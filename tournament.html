@@ -103,12 +103,14 @@ tailwind.config = {
 // ════════════════════════════════════════════════
 const SUPABASE_URL = 'YOUR_SUPABASE_URL'
 const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const DEMO_MODE = SUPABASE_URL === 'YOUR_SUPABASE_URL'
+const sb = DEMO_MODE ? null : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 let _sbUser = null
 let _tournamentId = new URLSearchParams(location.search).get('id')
 
 async function initAuth() {
+  if (DEMO_MODE) { _sbUser = { id: 'demo' }; return true }
   const { data: { session } } = await sb.auth.getSession()
   if (!session) { window.location.replace('index.html'); return false }
   _sbUser = session.user
@@ -116,12 +118,38 @@ async function initAuth() {
 }
 
 async function sbSave() {
-  if (!_tournamentId || !_sbUser) return
+  if (!_tournamentId) return
+  if (DEMO_MODE) {
+    try {
+      const tourneys = JSON.parse(localStorage.getItem('tc_tourneys')||'[]')
+      const idx = tourneys.findIndex(t => t.id === _tournamentId)
+      if (idx >= 0) { tourneys[idx].state = S; localStorage.setItem('tc_tourneys', JSON.stringify(tourneys)) }
+    } catch(e) {}
+    return
+  }
+  if (!_sbUser) return
   await sb.from('tournaments').update({ state: S }).eq('id', _tournamentId)
 }
 
 async function sbLoad() {
   if (!_tournamentId) return false
+  if (DEMO_MODE) {
+    try {
+      const tourneys = JSON.parse(localStorage.getItem('tc_tourneys')||'[]')
+      const t = tourneys.find(x => x.id === _tournamentId)
+      if (!t) return false
+      const el = document.getElementById('tournament-title')
+      if (el) el.textContent = t.name
+      if (t.state) { S = { ...S, ...t.state }; return true }
+      const regs = JSON.parse(localStorage.getItem('tc_regs')||'[]')
+        .filter(r => r.tournament_id === _tournamentId)
+      S.herren    = regs.filter(r => r.gender === 'herr').map(r => r.display_name || r.user_id)
+      S.damen     = regs.filter(r => r.gender === 'dame').map(r => r.display_name || r.user_id)
+      S.numRounds = t.num_rounds || 5
+      S.numCourts = t.num_courts || 6
+      return true
+    } catch(e) { return false }
+  }
   const { data } = await sb.from('tournaments').select('name, state').eq('id', _tournamentId).single()
   if (!data) return false
   if (data.name) {
@@ -333,7 +361,17 @@ function resetTournament() {
   if(!confirm('Turnier wirklich zurücksetzen?')) return;
   S={step:'setup',view:'spieler',herren:[],damen:[],numRounds:5,numCourts:6,schedule:[],currentRound:0};
   localStorage.removeItem('donatocup_v4');
-  if(_tournamentId) sb.from('tournaments').update({state:null}).eq('id',_tournamentId)
+  if(_tournamentId) {
+    if (DEMO_MODE) {
+      try {
+        const tourneys = JSON.parse(localStorage.getItem('tc_tourneys')||'[]')
+        const idx = tourneys.findIndex(t => t.id === _tournamentId)
+        if (idx >= 0) { delete tourneys[idx].state; localStorage.setItem('tc_tourneys', JSON.stringify(tourneys)) }
+      } catch(e) {}
+    } else {
+      sb.from('tournaments').update({state:null}).eq('id',_tournamentId)
+    }
+  }
   render();
 }
 

@@ -10,7 +10,16 @@
       "Bash(node -e ' *)",
       "Bash(sed -n '242,800p' dashboard.html)",
       "Bash(node --check /tmp/dashboard_js.js)",
-      "Bash(open -a \"Safari\" dashboard.html)"
+      "Bash(open -a \"Safari\" dashboard.html)",
+      "Bash(sed -n '244,1029p' /Users/louisdunkelprivat/Dev/Donatocup/dashboard.html)",
+      "Bash(node --check /tmp/dash_js.js)",
+      "Bash(grep -n \"^<script>$\" /Users/louisdunkelprivat/Dev/Donatocup/dashboard.html)",
+      "Bash(sed -n '101,200p' /Users/louisdunkelprivat/Dev/Donatocup/tournament.html)",
+      "Bash(node --check /tmp/tour_js.js)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3)",
+      "Bash(node --check /Users/louisdunkelprivat/Dev/Donatocup/dashboard.js)",
+      "WebFetch(domain:www.tennisclub-bss.de)"
     ]
   }
 }

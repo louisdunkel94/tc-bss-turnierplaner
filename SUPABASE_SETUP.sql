@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
   name                TEXT NOT NULL,
   created_by          UUID REFERENCES profiles(id),
   game_mode           TEXT DEFAULT 'geloste_paarungen'
-                        CHECK (game_mode IN ('geloste_paarungen', 'gruppenphase_ko')),
+                        CHECK (game_mode IN ('geloste_paarungen','americano','round_robin','gruppenphase_ko','einfaches_ko','doppeltes_ko','schweizer_system')),
   gender_requirement  TEXT DEFAULT 'mixed'
                         CHECK (gender_requirement IN ('mixed', 'herren', 'damen', 'offen')),
   skill_requirement   TEXT,

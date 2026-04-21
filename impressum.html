@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Impressum – TC Bad Soden-Salmünster Turniere</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme:{extend:{
+    colors:{
+      "primary-container":"#115217",
+      "secondary-fixed":"#dbed50","on-secondary-fixed":"#1a1e00",
+    },
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Plus Jakarta Sans","sans-serif"]},
+    borderRadius:{DEFAULT:"0.125rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
+  }}
+}
+</script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;background-color:#115217;color:#fff;}
+  .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
+  a{color:#dbed50;}a:hover{color:#bfd035;}
+</style>
+</head>
+<body class="min-h-screen">
+
+<header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
+  <a href="dashboard.html" class="flex items-center gap-3 no-underline">
+    <img src="logo.png" alt="TC BSS" class="w-9 h-9 object-contain"/>
+    <div>
+      <div class="text-base font-black text-white tracking-tight font-headline leading-none">TC Bad Soden-Salmünster</div>
+      <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">Turniere</div>
+    </div>
+  </a>
+</header>
+
+<main class="max-w-2xl mx-auto px-4 py-10">
+
+  <h1 class="text-3xl font-headline font-bold text-white mb-8">Impressum</h1>
+
+  <div class="space-y-6 text-white/70 font-body text-sm leading-relaxed">
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">Angaben gemäß § 5 TMG</h2>
+      <p>Tennisclub Bad Soden-Salmünster e.&thinsp;V.<br/>
+      Parkstraße 27<br/>
+      63628 Bad Soden-Salmünster</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">Vereinsregister</h2>
+      <p>Eingetragen beim Amtsgericht Hanau<br/>
+      Registernummer: VR 2147</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">Vertreten durch</h2>
+      <p>Markus Hansmann (1. Vorsitzender)</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">Kontakt</h2>
+      <p>Telefon: 0152 32083246<br/>
+      E-Mail: <a href="mailto:markus-hansmann-2006@web.de">markus-hansmann-2006@web.de</a></p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">Inhaltlich Verantwortlicher gemäß § 18 Abs. 2 MStV</h2>
+      <p>Markus Hansmann<br/>
+      Ulmenstraße 18<br/>
+      63628 Bad Soden-Salmünster</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">Haftungsausschluss</h2>
+      <p>Die Inhalte dieser Webanwendung wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte übernehmen wir jedoch keine Gewähr.</p>
+    </section>
+
+  </div>
+
+  <div class="mt-10 pt-6 border-t border-white/10 flex gap-6 text-xs text-white/30 font-body">
+    <a href="impressum.html" class="text-secondary-fixed">Impressum</a>
+    <a href="datenschutz.html">Datenschutz</a>
+    <a href="dashboard.html">Zurück zum Dashboard</a>
+  </div>
+
+</main>
+</body>
+</html>

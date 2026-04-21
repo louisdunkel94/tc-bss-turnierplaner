@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Datenschutz – TC Bad Soden-Salmünster Turniere</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme:{extend:{
+    colors:{
+      "primary-container":"#115217",
+      "secondary-fixed":"#dbed50","on-secondary-fixed":"#1a1e00",
+    },
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Plus Jakarta Sans","sans-serif"]},
+    borderRadius:{DEFAULT:"0.125rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
+  }}
+}
+</script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;background-color:#115217;color:#fff;}
+  .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
+  a{color:#dbed50;}a:hover{color:#bfd035;}
+</style>
+</head>
+<body class="min-h-screen">
+
+<header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
+  <a href="dashboard.html" class="flex items-center gap-3 no-underline">
+    <img src="logo.png" alt="TC BSS" class="w-9 h-9 object-contain"/>
+    <div>
+      <div class="text-base font-black text-white tracking-tight font-headline leading-none">TC Bad Soden-Salmünster</div>
+      <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">Turniere</div>
+    </div>
+  </a>
+</header>
+
+<main class="max-w-2xl mx-auto px-4 py-10">
+
+  <h1 class="text-3xl font-headline font-bold text-white mb-2">Datenschutzerklärung</h1>
+  <p class="text-white/30 font-body text-xs mb-8">Stand: April 2026</p>
+
+  <div class="space-y-8 text-white/70 font-body text-sm leading-relaxed">
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">1. Verantwortlicher</h2>
+      <p>Tennisclub Bad Soden-Salmünster e.&thinsp;V.<br/>
+      vertreten durch Markus Hansmann (1. Vorsitzender)<br/>
+      Parkstraße 27, 63628 Bad Soden-Salmünster<br/>
+      E-Mail: <a href="mailto:markus-hansmann-2006@web.de">markus-hansmann-2006@web.de</a><br/>
+      Telefon: 0152 32083246</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">2. Welche Daten werden verarbeitet?</h2>
+      <p class="mb-3">Diese Webanwendung verarbeitet folgende personenbezogene Daten, soweit du dich registrierst und nutzt:</p>
+      <ul class="list-disc list-inside space-y-1 text-white/60">
+        <li>E-Mail-Adresse (für Login und Kommunikation)</li>
+        <li>Anzeigename und Geschlecht (für Turnierpaarungen)</li>
+        <li>Turnierteilnahmen und Check-in-Zeitpunkte</li>
+      </ul>
+      <p class="mt-3">Es werden keine Tracking-Cookies gesetzt. Es findet kein Webanalyse-Tracking statt.</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">3. Rechtsgrundlage</h2>
+      <p>Die Verarbeitung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. b DSGVO (Durchführung eines Vertrags bzw. vorvertraglicher Maßnahmen) sowie Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Organisation des Vereinsturnierbetriebs).</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">4. Auftragsverarbeiter – Supabase</h2>
+      <p>Für die Speicherung von Nutzerdaten und Authentifizierung setzen wir den Dienst <strong class="text-white/80">Supabase</strong> (Supabase Inc., 970 Trestle Glen Road, Oakland, CA 94610, USA) ein. Die Datenübertragung erfolgt verschlüsselt via HTTPS. Mit Supabase besteht ein Auftragsverarbeitungsvertrag (DPA) gemäß Art. 28 DSGVO. Weitere Informationen: <a href="https://supabase.com/privacy" target="_blank" rel="noopener">supabase.com/privacy</a>.</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">5. Lokale Datenspeicherung</h2>
+      <p>Im Demo-Modus (ohne Supabase-Konfiguration) werden alle Daten ausschließlich lokal im <code class="text-secondary-fixed/70">localStorage</code> deines Browsers gespeichert. Diese Daten verlassen deinen Browser nicht und werden an keine externen Server übertragen.</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">6. Externe Ressourcen</h2>
+      <p>Beim Laden der Seite werden folgende externe Ressourcen eingebunden:</p>
+      <ul class="list-disc list-inside space-y-1 text-white/60 mt-2">
+        <li>Google Fonts (fonts.googleapis.com) – Schriftarten</li>
+        <li>jsDelivr CDN (cdn.jsdelivr.net) – JavaScript-Bibliotheken</li>
+        <li>Tailwind CSS CDN (cdn.tailwindcss.com) – Stylesheet</li>
+      </ul>
+      <p class="mt-2">Dabei wird deine IP-Adresse an die jeweiligen Anbieter übermittelt. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO.</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">7. Datenlöschung und Speicherdauer</h2>
+      <p>Deine Daten werden gelöscht, sobald sie für die Zwecke der Verarbeitung nicht mehr erforderlich sind. Du kannst jederzeit die Löschung deiner Daten per E-Mail an <a href="mailto:markus-hansmann-2006@web.de">markus-hansmann-2006@web.de</a> beantragen.</p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">8. Deine Rechte</h2>
+      <p class="mb-2">Du hast gemäß DSGVO folgende Rechte:</p>
+      <ul class="list-disc list-inside space-y-1 text-white/60">
+        <li>Auskunft über gespeicherte Daten (Art. 15 DSGVO)</li>
+        <li>Berichtigung unrichtiger Daten (Art. 16 DSGVO)</li>
+        <li>Löschung deiner Daten (Art. 17 DSGVO)</li>
+        <li>Einschränkung der Verarbeitung (Art. 18 DSGVO)</li>
+        <li>Widerspruch gegen die Verarbeitung (Art. 21 DSGVO)</li>
+        <li>Datenübertragbarkeit (Art. 20 DSGVO)</li>
+      </ul>
+      <p class="mt-3">Zur Ausübung deiner Rechte wende dich an: <a href="mailto:markus-hansmann-2006@web.de">markus-hansmann-2006@web.de</a></p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-headline font-bold text-white mb-2">9. Beschwerderecht</h2>
+      <p>Du hast das Recht, dich bei der zuständigen Datenschutzaufsichtsbehörde zu beschweren. Für Hessen ist dies der Hessische Beauftragte für Datenschutz und Informationsfreiheit, Gustav-Stresemann-Ring 1, 65189 Wiesbaden.</p>
+    </section>
+
+  </div>
+
+  <div class="mt-10 pt-6 border-t border-white/10 flex gap-6 text-xs text-white/30 font-body">
+    <a href="impressum.html">Impressum</a>
+    <a href="datenschutz.html" class="text-secondary-fixed">Datenschutz</a>
+    <a href="dashboard.html">Zurück zum Dashboard</a>
+  </div>
+
+</main>
+</body>
+</html>

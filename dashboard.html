@@ -81,37 +81,39 @@ tailwind.config = {
   <div class="w-full max-w-lg mx-auto mt-8 md:mt-16 px-4">
     <div class="bg-[#1a3320] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <h2 class="font-headline font-bold text-lg text-white">Turnier erstellen</h2>
+        <h2 id="modal-create-title" class="font-headline font-bold text-lg text-white">Turnier erstellen</h2>
         <button onclick="closeModal()" class="text-white/40 hover:text-white transition-colors">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
       <form id="form-create" onsubmit="handleCreateTournament(event)" class="p-6 space-y-4 max-h-[70vh] overflow-y-auto scrollbar-hide">
+        <div id="template-row">
+          <label class="label">Aus Vorlage laden</label>
+          <select id="t-template" class="input" onchange="loadTemplate(this.value)">
+            <option value="">— Vorlage wählen —</option>
+          </select>
+        </div>
         <div>
           <label class="label">Turniername</label>
-          <input type="text" id="t-name" required placeholder="z.B. Donatocup 2025" class="input"/>
+          <input type="text" id="t-name" required maxlength="100" placeholder="z.B. Donatocup 2025" class="input"/>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="label">Spielmodus</label>
-            <select id="t-mode" class="input">
-              <option value="geloste_paarungen">Geloste Paarungen</option>
-              <option value="gruppenphase_ko">Gruppenphase + KO</option>
-            </select>
-          </div>
-          <div>
-            <label class="label">Geschlecht</label>
-            <select id="t-gender" class="input">
-              <option value="mixed">Mixed</option>
-              <option value="herren">Nur Herren</option>
-              <option value="damen">Nur Damen</option>
-              <option value="offen">Offen</option>
-            </select>
-          </div>
+        <div>
+          <label class="label">Spielmodus</label>
+          <div id="mode-cards" class="grid grid-cols-1 gap-2"></div>
+          <input type="hidden" id="t-mode" value="geloste_paarungen"/>
+        </div>
+        <div>
+          <label class="label">Geschlecht</label>
+          <select id="t-gender" class="input">
+            <option value="mixed">Mixed</option>
+            <option value="herren">Nur Herren</option>
+            <option value="damen">Nur Damen</option>
+            <option value="offen">Offen</option>
+          </select>
         </div>
         <div>
           <label class="label">Spielstärke (optional)</label>
-          <input type="text" id="t-skill" placeholder="z.B. LK 10–25" class="input"/>
+          <input type="text" id="t-skill" maxlength="100" placeholder="z.B. LK 10–25" class="input"/>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -139,7 +141,7 @@ tailwind.config = {
         </div>
         <div class="pt-2 flex gap-3">
           <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm border border-white/15 text-white/50 hover:bg-white/5 transition-colors">Abbrechen</button>
-          <button type="submit" id="btn-create" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">Erstellen</button>
+          <button type="submit" id="btn-create" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">Speichern</button>
         </div>
       </form>
     </div>
@@ -232,6 +234,37 @@ tailwind.config = {
   </div>
 </dialog>
 
+<!-- ── Participants Modal ── -->
+<dialog id="modal-participants">
+  <div class="w-full max-w-md mx-auto mt-8 px-4">
+    <div class="bg-[#1a3320] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
+        <h2 class="font-headline font-bold text-lg text-white flex items-center gap-2">
+          <span class="material-symbols-outlined text-base text-secondary-fixed">group</span>
+          <span id="participants-title">Teilnehmer</span>
+        </h2>
+        <button onclick="document.getElementById('modal-participants').close()" class="text-white/40 hover:text-white transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div id="participants-list" class="p-4 max-h-[50vh] overflow-y-auto space-y-1.5"></div>
+      <div id="add-participant-form" class="px-4 pb-4 border-t border-white/5 pt-3 space-y-2">
+        <p class="text-[10px] font-headline uppercase tracking-widest text-white/30 mb-2">Spieler manuell eintragen</p>
+        <div class="flex gap-2">
+          <input type="text" id="p-name" maxlength="60" placeholder="Name" class="input flex-1"/>
+          <select id="p-gender" class="input w-28">
+            <option value="herr">Herr</option>
+            <option value="dame">Dame</option>
+          </select>
+          <button onclick="addManualParticipant()" class="flex-shrink-0 px-3 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+            <span class="material-symbols-outlined text-sm">person_add</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <style>
   .label{display:block;font-family:'Lexend',sans-serif;font-weight:700;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:.375rem;}
   .input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:.5rem;padding:.625rem .875rem;font-size:.875rem;font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border-color .15s;}
@@ -239,564 +272,11 @@ tailwind.config = {
   .input option{background:#1a3320;color:#fff;}
 </style>
 
-<script>
-// ── Supabase ─────────────────────────────────────────────────
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'
-const DEMO_MODE = SUPABASE_URL === 'YOUR_SUPABASE_URL'
+<footer class="max-w-5xl mx-auto px-4 pb-6 flex gap-5 text-xs text-white/20 font-body">
+  <a href="impressum.html" class="hover:text-white/50 transition-colors">Impressum</a>
+  <a href="datenschutz.html" class="hover:text-white/50 transition-colors">Datenschutz</a>
+</footer>
 
-const sb = DEMO_MODE ? null : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-
-let currentUser = null
-let currentProfile = null
-let activeTournamentId = null
-
-// ── Boot ─────────────────────────────────────────────────────
-async function boot() {
-  if (DEMO_MODE) {
-    currentUser = { id: 'demo', email: 'demo@tc-bss.de' }
-    currentProfile = { id: 'demo', display_name: 'Demo Veranstalter', role: 'veranstalter', email: 'demo@tc-bss.de' }
-    showDemoBanner()
-  } else {
-    const { data: { session } } = await sb.auth.getSession()
-    if (!session) { window.location.replace('index.html'); return }
-    currentUser = session.user
-    const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single()
-    currentProfile = profile
-  }
-
-  const chip = document.getElementById('user-chip')
-  chip.classList.remove('hidden'); chip.classList.add('flex')
-  const name = currentProfile?.display_name || currentUser.email
-  document.getElementById('user-avatar').textContent = name.slice(0,2).toUpperCase()
-  document.getElementById('user-name').textContent = name
-  document.getElementById('user-role-badge').textContent = roleLabel(currentProfile?.role)
-
-  render()
-}
-
-function showDemoBanner() {
-  const banner = document.createElement('div')
-  banner.className = 'fixed top-0 left-0 right-0 z-[100] bg-yellow-500/90 text-black text-xs font-headline font-bold text-center py-1.5 px-4'
-  banner.textContent = '⚠ Demo-Modus – Supabase noch nicht konfiguriert. Daten werden nicht gespeichert.'
-  document.body.prepend(banner)
-  document.querySelector('header').style.top = '28px'
-}
-
-function roleLabel(role) {
-  return { admin: 'Administrator', veranstalter: 'Veranstalter', mitglied: 'Mitglied' }[role] || 'Mitglied'
-}
-
-function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
-
-// ── Render ───────────────────────────────────────────────────
-async function render() {
-  const role = currentProfile?.role || 'mitglied'
-  const app = document.getElementById('app')
-
-  if (role === 'admin') {
-    await renderAdmin(app)
-  } else if (role === 'veranstalter') {
-    await renderVeranstalter(app)
-  } else {
-    await renderMitglied(app)
-  }
-}
-
-// ── Demo store (localStorage fallback) ───────────────────────
-const DS = {
-  get tourneys()  { try { return JSON.parse(localStorage.getItem('tc_tourneys')||'[]') } catch{ return [] } },
-  set tourneys(v) { localStorage.setItem('tc_tourneys', JSON.stringify(v)) },
-  get regs()      { try { return JSON.parse(localStorage.getItem('tc_regs')||'[]') } catch{ return [] } },
-  set regs(v)     { localStorage.setItem('tc_regs', JSON.stringify(v)) },
-}
-
-async function dbTourneys(statusFilter) {
-  if (DEMO_MODE) {
-    let t = DS.tourneys
-    if (statusFilter) t = t.filter(x => statusFilter.includes(x.status))
-    return t.map(t => ({ ...t, tournament_participants: [{ count: DS.regs.filter(r=>r.tournament_id===t.id).length }] }))
-  }
-  const q = sb.from('tournaments').select('*, tournament_participants(count)').order('created_at', { ascending: false })
-  const { data } = statusFilter ? await q.in('status', statusFilter) : await q
-  return data || []
-}
-async function dbMyRegs() {
-  if (DEMO_MODE) return DS.regs.filter(r => r.user_id === currentUser.id)
-  const { data } = await sb.from('tournament_participants').select('tournament_id').eq('user_id', currentUser.id)
-  return data || []
-}
-async function dbMembers() {
-  if (DEMO_MODE) return [currentProfile]
-  const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false })
-  return data || []
-}
-
-// ── Mitglied ─────────────────────────────────────────────────
-async function renderMitglied(app) {
-  const tourneys = await dbTourneys(['open','running'])
-  const myRegs   = await dbMyRegs()
-  const myIds    = new Set(myRegs.map(r => r.tournament_id))
-
-  app.innerHTML = `
-    <div class="mb-8">
-      <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Willkommen${currentProfile?.display_name ? ', ' + esc(currentProfile.display_name.split(' ')[0]) : ''}</h1>
-      <p class="text-white/40 font-body mt-1">Hier sind die aktuellen Turniere.</p>
-    </div>
-    ${!tourneys?.length
-      ? `<div class="text-center py-20 text-white/30 font-body">
-           <span class="material-symbols-outlined text-4xl block mb-3">event_busy</span>
-           Keine offenen Turniere gerade
-         </div>`
-      : `<div class="grid gap-4 md:grid-cols-2">${tourneys.map(t => tournamentCard(t, myIds.has(t.id), false)).join('')}</div>`}
-  `
-}
-
-// ── Veranstalter ─────────────────────────────────────────────
-async function renderVeranstalter(app) {
-  const tourneys = await dbTourneys()
-  const myRegs   = await dbMyRegs()
-  const myIds    = new Set(myRegs.map(r => r.tournament_id))
-
-  app.innerHTML = `
-    <div class="flex items-start justify-between mb-8 flex-wrap gap-4">
-      <div>
-        <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Turniere</h1>
-        <p class="text-white/40 font-body mt-1">Verwalte und erstelle Turniere.</p>
-      </div>
-      <button onclick="openCreateModal()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
-        <span class="material-symbols-outlined text-base">add</span>Turnier erstellen
-      </button>
-    </div>
-    ${!tourneys?.length
-      ? `<div class="text-center py-16 text-white/30 font-body">
-           <span class="material-symbols-outlined text-4xl block mb-3">add_circle</span>
-           <p class="mb-5">Noch keine Turniere — erstelle das erste!</p>
-           <button onclick="loadExampleTournament()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-headline font-semibold bg-white/5 text-white/30 hover:text-secondary-fixed hover:bg-white/8 transition-colors">
-             <span class="material-symbols-outlined text-sm">science</span>Beispielturnier laden
-           </button>
-         </div>`
-      : `<div class="grid gap-4 md:grid-cols-2">${tourneys.map(t => tournamentCard(t, myIds.has(t.id), true)).join('')}</div>
-         ${DEMO_MODE ? `<div class="text-center mt-6">
-           <button onclick="loadExampleTournament()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-headline font-semibold text-white/20 hover:text-secondary-fixed hover:bg-white/5 transition-colors">
-             <span class="material-symbols-outlined text-sm">science</span>Beispielturnier neu laden
-           </button>
-         </div>` : ''}`}
-  `
-}
-
-// ── Admin ─────────────────────────────────────────────────────
-async function renderAdmin(app) {
-  const [tourneys, members, myRegs] = await Promise.all([dbTourneys(), dbMembers(), dbMyRegs()])
-  const myIds = new Set(myRegs.map(r => r.tournament_id))
-
-  const roleColors = { admin: 'bg-red-500/15 text-red-300 border-red-500/20', veranstalter: 'bg-blue-500/15 text-blue-300 border-blue-500/20', mitglied: 'bg-white/10 text-white/50 border-white/10' }
-
-  app.innerHTML = `
-    <div class="mb-8">
-      <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Admin</h1>
-      <p class="text-white/40 font-body mt-1">Übersicht aller Mitglieder und Turniere.</p>
-    </div>
-
-    <!-- Members -->
-    <section class="mb-10">
-      <h2 class="text-lg font-headline font-bold text-white mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-base text-white/40">group</span>
-        Mitglieder <span class="text-white/30 font-normal text-sm">(${members?.length||0})</span>
-      </h2>
-      <div class="rounded-2xl border border-white/5 overflow-hidden bg-black/20">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm font-body">
-            <thead>
-              <tr class="border-b border-white/5 text-white/30 text-xs font-headline uppercase tracking-wider">
-                <th class="text-left px-4 py-3">Name</th>
-                <th class="text-left px-4 py-3 hidden md:table-cell">E-Mail</th>
-                <th class="text-left px-4 py-3">Rolle</th>
-                <th class="text-left px-4 py-3 hidden md:table-cell">Dabei seit</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(members||[]).map(m => `
-                <tr class="border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors">
-                  <td class="px-4 py-3">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-full bg-secondary-fixed/15 flex items-center justify-center text-xs font-headline font-bold text-secondary-fixed flex-shrink-0">
-                        ${(m.display_name||m.email).slice(0,2).toUpperCase()}
-                      </div>
-                      <span class="font-semibold text-white">${esc(m.display_name||'–')}</span>
-                    </div>
-                  </td>
-                  <td class="px-4 py-3 text-white/50 hidden md:table-cell">${esc(m.email)}</td>
-                  <td class="px-4 py-3">
-                    <select onchange="changeRole('${m.id}', this.value)" ${m.id===currentUser.id?'disabled':''} class="bg-transparent border-none text-sm font-body cursor-pointer focus:outline-none">
-                      ${['mitglied','veranstalter','admin'].map(r => `<option value="${r}" ${m.role===r?'selected':''} class="bg-[#1a3320]">${roleLabel(r)}</option>`).join('')}
-                    </select>
-                  </td>
-                  <td class="px-4 py-3 text-white/30 hidden md:table-cell">${new Date(m.created_at).toLocaleDateString('de-DE')}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Tournaments -->
-    <section>
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-headline font-bold text-white flex items-center gap-2">
-          <span class="material-symbols-outlined text-base text-white/40">emoji_events</span>
-          Turniere <span class="text-white/30 font-normal text-sm">(${tourneys?.length||0})</span>
-        </h2>
-        <button onclick="openCreateModal()" class="flex items-center gap-1.5 text-sm text-white/40 hover:text-secondary-fixed transition-colors font-headline font-semibold px-3 py-1.5 rounded-xl hover:bg-white/5">
-          <span class="material-symbols-outlined text-sm">add</span>Neu
-        </button>
-      </div>
-      <div class="grid gap-4 md:grid-cols-2">${(tourneys||[]).map(t => tournamentCard(t, myIds.has(t.id), true)).join('')}</div>
-    </section>
-  `
-}
-
-// ── Tournament card ───────────────────────────────────────────
-function tournamentCard(t, isRegistered, isOrganizer) {
-  const statusConfig = {
-    draft:   { label: 'Entwurf',      color: 'bg-white/10 text-white/40' },
-    open:    { label: 'Offen',        color: 'bg-secondary-fixed/15 text-secondary-fixed' },
-    running: { label: 'Läuft',        color: 'bg-green-500/15 text-green-400' },
-    closed:  { label: 'Abgeschlossen',color: 'bg-white/5 text-white/25' },
-  }
-  const modeLabels = { geloste_paarungen: 'Geloste Paarungen', gruppenphase_ko: 'Gruppenphase + KO' }
-  const genderLabels = { mixed: 'Mixed', herren: 'Nur Herren', damen: 'Nur Damen', offen: 'Offen' }
-  const sc = statusConfig[t.status] || statusConfig.draft
-  const count = t.tournament_participants?.[0]?.count ?? 0
-  const full = count >= t.max_participants
-  const canRegister = t.status === 'open' && !isRegistered && !full
-
-  const dateStr = t.start_at
-    ? new Date(t.start_at).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })
-    : '–'
-
-  return `
-    <div class="rounded-2xl bg-black/25 border border-white/5 overflow-hidden hover:border-white/10 transition-colors">
-      <div class="px-5 pt-5 pb-4">
-        <div class="flex items-start justify-between gap-3 mb-3">
-          <h3 class="font-headline font-bold text-white text-base leading-tight">${esc(t.name)}</h3>
-          <span class="text-[11px] font-headline font-bold px-2.5 py-1 rounded-full flex-shrink-0 ${sc.color}">${sc.label}</span>
-        </div>
-        <div class="space-y-1.5 text-xs text-white/45 font-body">
-          <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-xs">schedule</span>${dateStr}${t.duration_hours ? ` · ${t.duration_hours}h` : ''}</div>
-          <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-xs">sports_tennis</span>${modeLabels[t.game_mode]||t.game_mode} · ${genderLabels[t.gender_requirement]||t.gender_requirement}</div>
-          ${t.skill_requirement ? `<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-xs">leaderboard</span>${esc(t.skill_requirement)}</div>` : ''}
-          <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-xs">group</span>${count} / ${t.max_participants} Spieler${full ? ' · <span class="text-red-400">Voll</span>' : ''}</div>
-        </div>
-      </div>
-      <div class="px-5 pb-4 flex gap-2 flex-wrap">
-        ${canRegister ? `<button onclick="registerForTournament('${t.id}')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
-          <span class="material-symbols-outlined text-xs">how_to_reg</span>Anmelden
-        </button>` : ''}
-        ${isRegistered && t.status === 'open' ? `<button onclick="unregisterFromTournament('${t.id}')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-red-900/30 hover:text-red-300 transition-colors">
-          <span class="material-symbols-outlined text-xs">person_remove</span>Abmelden
-        </button>` : ''}
-        ${isRegistered && t.status !== 'open' ? `<span class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed/10 text-secondary-fixed/60">
-          <span class="material-symbols-outlined text-xs">check</span>Angemeldet
-        </span>` : ''}
-        ${isOrganizer ? `
-          ${t.status === 'draft' ? `<button onclick="setTournamentStatus('${t.id}','open')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
-            <span class="material-symbols-outlined text-xs">public</span>Veröffentlichen
-          </button>` : ''}
-          ${t.status === 'open' ? `<button onclick="setTournamentStatus('${t.id}','running')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
-            <span class="material-symbols-outlined text-xs">play_arrow</span>Starten
-          </button>` : ''}
-          ${t.status === 'running' ? `<a href="tournament.html?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
-            <span class="material-symbols-outlined text-xs">open_in_new</span>Spielplan
-          </a>` : ''}
-          ${(t.status === 'open' || t.status === 'running') ? `<button onclick="openQR('${t.id}','${esc(t.name)}')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
-            <span class="material-symbols-outlined text-xs">qr_code_2</span>Check-in
-          </button>` : ''}
-          ${t.status !== 'closed' ? `<button onclick="openEmailModal('${t.id}')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
-            <span class="material-symbols-outlined text-xs">mail</span>Info-Mail
-          </button>` : ''}
-          ${t.status === 'running' ? `<button onclick="setTournamentStatus('${t.id}','closed')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/50 hover:bg-white/15 transition-colors">
-            <span class="material-symbols-outlined text-xs">stop</span>Beenden
-          </button>` : ''}
-        ` : ''}
-      </div>
-    </div>`
-}
-
-// ── Actions ───────────────────────────────────────────────────
-async function registerForTournament(id) {
-  if (DEMO_MODE) {
-    DS.regs = [...DS.regs, { tournament_id: id, user_id: currentUser.id, gender: currentProfile?.gender || 'offen' }]
-    toast('Erfolgreich angemeldet!'); render(); return
-  }
-  const { error } = await sb.from('tournament_participants').insert({ tournament_id: id, user_id: currentUser.id, gender: currentProfile?.gender })
-  if (error) { toast('Fehler: ' + error.message); return }
-  toast('Erfolgreich angemeldet!'); render()
-}
-
-async function unregisterFromTournament(id) {
-  if (DEMO_MODE) {
-    DS.regs = DS.regs.filter(r => !(r.tournament_id === id && r.user_id === currentUser.id))
-    toast('Abgemeldet.'); render(); return
-  }
-  const { error } = await sb.from('tournament_participants').delete().eq('tournament_id', id).eq('user_id', currentUser.id)
-  if (error) { toast('Fehler: ' + error.message); return }
-  toast('Abgemeldet.'); render()
-}
-
-async function setTournamentStatus(id, status) {
-  if (DEMO_MODE) {
-    DS.tourneys = DS.tourneys.map(t => t.id === id ? { ...t, status } : t)
-    toast(`Status: ${status}`); render(); return
-  }
-  const { error } = await sb.from('tournaments').update({ status }).eq('id', id)
-  if (error) { toast('Fehler: ' + error.message); return }
-  toast(`Status: ${status}`); render()
-}
-
-async function changeRole(userId, role) {
-  if (DEMO_MODE) { toast('Im Demo-Modus nicht verfügbar'); return }
-  const { error } = await sb.from('profiles').update({ role }).eq('id', userId)
-  if (error) { toast('Fehler: ' + error.message); return }
-  toast(`Rolle geändert: ${roleLabel(role)}`)
-}
-
-// ── Create Tournament ─────────────────────────────────────────
-function openCreateModal() { document.getElementById('modal-create').showModal() }
-function closeModal() { document.getElementById('modal-create').close() }
-
-async function handleCreateTournament(e) {
-  e.preventDefault()
-  const btn = document.getElementById('btn-create')
-  btn.disabled = true; btn.textContent = '…'
-
-  const payload = {
-    name: document.getElementById('t-name').value.trim(),
-    game_mode: document.getElementById('t-mode').value,
-    gender_requirement: document.getElementById('t-gender').value,
-    skill_requirement: document.getElementById('t-skill').value.trim() || null,
-    start_at: document.getElementById('t-start').value || null,
-    duration_hours: parseInt(document.getElementById('t-duration').value) || 3,
-    max_participants: parseInt(document.getElementById('t-maxp').value) || 30,
-    num_courts: parseInt(document.getElementById('t-courts').value) || 6,
-    num_rounds: parseInt(document.getElementById('t-rounds').value) || 5,
-    created_by: currentUser.id,
-    status: 'draft'
-  }
-
-  if (DEMO_MODE) {
-    payload.id = 'demo_' + Date.now()
-    payload.created_at = new Date().toISOString()
-    DS.tourneys = [payload, ...DS.tourneys]
-    btn.disabled = false; btn.textContent = 'Erstellen'
-    closeModal(); document.getElementById('form-create').reset(); toast('Turnier erstellt!'); render(); return
-  }
-  const { error } = await sb.from('tournaments').insert(payload)
-  btn.disabled = false; btn.textContent = 'Erstellen'
-  if (error) { toast('Fehler: ' + error.message); return }
-  closeModal()
-  document.getElementById('form-create').reset()
-  toast('Turnier erstellt!')
-  render()
-}
-
-// ── Email Modal ───────────────────────────────────────────────
-function openEmailModal(tournamentId) {
-  activeTournamentId = tournamentId
-  document.getElementById('modal-email').showModal()
-}
-
-async function sendEmail() {
-  const subject = document.getElementById('email-subject').value.trim()
-  const body = document.getElementById('email-body').value.trim()
-  if (!subject || !body) { toast('Betreff und Nachricht ausfüllen'); return }
-
-  const btn = document.getElementById('btn-send-email')
-  btn.disabled = true
-
-  if (DEMO_MODE) {
-    btn.disabled = false
-    document.getElementById('modal-email').close()
-    toast('Demo-Modus: E-Mail würde versendet werden'); return
-  }
-  const { error } = await sb.functions.invoke('send-email', {
-    body: { tournament_id: activeTournamentId, subject, body }
-  })
-
-  btn.disabled = false
-  if (error) { toast('Fehler beim Senden: ' + error.message); return }
-  document.getElementById('modal-email').close()
-  document.getElementById('email-subject').value = ''
-  document.getElementById('email-body').value = ''
-  toast('E-Mails versendet!')
-}
-
-// ── Logout ────────────────────────────────────────────────────
-async function logout() {
-  if (!DEMO_MODE) await sb.auth.signOut()
-  window.location.replace('index.html')
-}
-
-// ── QR Code ───────────────────────────────────────────────────
-let _qrTournamentId = null
-
-function openQR(tournamentId, tournamentName) {
-  _qrTournamentId = tournamentId
-  document.getElementById('modal-qr').showModal()
-  document.getElementById('qr-tourney-name').textContent = tournamentName
-
-  const base = location.href.replace(/[^/]*(\?.*)?$/, '')
-  const url  = base + 'checkin.html?t=' + tournamentId
-
-  const canvas = document.getElementById('qr-canvas')
-  QRCode.toCanvas(canvas, url, {
-    width: 220,
-    margin: 1,
-    color: { dark: '#0a1f0b', light: '#ffffff' }
-  })
-}
-
-function printQR() {
-  const canvas = document.getElementById('qr-canvas')
-  const name   = document.getElementById('qr-tourney-name').textContent
-  const img    = canvas.toDataURL()
-  const scriptOpen  = '<scr' + 'ipt>'
-  const scriptClose = '<\/scr' + 'ipt>'
-  const html = [
-    '<!DOCTYPE html><html>',
-    '<head><title>Check-in QR</title>',
-    '<style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;background:#fff;}',
-    'h2{font-size:1.4rem;font-weight:900;color:#003908;margin-bottom:1rem;text-align:center;}',
-    'p{color:#555;font-size:.9rem;margin-top:.75rem;}</style>',
-    '</head><body>',
-    '<h2>' + name + '</h2>',
-    '<img src="' + img + '" width="280"/>',
-    '<p>QR-Code scannen zum Einchecken</p>',
-    scriptOpen + 'window.onload=function(){window.print();window.close()}' + scriptClose,
-    '</body></html>'
-  ].join('')
-  const blob = new Blob([html], { type: 'text/html' })
-  const url  = URL.createObjectURL(blob)
-  window.open(url, '_blank')
-  setTimeout(function(){ URL.revokeObjectURL(url) }, 5000)
-}
-
-// ── Check-in overview ─────────────────────────────────────────
-async function openCheckinOverview() {
-  document.getElementById('modal-checkin').showModal()
-  await refreshCheckins()
-}
-
-async function refreshCheckins() {
-  const list = document.getElementById('checkin-list')
-  list.innerHTML = '<div class="text-white/30 text-sm font-body text-center py-4">Lade…</div>'
-
-  let participants = []
-
-  if (DEMO_MODE) {
-    const regs = DS.regs.filter(r => r.tournament_id === _qrTournamentId)
-    participants = regs.map(r => ({
-      display_name: r.display_name || (r.user_id === 'demo' ? (currentProfile?.display_name || 'Demo User') : r.user_id),
-      email: r.user_id === 'demo' ? currentUser.email : '',
-      gender: r.gender,
-      checked_in: r.checked_in || false,
-      checked_in_at: null
-    }))
-  } else {
-    const { data } = await sb.from('tournament_participants')
-      .select('checked_in, checked_in_at, gender, profiles(display_name, email)')
-      .eq('tournament_id', _qrTournamentId)
-      .order('checked_in', { ascending: false })
-    participants = (data || []).map(p => ({ ...p.profiles, gender: p.gender, checked_in: p.checked_in, checked_in_at: p.checked_in_at }))
-  }
-
-  const checkedIn = participants.filter(p => p.checked_in).length
-  document.getElementById('checkin-count').textContent = `${checkedIn} / ${participants.length} da`
-
-  if (!participants.length) {
-    list.innerHTML = '<p class="text-white/30 text-sm font-body text-center py-6">Keine Anmeldungen</p>'
-    return
-  }
-
-  list.innerHTML = participants.map(p => {
-    const name = p.display_name || p.email || '–'
-    const ic   = p.gender === 'herr' ? 'text-blue-400' : 'text-pink-400'
-    return `<div class="flex items-center gap-3 px-3 py-2.5 rounded-xl ${p.checked_in ? 'bg-secondary-fixed/8 border border-secondary-fixed/15' : 'bg-white/5 border border-white/5'}">
-      <span class="material-symbols-outlined text-base ${ic}">person</span>
-      <span class="flex-1 text-sm font-body font-medium ${p.checked_in ? 'text-white' : 'text-white/40'}">${esc(name)}</span>
-      ${p.checked_in
-        ? `<span class="flex items-center gap-1 text-xs font-headline font-bold text-secondary-fixed"><span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 1">check_circle</span>Da</span>`
-        : `<span class="text-xs text-white/20 font-body">Ausstehend</span>`}
-    </div>`
-  }).join('')
-}
-
-// ── Beispielturnier ───────────────────────────────────────────
-function loadExampleTournament() {
-  const id = 'example_' + Date.now()
-  const start = new Date()
-  start.setDate(start.getDate() + 7)
-  start.setHours(14, 0, 0, 0)
-
-  const tourney = {
-    id,
-    name: 'Donatocup 2025',
-    created_by: 'demo',
-    game_mode: 'geloste_paarungen',
-    gender_requirement: 'mixed',
-    skill_requirement: 'LK 10–25',
-    start_at: start.toISOString(),
-    duration_hours: 4,
-    max_participants: 24,
-    num_courts: 6,
-    num_rounds: 5,
-    status: 'open',
-    created_at: new Date().toISOString()
-  }
-
-  const names = [
-    { name: 'Max Müller',      gender: 'herr' },
-    { name: 'Felix Wagner',    gender: 'herr' },
-    { name: 'Tobias Klein',    gender: 'herr' },
-    { name: 'Jonas Becker',    gender: 'herr' },
-    { name: 'Stefan Braun',    gender: 'herr' },
-    { name: 'Lukas Hoffmann',  gender: 'herr' },
-    { name: 'Anna Schmidt',    gender: 'dame' },
-    { name: 'Laura Fischer',   gender: 'dame' },
-    { name: 'Sarah Meyer',     gender: 'dame' },
-    { name: 'Julia Weber',     gender: 'dame' },
-    { name: 'Lisa Schulz',     gender: 'dame' },
-    { name: 'Marie Richter',   gender: 'dame' },
-  ]
-
-  const regs = names.map((p, i) => ({
-    tournament_id: id,
-    user_id: 'player_' + i,
-    gender: p.gender,
-    display_name: p.name,
-    checked_in: i < 8, // erste 8 bereits eingecheckt
-  }))
-
-  DS.tourneys = [tourney, ...DS.tourneys.filter(t => !t.id.startsWith('example_'))]
-  DS.regs = [...DS.regs.filter(r => r.tournament_id !== id), ...regs]
-  toast('Beispielturnier erstellt!')
-  render()
-}
-
-// ── Toast ─────────────────────────────────────────────────────
-function toast(msg) {
-  const el = document.getElementById('toast')
-  el.textContent = msg
-  el.classList.remove('opacity-0', 'translate-x-4')
-  el.classList.add('opacity-100', 'translate-x-0')
-  clearTimeout(el._t)
-  el._t = setTimeout(() => {
-    el.classList.add('opacity-0', 'translate-x-4')
-    el.classList.remove('opacity-100', 'translate-x-0')
-  }, 2800)
-}
-
-boot()
-</script>
+<script src="dashboard.js"></script>
 </body>
 </html>
