@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TC Bad Soden-Salmünster – Turnierplan</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+tailwind.config = {
+  darkMode:"class",
+  theme:{extend:{
+    colors:{
+      "primary":"#003908","primary-container":"#115217",
+      "on-primary-container":"#83c57c",
+      "secondary-fixed":"#dbed50","on-secondary-fixed":"#1a1e00",
+      "secondary-fixed-dim":"#bfd035",
+      "outline-variant":"#c0c9bb","error":"#ba1a1a"
+    },
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Plus Jakarta Sans","sans-serif"]},
+    borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
+  }}
+}
+</script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;background-color:#115217;color:#fff;}
+  .font-headline,h1,h2,h3,h4{font-family:'Lexend',sans-serif;}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
+  .scrollbar-hide::-webkit-scrollbar{display:none;}
+  .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none;}
+  .import-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+</style>
+</head>
+<body class="min-h-screen pb-24 md:pb-8">
+
+<!-- ── Header ────────────────────────────────────── -->
+<header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5 shadow-none">
+  <div class="flex items-center gap-3">
+    <a href="dashboard.html" class="text-white/30 hover:text-white transition-colors flex-shrink-0 flex items-center" title="Zurück zum Dashboard">
+      <span class="material-symbols-outlined text-xl">arrow_back</span>
+    </a>
+    <img src="logo.png" alt="TC Bad Soden-Salmünster" class="w-9 h-9 object-contain flex-shrink-0"/>
+    <div>
+      <div id="tournament-title" class="text-base font-black text-white tracking-tight font-headline leading-none">Turnierplan</div>
+      <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">TC Bad Soden-Salmünster</div>
+    </div>
+  </div>
+
+  <!-- Desktop nav -->
+  <nav class="hidden md:flex gap-1 items-center mx-4">
+    <button id="hnav-spieler" onclick="setView('spieler')"
+      class="px-4 py-2 rounded-xl font-headline font-bold text-sm transition-all">Spieler</button>
+    <button id="hnav-plan" onclick="setView('plan')"
+      class="px-4 py-2 rounded-xl font-headline font-bold text-sm transition-all">Spielplan</button>
+    <button id="hnav-tabelle" onclick="setView('tabelle')"
+      class="px-4 py-2 rounded-xl font-headline font-bold text-sm transition-all">Tabelle</button>
+    <button id="hnav-paarungen" onclick="setView('paarungen')"
+      class="px-4 py-2 rounded-xl font-headline font-bold text-sm transition-all">Paarungen</button>
+  </nav>
+
+  <div class="flex items-center gap-2">
+    <span id="header-badge" class="hidden text-xs font-bold bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-full font-headline"></span>
+    <button onclick="resetTournament()"
+      class="text-white/40 hover:text-white/80 text-sm font-headline font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors flex items-center gap-1">
+      <span class="material-symbols-outlined text-base">refresh</span>
+      <span class="hidden md:inline">Reset</span>
+    </button>
+  </div>
+</header>
+
+<!-- ── Toast ─────────────────────────────────────── -->
+<div id="toast" class="fixed bottom-28 md:bottom-6 left-1/2 -translate-x-1/2 opacity-0 translate-y-2 transition-all duration-300 bg-secondary-fixed text-on-secondary-fixed px-5 py-2.5 rounded-full text-sm font-headline font-bold shadow-xl z-50 pointer-events-none whitespace-nowrap"></div>
+
+<!-- ── Main ──────────────────────────────────────── -->
+<main class="max-w-4xl mx-auto px-4 py-6"><div id="app"></div></main>
+
+<!-- ── Bottom Nav (mobile) ───────────────────────── -->
+<nav class="fixed bottom-0 w-full rounded-t-2xl bg-emerald-950/95 backdrop-blur-md border-t border-white/5 shadow-[0_-10px_30px_rgba(0,34,3,.3)] z-50 flex justify-around items-center px-1 pb-6 pt-3 md:hidden">
+  <button id="bnav-spieler" onclick="setView('spieler')" class="flex flex-col items-center px-3 py-2 rounded-xl transition-all active:scale-90">
+    <span class="material-symbols-outlined mb-0.5">group</span>
+    <span class="font-headline text-[10px] uppercase tracking-widest font-semibold">Spieler</span>
+  </button>
+  <button id="bnav-plan" onclick="setView('plan')" class="flex flex-col items-center px-3 py-2 rounded-xl transition-all active:scale-90">
+    <span class="material-symbols-outlined mb-0.5">event_note</span>
+    <span class="font-headline text-[10px] uppercase tracking-widest font-semibold">Plan</span>
+  </button>
+  <button id="bnav-tabelle" onclick="setView('tabelle')" class="flex flex-col items-center px-3 py-2 rounded-xl transition-all active:scale-90">
+    <span class="material-symbols-outlined mb-0.5">leaderboard</span>
+    <span class="font-headline text-[10px] uppercase tracking-widest font-semibold">Tabelle</span>
+  </button>
+  <button id="bnav-paarungen" onclick="setView('paarungen')" class="flex flex-col items-center px-3 py-2 rounded-xl transition-all active:scale-90">
+    <span class="material-symbols-outlined mb-0.5">people</span>
+    <span class="font-headline text-[10px] uppercase tracking-widest font-semibold">Paarungen</span>
+  </button>
+</nav>
+
+<script>
+// ════════════════════════════════════════════════
+//  SUPABASE + AUTH
+// ════════════════════════════════════════════════
+const SUPABASE_URL = 'YOUR_SUPABASE_URL'
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+let _sbUser = null
+let _tournamentId = new URLSearchParams(location.search).get('id')
+
+async function initAuth() {
+  const { data: { session } } = await sb.auth.getSession()
+  if (!session) { window.location.replace('index.html'); return false }
+  _sbUser = session.user
+  return true
+}
+
+async function sbSave() {
+  if (!_tournamentId || !_sbUser) return
+  await sb.from('tournaments').update({ state: S }).eq('id', _tournamentId)
+}
+
+async function sbLoad() {
+  if (!_tournamentId) return false
+  const { data } = await sb.from('tournaments').select('name, state').eq('id', _tournamentId).single()
+  if (!data) return false
+  if (data.name) {
+    const el = document.getElementById('tournament-title')
+    if (el) el.textContent = data.name
+  }
+  if (data.state) { S = { ...S, ...data.state }; return true }
+  return false
+}
+
+// ════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════
+let S = {
+  step:         'setup',    // setup | tournament
+  view:         'spieler',  // spieler | plan | tabelle
+  herren:       [],
+  damen:        [],
+  numRounds:    5,
+  numCourts:    6,
+  schedule:     [],         // [{round, matches:[{herr1,dame1,herr2,dame2,result,court}], byeHerr, byeDame}]
+  currentRound: 0,
+};
+
+function save() {
+  try { localStorage.setItem('donatocup_v4', JSON.stringify(S)); } catch(e) {}
+  sbSave() // async, fire-and-forget
+}
+function load() { try { const d = localStorage.getItem('donatocup_v4'); if (d) S = { ...S, ...JSON.parse(d) }; } catch(e) {} }
+
+// ════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════
+function shuffle(a) {
+  a = [...a];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function esc(s) {
+  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function initials(name) {
+  return (name||'?').trim().split(/\s+/).map(w=>w[0].toUpperCase()).slice(0,2).join('');
+}
+function roundHasSomeResult(r) { return r.matches.some(m => m.result !== null); }
+function roundDone(r)          { return r.matches.length>0 && r.matches.every(m => m.result!==null); }
+
+function drawRound(num) {
+  const n = Math.min(S.herren.length, S.damen.length);
+
+  // Topf 1: Männer, Topf 2: Frauen, Topf 3: Plätze – alle gemischt, ohne Zurücklegen
+  const topf1 = shuffle(S.herren.slice(0, n));
+  const topf2 = shuffle(S.damen.slice(0, n));
+  const topf3 = shuffle(Array.from({ length: S.numCourts }, (_, i) => i + 1));
+
+  // Je ein Mann + eine Frau aus T1/T2 → Mixed-Paar
+  let pairs = shuffle(topf1.map((h, i) => ({ herr: h, dame: topf2[i] })));
+
+  // Max. so viele Matches wie Plätze vorhanden
+  const maxMatches = Math.min(S.numCourts, Math.floor(pairs.length / 2));
+  const activePairs = pairs.slice(0, maxMatches * 2);
+  const byePairs   = pairs.slice(maxMatches * 2);
+
+  const matches = [];
+  for (let i = 0; i < activePairs.length; i += 2)
+    matches.push({
+      herr1: activePairs[i].herr,   dame1: activePairs[i].dame,
+      herr2: activePairs[i+1].herr, dame2: activePairs[i+1].dame,
+      result: null,
+      court: topf3[i / 2]  // Platz aus Topf 3 gezogen
+    });
+  return { round: num, matches, byePairs };
+}
+
+// Sync schedule after player or round-count change
+function syncSchedule() {
+  if (S.step!=='tournament') return 0;
+  let redrawn=0;
+
+  // Redraw rounds with no results
+  S.schedule = S.schedule.map(rnd => {
+    if (roundHasSomeResult(rnd)) return rnd;
+    redrawn++;
+    return drawRound(rnd.round);
+  });
+
+  // Add missing rounds
+  while (S.schedule.length < S.numRounds) {
+    S.schedule.push(drawRound(S.schedule.length+1)); redrawn++;
+  }
+  // Remove tail rounds without results
+  while (S.schedule.length > S.numRounds) {
+    const last = S.schedule[S.schedule.length-1];
+    if (!roundHasSomeResult(last)) { S.schedule.pop(); }
+    else break;
+  }
+
+  if (S.currentRound >= S.schedule.length) S.currentRound = S.schedule.length-1;
+  return redrawn;
+}
+
+function calcStandings() {
+  const map={};
+  [...S.herren.map(n=>({name:n,gender:'herr'})),...S.damen.map(n=>({name:n,gender:'dame'}))]
+    .forEach(p=>{map[p.name]={...p,pts:0,w:0,l:0,d:0,played:0};});
+
+  S.schedule.forEach(rnd=>{
+    rnd.matches.forEach(m=>{
+      if (!m.result) return;
+      const award=(names,pts,w,d)=>names.forEach(n=>{
+        if(!map[n])return;map[n].played++;map[n].pts+=pts;
+        if(w)map[n].w++;else if(d)map[n].d++;else map[n].l++;
+      });
+      if(m.result==='team1'){award([m.herr1,m.dame1],2,true,false);award([m.herr2,m.dame2],0,false,false);}
+      if(m.result==='team2'){award([m.herr2,m.dame2],2,true,false);award([m.herr1,m.dame1],0,false,false);}
+      if(m.result==='draw') {award([m.herr1,m.dame1],1,false,true);award([m.herr2,m.dame2],1,false,true);}
+    });
+  });
+  return Object.values(map).sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.w-a.w||a.l-b.l);
+}
+
+// ════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════
+function toast(msg) {
+  const el=document.getElementById('toast'); if(!el) return;
+  el.textContent=msg;
+  el.classList.remove('opacity-0','translate-y-2');
+  el.classList.add('opacity-100','translate-y-0');
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.classList.add('opacity-0','translate-y-2');el.classList.remove('opacity-100','translate-y-0');},2800);
+}
+
+// ════════════════════════════════════════════════
+//  ACTIONS
+// ════════════════════════════════════════════════
+function setView(v) {
+  if ((v==='plan'||v==='tabelle'||v==='paarungen') && S.step==='setup') {
+    toast('Bitte erst Turnier starten'); return;
+  }
+  S.view=v; save(); render();
+}
+
+function addPlayer(gender) {
+  const inp=document.getElementById(`input-${gender}`);
+  const val=(inp?.value||'').trim(); if(!val) return;
+  if(gender==='herr') S.herren.push(val); else S.damen.push(val);
+  const n=syncSchedule();
+  save(); render();
+  const el=document.getElementById(`input-${gender}`); if(el){el.value='';el.focus();}
+  if(n>0) toast(`${n} Runde${n>1?'n':''} neu ausgelost`);
+}
+
+function removePlayer(gender,idx) {
+  if(gender==='herr') S.herren.splice(idx,1); else S.damen.splice(idx,1);
+  const n=syncSchedule();
+  save(); render();
+  if(n>0) toast(`${n} Runde${n>1?'n':''} neu ausgelost`);
+}
+
+function setRounds(n) {
+  n=Math.max(1,Math.min(20,n));
+  if(n===S.numRounds) return;
+  S.numRounds=n;
+  const redrawn=syncSchedule();
+  save(); render();
+  if(redrawn>0) toast(`Spielplan auf ${n} Runden angepasst`);
+}
+
+function setCourts(n) {
+  n=Math.max(1,Math.min(20,n));
+  if(n===S.numCourts) return;
+  S.numCourts=n;
+  const redrawn=syncSchedule();
+  save(); render();
+  toast(`${n} Plätze zugewiesen`);
+}
+
+function loadTestData() {
+  S.herren=['Max','Felix','Tobias','Lukas','Jonas','Stefan'];
+  S.damen=['Anna','Laura','Sarah','Julia','Lisa','Mia'];
+  const n=syncSchedule(); save(); render();
+  if(n>0) toast(`${n} Runden neu ausgelost`);
+}
+
+function startTournament() {
+  S.schedule=[]; S.numRounds=S.numRounds||5;
+  for(let i=1;i<=S.numRounds;i++) S.schedule.push(drawRound(i));
+  S.currentRound=0; S.step='tournament'; S.view='plan';
+  save(); render();
+}
+
+function redrawRound(idx) {
+  S.schedule[idx]=drawRound(S.schedule[idx].round);
+  save(); render(); toast('Runde neu ausgelost');
+}
+
+function setRound(i) { S.currentRound=i; render(); }
+
+function setResult(rIdx,mIdx,result) {
+  const m=S.schedule[rIdx].matches[mIdx];
+  m.result=(m.result===result)?null:result;
+  save(); render();
+}
+
+function resetTournament() {
+  if(!confirm('Turnier wirklich zurücksetzen?')) return;
+  S={step:'setup',view:'spieler',herren:[],damen:[],numRounds:5,numCourts:6,schedule:[],currentRound:0};
+  localStorage.removeItem('donatocup_v4');
+  if(_tournamentId) sb.from('tournaments').update({state:null}).eq('id',_tournamentId)
+  render();
+}
+
+// ════════════════════════════════════════════════
+//  IMPORT
+// ════════════════════════════════════════════════
+function handleFileInput(e){const f=e.target.files[0];if(f)processImportFile(f);}
+function handleDrop(e){
+  e.preventDefault();
+  const f=e.dataTransfer.files[0]; if(f) processImportFile(f);
+}
+function processImportFile(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+      if(!rows.length) return showImportMsg('Datei ist leer.',true);
+
+      const header=rows[0].map(c=>String(c).toLowerCase().trim());
+      let herren=[],damen=[];
+      const isHerr=s=>/herr|mann|male|m$/.test(s);
+      const isDame=s=>/dame|frau|female|w$|f$/.test(s);
+      const nameCol=header.findIndex(s=>/name|spieler/.test(s));
+      const genderCol=header.findIndex(s=>/geschl|gender|sex/.test(s));
+
+      if(nameCol>=0&&genderCol>=0){
+        rows.slice(1).forEach(r=>{
+          const name=String(r[nameCol]||'').trim(),g=String(r[genderCol]||'').trim().toLowerCase();
+          if(!name)return;
+          if(/^[mh]/.test(g))herren.push(name);else if(/^[wfd]/.test(g))damen.push(name);
+        });
+      }else{
+        const hIdx=header.findIndex(isHerr)>=0?header.findIndex(isHerr):0;
+        const dIdx=header.findIndex(isDame)>=0?header.findIndex(isDame):1;
+        const start=(header.some(isHerr)||header.some(isDame))?1:0;
+        rows.slice(start).forEach(r=>{
+          const h=String(r[hIdx]||'').trim(),d=String(r[dIdx]||'').trim();
+          if(h)herren.push(h);if(d)damen.push(d);
+        });
+      }
+      if(!herren.length&&!damen.length)
+        return showImportMsg('Keine Namen gefunden. Format: Spalte A=Herren, Spalte B=Damen',true);
+
+      const addUniq=(list,names)=>names.forEach(n=>{if(n&&!list.includes(n))list.push(n);});
+      addUniq(S.herren,herren);addUniq(S.damen,damen);
+      const n=syncSchedule(); save();
+      showImportMsg(`${herren.length} Herren + ${damen.length} Damen importiert`);
+      render();
+      if(n>0) toast(`${n} Runden neu ausgelost`);
+    }catch(err){showImportMsg('Fehler: '+err.message,true);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function showImportMsg(text,err=false){
+  const el=document.getElementById('import-msg'); if(!el)return;
+  el.className=`flex items-center gap-2 text-sm px-4 py-3 rounded-xl mb-3 ${err?'bg-red-900/30 text-red-300 border border-red-500/20':'bg-secondary-fixed/10 text-secondary-fixed border border-secondary-fixed/20'}`;
+  el.innerHTML=`<span class="material-symbols-outlined text-base">${err?'warning':'check_circle'}</span><span class="font-body">${esc(text)}</span>`;
+  el.style.display='flex';
+}
+
+// ════════════════════════════════════════════════
+//  RENDER — SPIELER
+// ════════════════════════════════════════════════
+function renderSpieler() {
+  const n=Math.min(S.herren.length,S.damen.length);
+  const ok=n>=2&&S.herren.length===S.damen.length;
+  const unbalanced=S.herren.length!==S.damen.length&&(S.herren.length+S.damen.length>0);
+  const inTournament=S.step==='tournament';
+
+  const playerItem=(name,gender,idx)=>`
+    <div class="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
+      <div class="w-8 h-8 rounded-full ${gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-xs font-bold text-white font-headline flex-shrink-0">
+        ${initials(name)}</div>
+      <span class="text-sm font-body text-white font-medium flex-1 truncate">${esc(name)}</span>
+      <button onclick="removePlayer('${gender}',${idx})" class="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>`;
+
+  return `
+    <!-- Import -->
+    <div class="relative border-2 border-dashed border-white/15 rounded-2xl p-5 text-center cursor-pointer hover:border-secondary-fixed/40 hover:bg-white/5 transition-all mb-4"
+         ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+      <input type="file" accept=".xlsx,.xls,.csv" class="import-input" onchange="handleFileInput(event)"/>
+      <span class="material-symbols-outlined text-2xl text-white/25 block mb-1">upload_file</span>
+      <p class="text-sm font-body text-white/50 font-semibold">Excel / CSV importieren</p>
+      <p class="text-xs text-white/25 mt-0.5 font-body">Spalte A = Herren · Spalte B = Damen</p>
+    </div>
+    <div id="import-msg" style="display:none"></div>
+
+    ${unbalanced?`<div class="flex items-center gap-2 text-sm px-4 py-3 rounded-xl mb-3 bg-yellow-900/30 text-yellow-300 border border-yellow-500/20">
+      <span class="material-symbols-outlined text-base">warning</span>
+      <span class="font-body">Gleiche Anzahl erforderlich — ${S.herren.length} Herren / ${S.damen.length} Damen</span>
+    </div>`:''}
+    ${ok&&!inTournament?`<div class="flex items-center gap-2 text-sm px-4 py-3 rounded-xl mb-3 bg-secondary-fixed/10 text-secondary-fixed border border-secondary-fixed/20">
+      <span class="material-symbols-outlined text-base">check_circle</span>
+      <span class="font-body font-semibold">${n} Paare · ${S.numRounds} Runden · Partner &amp; Gegner jede Runde neu</span>
+    </div>`:''}
+    ${inTournament?`<div class="flex items-center gap-2 text-sm px-4 py-3 rounded-xl mb-3 bg-white/5 text-white/50 border border-white/10">
+      <span class="material-symbols-outlined text-base">info</span>
+      <span class="font-body">Änderungen regenerieren automatisch alle Runden ohne Ergebnis</span>
+    </div>`:''}
+
+    <!-- Rounds + Courts steppers -->
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      <div class="flex items-center justify-between px-4 py-3 rounded-xl bg-black/25 border border-white/5">
+        <div>
+          <div class="text-sm font-headline font-bold text-white">Runden</div>
+          <div class="text-xs text-white/35 font-body mt-0.5">Spielrunden</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="setRounds(S.numRounds-1)"
+            class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-headline font-bold text-lg transition-colors">−</button>
+          <span class="font-headline font-bold text-xl text-secondary-fixed w-7 text-center">${S.numRounds}</span>
+          <button onclick="setRounds(S.numRounds+1)"
+            class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-headline font-bold text-lg transition-colors">+</button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between px-4 py-3 rounded-xl bg-black/25 border border-white/5">
+        <div>
+          <div class="text-sm font-headline font-bold text-white">Plätze</div>
+          <div class="text-xs text-white/35 font-body mt-0.5">Tennisplätze</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="setCourts(S.numCourts-1)"
+            class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-headline font-bold text-lg transition-colors">−</button>
+          <span class="font-headline font-bold text-xl text-secondary-fixed w-7 text-center">${S.numCourts}</span>
+          <button onclick="setCourts(S.numCourts+1)"
+            class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-headline font-bold text-lg transition-colors">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player lists -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      ${['herr','dame'].map(g=>{
+        const list=g==='herr'?S.herren:S.damen;
+        const color=g==='herr'?'bg-blue-400':'bg-pink-400';
+        const label=g==='herr'?'Herren':'Damen';
+        return `<div>
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-2.5 h-2.5 rounded-full ${color} flex-shrink-0"></div>
+            <span class="text-xs font-headline font-bold uppercase tracking-widest text-white/50">${label}</span>
+            <span class="ml-auto text-xs font-bold bg-white/10 text-white/50 px-2 py-0.5 rounded-full font-headline">${list.length}</span>
+          </div>
+          <div class="flex gap-2 mb-2.5">
+            <input type="text" id="input-${g}" placeholder="Name…"
+                   onkeydown="if(event.key==='Enter')addPlayer('${g}')"
+                   class="flex-1 bg-white/10 border border-white/10 text-white placeholder-white/25 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors min-w-0"/>
+            <button onclick="addPlayer('${g}')"
+              class="w-9 h-9 bg-secondary-fixed text-on-secondary-fixed rounded-xl flex items-center justify-center hover:bg-secondary-fixed-dim transition-colors flex-shrink-0">
+              <span class="material-symbols-outlined text-base">add</span>
+            </button>
+          </div>
+          <div class="space-y-1.5 max-h-64 overflow-y-auto scrollbar-hide">
+            ${list.map((name,i)=>playerItem(name,g,i)).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- Footer -->
+    <div class="flex items-center justify-between">
+      <button onclick="loadTestData()"
+        class="flex items-center gap-1.5 text-sm text-white/35 hover:text-secondary-fixed transition-colors font-headline font-semibold px-3 py-2 rounded-xl hover:bg-white/5">
+        <span class="material-symbols-outlined text-base">science</span>Testdaten
+      </button>
+      ${inTournament
+        ? `<button onclick="setView('plan')"
+             class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+             <span class="material-symbols-outlined text-base">arrow_forward</span>Zum Spielplan
+           </button>`
+        : `<button onclick="startTournament()" ${ok?'':'disabled'}
+             class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-headline font-bold text-sm transition-colors ${ok?'bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim':'bg-white/10 text-white/25 cursor-not-allowed'}">
+             Turnier starten<span class="material-symbols-outlined text-base">arrow_forward</span>
+           </button>`}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════
+//  RENDER — SPIELPLAN
+// ════════════════════════════════════════════════
+function renderPlan() {
+  const rnd=S.schedule[S.currentRound];
+  const canRedraw=!roundHasSomeResult(rnd);
+  const doneCnt=S.schedule.filter(roundDone).length;
+
+  const pills=S.schedule.map((r,i)=>{
+    const done=roundDone(r),active=i===S.currentRound;
+    return `<button onclick="setRound(${i})" class="px-5 py-2 rounded-full font-headline font-semibold text-sm whitespace-nowrap transition-colors flex items-center gap-1.5
+      ${active?'bg-secondary-fixed text-on-secondary-fixed':done?'border border-secondary-fixed/50 text-secondary-fixed/70 hover:bg-white/5':'border border-outline-variant text-outline-variant hover:bg-white/5'}">
+      ${done&&!active?'<span class="material-symbols-outlined text-sm">check</span>':''}R${r.round}
+    </button>`;
+  }).join('');
+
+  const box=(isWin,isDraw,side)=>{
+    const r=S.schedule[S.currentRound]; // unused here, passed via closure
+    const val=isWin?'1':isDraw?'½':'0';
+    if(isWin)  return `<div class="w-10 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-xl bg-secondary-fixed text-on-secondary-fixed">${val}</div>`;
+    if(isDraw) return `<div class="w-10 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-xl bg-secondary-fixed/20 text-secondary-fixed">${val}</div>`;
+    return `<div class="w-10 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-xl bg-white/10 text-white/30">${val}</div>`;
+  };
+  const emptyBox=`<div class="w-10 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-xl text-white/15 bg-white/5">–</div>`;
+
+  const cards=rnd.matches.map((m,mi)=>{
+    const res=m.result;
+    const w1=res==='team1',w2=res==='team2',dr=res==='draw';
+
+    const resBtn=(type,icon)=>{
+      const active=res===type;
+      return `<button onclick="setResult(${S.currentRound},${mi},'${type}')"
+        class="h-7 px-2.5 rounded-lg font-headline font-bold text-sm flex items-center gap-0.5 transition-all active:scale-95
+          ${active?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20 hover:text-white/80'}">
+        ${icon==='='?'<span class="text-sm">=</span>':`<span class="material-symbols-outlined text-sm">${icon}</span>`}
+      </button>`;
+    };
+
+    return `
+      <div class="rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 border border-white/5 relative overflow-hidden hover:bg-white/[0.03] transition-colors ${res?'bg-black/30':'bg-black/20'}">
+        <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl transition-all ${res?'bg-secondary-fixed':'bg-transparent'}"></div>
+        <div class="absolute top-2.5 right-3 flex items-center gap-1 text-[10px] font-headline font-bold text-white/30 uppercase tracking-widest">
+          <span class="material-symbols-outlined text-xs">sports_tennis</span>Platz ${m.court}
+        </div>
+
+        <!-- Team 1 -->
+        <div class="flex-1 flex flex-col gap-1.5 w-full md:w-auto">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-blue-400 text-sm flex-shrink-0">person</span>
+            <span class="font-body font-bold text-sm md:text-base truncate transition-colors ${w1?'text-secondary-fixed':'text-white'}">${esc(m.herr1)}</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-pink-400 text-sm flex-shrink-0">person</span>
+            <span class="font-body font-bold text-sm md:text-base truncate transition-colors ${w1?'text-secondary-fixed':'text-white'}">${esc(m.dame1)}</span>
+          </div>
+        </div>
+
+        <!-- Score + controls -->
+        <div class="flex flex-col items-center gap-2 px-2 shrink-0">
+          <div class="flex items-center gap-2">
+            ${res?box(w1,dr,'left'):emptyBox}
+            <span class="font-headline font-bold ${res?'text-white/50':'text-white/15'}">:</span>
+            ${res?box(w2,dr,'right'):emptyBox}
+          </div>
+          <div class="flex items-center gap-1.5">
+            ${resBtn('team1','chevron_left')}
+            ${resBtn('draw','=')}
+            ${resBtn('team2','chevron_right')}
+          </div>
+        </div>
+
+        <!-- Team 2 -->
+        <div class="flex-1 flex flex-col gap-1.5 w-full md:w-auto items-start md:items-end">
+          <div class="flex items-center gap-2.5 flex-row md:flex-row-reverse">
+            <span class="material-symbols-outlined text-blue-400 text-sm flex-shrink-0">person</span>
+            <span class="font-body font-bold text-sm md:text-base truncate transition-colors ${w2?'text-secondary-fixed':'text-white'}">${esc(m.herr2)}</span>
+          </div>
+          <div class="flex items-center gap-2.5 flex-row md:flex-row-reverse">
+            <span class="material-symbols-outlined text-pink-400 text-sm flex-shrink-0">person</span>
+            <span class="font-body font-bold text-sm md:text-base truncate transition-colors ${w2?'text-secondary-fixed':'text-white'}">${esc(m.dame2)}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const byePairs = rnd.byePairs || (rnd.byeHerr ? [{herr:rnd.byeHerr, dame:rnd.byeDame}] : []);
+  const bye = byePairs.length ? `
+    <div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white/50 text-sm font-body font-medium mb-3">
+      <div class="flex items-center gap-2 mb-1.5">
+        <span class="material-symbols-outlined text-base text-white/30">weekend</span>
+        <span class="font-headline font-bold text-xs uppercase tracking-widest text-white/30">Freilos diese Runde</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        ${byePairs.map(p=>`<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 text-white/50 text-xs font-body">
+          <span class="material-symbols-outlined text-xs text-blue-400">person</span>${esc(p.herr)}
+          <span class="text-white/20">&amp;</span>
+          <span class="material-symbols-outlined text-xs text-pink-400">person</span>${esc(p.dame)}
+        </span>`).join('')}
+      </div>
+    </div>` : '';
+
+  return `
+    <div class="flex gap-2.5 mb-6 overflow-x-auto pb-1 scrollbar-hide">${pills}</div>
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="text-2xl md:text-3xl font-headline font-bold text-white tracking-tight">
+        Runde ${rnd.round}<span class="text-base font-normal text-white/35 ml-2">von ${S.schedule.length}</span>
+      </h2>
+      <div class="flex items-center gap-2.5">
+        <span class="text-xs font-bold bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-full font-headline">${doneCnt}/${S.schedule.length} fertig</span>
+        ${canRedraw
+          ?`<button onclick="redrawRound(${S.currentRound})" class="text-xs text-white/35 hover:text-secondary-fixed transition-colors font-headline font-semibold flex items-center gap-1 px-2.5 py-1.5 rounded-xl hover:bg-white/5">
+              <span class="material-symbols-outlined text-sm">shuffle</span>Neu
+            </button>`
+          :`<span class="text-xs text-white/20 font-headline font-semibold flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">lock</span>gesperrt
+            </span>`}
+      </div>
+    </div>
+    ${bye}
+    <div class="space-y-3">${cards}</div>`;
+}
+
+// ════════════════════════════════════════════════
+//  RENDER — TABELLE
+// ════════════════════════════════════════════════
+function renderTabelle() {
+  const rows=calcStandings();
+  const maxPts=Math.max(...rows.map(r=>r.pts),1);
+  const medals=['🥇','🥈','🥉'];
+  const accents=['border-l-[3px] border-yellow-400','border-l-[3px] border-zinc-500','border-l-[3px] border-amber-700'];
+
+  const items=rows.map((s,i)=>`
+    <div class="rounded-xl p-4 bg-black/20 border border-white/5 flex items-center gap-3 ${accents[i]||''} hover:bg-white/5 transition-colors">
+      <div class="text-lg w-8 text-center flex-shrink-0">${medals[i]||`<span class="font-headline font-bold text-white/30 text-sm">${i+1}</span>`}</div>
+      <div class="w-10 h-10 rounded-full ${s.gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-sm font-headline font-bold text-white flex-shrink-0">
+        ${initials(s.name)}</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-headline font-bold text-white text-sm md:text-base truncate">${esc(s.name)}</div>
+        <div class="text-xs text-white/40 font-body mt-0.5">${s.played} Sp · ${s.w}S${s.d>0?' '+s.d+'U':''} · ${s.l}N</div>
+      </div>
+      <div class="hidden sm:block flex-1 max-w-24 mx-3">
+        <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div class="h-full bg-secondary-fixed rounded-full" style="width:${Math.round(s.pts/maxPts*100)}%"></div>
+        </div>
+      </div>
+      <div class="text-right flex-shrink-0 min-w-[3rem]">
+        <div class="font-headline font-bold text-lg ${i===0?'text-secondary-fixed':'text-white'}">${s.pts}</div>
+        <div class="text-[10px] text-white/25 font-body uppercase tracking-wide">Pkt</div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="text-2xl md:text-3xl font-headline font-bold text-white tracking-tight">Tabelle</h2>
+      <div class="flex gap-3 text-xs text-white/35 font-body">
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0"></span>Herren</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-pink-400 flex-shrink-0"></span>Damen</span>
+      </div>
+    </div>
+    ${rows.length===0
+      ?`<div class="text-center py-16 text-white/30 font-body">
+          <span class="material-symbols-outlined text-4xl block mb-3">leaderboard</span>
+          Noch keine Ergebnisse eingetragen
+        </div>`
+      :`<div class="space-y-2">${items}</div>`}`;
+}
+
+// ════════════════════════════════════════════════
+//  RENDER — PAARUNGEN
+// ════════════════════════════════════════════════
+function calcPairingStats() {
+  const withMap = {}, vsMap = {};
+  [...S.herren, ...S.damen].forEach(p => { withMap[p] = {}; vsMap[p] = {}; });
+
+  S.schedule.forEach(rnd => {
+    rnd.matches.forEach(m => {
+      const inc = (map, a, b) => { map[a][b] = (map[a][b]||0)+1; map[b][a] = (map[b][a]||0)+1; };
+      inc(withMap, m.herr1, m.dame1);
+      inc(withMap, m.herr2, m.dame2);
+      [m.herr1, m.dame1].forEach(p1 =>
+        [m.herr2, m.dame2].forEach(p2 => inc(vsMap, p1, p2))
+      );
+    });
+  });
+  return { withMap, vsMap };
+}
+
+function renderPaarungen() {
+  const { withMap, vsMap } = calcPairingStats();
+  const allPlayers = [
+    ...S.herren.map(n=>({name:n,gender:'herr'})),
+    ...S.damen.map(n=>({name:n,gender:'dame'}))
+  ];
+  const hasAny = allPlayers.some(p => Object.keys(withMap[p.name]||{}).length > 0);
+
+  const sorted = obj => Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]);
+
+  const pills = (entries, iconColor) => entries.map(([name, count]) => {
+    const isHerr = S.herren.includes(name);
+    const ic = isHerr ? 'text-blue-400' : 'text-pink-400';
+    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/5 text-xs font-body">
+      <span class="material-symbols-outlined text-xs ${ic}">person</span>
+      <span class="text-white/70">${esc(name)}</span>
+      <span class="text-white/25 font-headline font-bold">×${count}</span>
+    </span>`;
+  }).join('');
+
+  const cards = allPlayers.map(p => {
+    const partners  = sorted(withMap[p.name]);
+    const opponents = sorted(vsMap[p.name]);
+    const total = partners.reduce((s,[,c])=>s+c, 0);
+    return `
+      <div class="rounded-xl bg-black/20 border border-white/5 overflow-hidden">
+        <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+          <div class="w-9 h-9 rounded-full ${p.gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-xs font-headline font-bold text-white flex-shrink-0">${initials(p.name)}</div>
+          <span class="font-headline font-bold text-white flex-1">${esc(p.name)}</span>
+          <span class="text-xs text-white/30 font-body">${total} Spiel${total!==1?'e':''}</span>
+        </div>
+        <div class="px-4 py-3 space-y-3">
+          <div>
+            <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-white/25 mb-2 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-xs">handshake</span>Partner
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              ${partners.length ? pills(partners) : '<span class="text-xs text-white/20 font-body">–</span>'}
+            </div>
+          </div>
+          <div>
+            <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-white/25 mb-2 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-xs">swords</span>Gegner
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              ${opponents.length ? pills(opponents) : '<span class="text-xs text-white/20 font-body">–</span>'}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="text-2xl md:text-3xl font-headline font-bold text-white tracking-tight">Paarungen</h2>
+      <span class="text-xs text-white/30 font-body">${allPlayers.length} Spieler</span>
+    </div>
+    ${!hasAny
+      ? `<div class="text-center py-16 text-white/30 font-body">
+           <span class="material-symbols-outlined text-4xl block mb-3">people</span>
+           Noch keine Runden ausgelost
+         </div>`
+      : `<div class="space-y-3">${cards}</div>`}`;
+}
+
+// ════════════════════════════════════════════════
+//  CHROME UPDATE (nav highlight)
+// ════════════════════════════════════════════════
+function updateChrome() {
+  const badge=document.getElementById('header-badge');
+  if(badge){
+    if(S.step==='tournament'){
+      const done=S.schedule.filter(roundDone).length;
+      badge.textContent=`${done}/${S.schedule.length} Runden`;
+      badge.classList.remove('hidden');
+    } else { badge.classList.add('hidden'); }
+  }
+
+  const activeView = S.step==='setup' ? 'spieler' : S.view;
+  const inTournament = S.step==='tournament';
+
+  ['spieler','plan','tabelle','paarungen'].forEach(v=>{
+    const isActive=activeView===v;
+    const disabled=!inTournament&&(v==='plan'||v==='tabelle'||v==='paarungen');
+
+    // Bottom nav
+    const bn=document.getElementById(`bnav-${v}`);
+    if(bn) bn.className=`flex flex-col items-center px-5 py-2 rounded-xl transition-all active:scale-90 ${
+      isActive?'bg-secondary-fixed text-on-secondary-fixed':
+      disabled?'text-white/20 cursor-not-allowed':'text-emerald-100/50 hover:text-white'}`;
+
+    // Header nav
+    const hn=document.getElementById(`hnav-${v}`);
+    if(hn) hn.className=`px-4 py-2 rounded-xl font-headline font-bold text-sm transition-all ${
+      isActive?'text-secondary-fixed bg-white/10':
+      disabled?'text-white/20 cursor-not-allowed':'text-white/50 hover:text-white hover:bg-white/10'}`;
+  });
+}
+
+// ════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════
+function render() {
+  const app=document.getElementById('app'); if(!app) return;
+  const view = S.step==='setup' ? 'spieler' : S.view;
+  if(view==='spieler')         app.innerHTML=renderSpieler();
+  else if(view==='plan')       app.innerHTML=renderPlan();
+  else if(view==='tabelle')    app.innerHTML=renderTabelle();
+  else if(view==='paarungen')  app.innerHTML=renderPaarungen();
+  updateChrome();
+}
+
+// Boot: auth guard → try Supabase state → fallback to localStorage
+initAuth().then(async ok => {
+  if (!ok) return
+  const loaded = await sbLoad()
+  if (!loaded) load()
+  render()
+})
+</script>
+</body>
+</html>

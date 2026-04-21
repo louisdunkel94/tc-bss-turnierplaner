@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Check-in – TC Bad Soden-Salmünster</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+tailwind.config = {
+  theme:{extend:{
+    colors:{
+      "primary-container":"#115217",
+      "secondary-fixed":"#dbed50","on-secondary-fixed":"#1a1e00",
+      "secondary-fixed-dim":"#bfd035",
+    },
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Plus Jakarta Sans","sans-serif"]},
+    borderRadius:{DEFAULT:"0.125rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
+  }}
+}
+</script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:#0a1f0b;color:#fff;min-height:100vh;}
+  .font-headline,h1,h2{font-family:'Lexend',sans-serif;}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
+  @keyframes pop{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+  .pop{animation:pop .4s ease forwards;}
+  @keyframes pulse-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.6);opacity:0}}
+  .pulse-ring::before{content:'';position:absolute;inset:0;border-radius:9999px;background:rgba(219,237,80,.3);animation:pulse-ring 1.4s ease-out infinite;}
+</style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen px-4 py-10">
+
+<div id="app" class="w-full max-w-sm text-center">
+  <!-- loading -->
+  <div class="text-white/30 font-body">
+    <span class="material-symbols-outlined text-3xl animate-spin block mb-2">progress_activity</span>
+    Lade…
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'YOUR_SUPABASE_URL'
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'
+const DEMO_MODE = SUPABASE_URL === 'YOUR_SUPABASE_URL'
+const sb = DEMO_MODE ? null : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+const params = new URLSearchParams(location.search)
+const tournamentId = params.get('t')
+const app = document.getElementById('app')
+
+function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+// ── Demo store helpers ────────────────────────────────────────
+const DS = {
+  get tourneys() { try{return JSON.parse(localStorage.getItem('tc_tourneys')||'[]')}catch{return[]} },
+  get regs()     { try{return JSON.parse(localStorage.getItem('tc_regs')||'[]')}catch{return[]} },
+  set regs(v)    { localStorage.setItem('tc_regs', JSON.stringify(v)) },
+}
+
+async function boot() {
+  if (!tournamentId) { showError('Kein Turnier angegeben.'); return }
+
+  let user = null, tournament = null, alreadyRegistered = false, alreadyCheckedIn = false
+
+  if (DEMO_MODE) {
+    tournament = DS.tourneys.find(t => t.id === tournamentId)
+    user = { id: 'demo', email: 'demo@tc-bss.de' }
+    const reg = DS.regs.find(r => r.tournament_id === tournamentId && r.user_id === 'demo')
+    alreadyRegistered = !!reg
+    alreadyCheckedIn  = reg?.checked_in === true
+  } else {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) { showLogin(); return }
+    user = session.user
+
+    const [{ data: t }, { data: reg }] = await Promise.all([
+      sb.from('tournaments').select('name, status, start_at').eq('id', tournamentId).single(),
+      sb.from('tournament_participants').select('checked_in').eq('tournament_id', tournamentId).eq('user_id', user.id).single()
+    ])
+    tournament = t
+    alreadyRegistered = !!reg
+    alreadyCheckedIn  = reg?.checked_in === true
+  }
+
+  if (!tournament) { showError('Turnier nicht gefunden.'); return }
+  if (!alreadyRegistered) { showNotRegistered(tournament); return }
+  if (alreadyCheckedIn)   { showAlreadyCheckedIn(tournament); return }
+  showCheckinScreen(tournament, user)
+}
+
+// ── Screens ───────────────────────────────────────────────────
+function showLogin() {
+  app.innerHTML = `
+    <img src="logo.png" alt="TC BSS" class="w-20 h-20 object-contain mx-auto mb-6"/>
+    <p class="text-white/50 font-body mb-5">Bitte zuerst anmelden, um einzuchecken.</p>
+    <a href="index.html?redirect=${encodeURIComponent(location.href)}"
+      class="inline-flex items-center gap-2 px-6 py-3 rounded-full font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+      <span class="material-symbols-outlined text-base">login</span>Anmelden
+    </a>`
+}
+
+function showNotRegistered(t) {
+  app.innerHTML = `
+    <div class="text-5xl mb-4">🚫</div>
+    <h1 class="text-xl font-headline font-bold text-white mb-2">Nicht angemeldet</h1>
+    <p class="text-white/40 font-body text-sm">Du bist nicht für <strong>${esc(t.name)}</strong> angemeldet.<br>Melde dich zuerst über das Dashboard an.</p>
+    <a href="dashboard.html" class="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full font-headline font-bold text-sm bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
+      Zum Dashboard
+    </a>`
+}
+
+function showAlreadyCheckedIn(t) {
+  app.innerHTML = `
+    <div class="relative inline-flex items-center justify-center w-24 h-24 mx-auto mb-6 pulse-ring">
+      <div class="relative z-10 w-24 h-24 rounded-full bg-secondary-fixed flex items-center justify-center pop">
+        <span class="material-symbols-outlined text-4xl text-on-secondary-fixed" style="font-variation-settings:'FILL' 1,'wght' 700,'GRAD' 0,'opsz' 48">check_circle</span>
+      </div>
+    </div>
+    <h1 class="text-2xl font-headline font-bold text-white mb-2">Bereits eingecheckt</h1>
+    <p class="text-white/40 font-body text-sm">Du bist für <strong class="text-white/70">${esc(t.name)}</strong> eingecheckt. Viel Spaß!</p>`
+}
+
+function showCheckinScreen(t, user) {
+  const dateStr = t.start_at
+    ? new Date(t.start_at).toLocaleDateString('de-DE', {weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'})
+    : ''
+  app.innerHTML = `
+    <img src="logo.png" alt="TC BSS" class="w-16 h-16 object-contain mx-auto mb-5"/>
+    <div class="text-[10px] font-headline uppercase tracking-widest text-secondary-fixed mb-2">Check-in</div>
+    <h1 class="text-2xl font-headline font-bold text-white mb-1">${esc(t.name)}</h1>
+    ${dateStr ? `<p class="text-white/35 font-body text-sm mb-8">${dateStr}</p>` : '<div class="mb-8"></div>'}
+    <button id="btn-checkin" onclick="doCheckin()"
+      class="w-full py-4 rounded-2xl font-headline font-bold text-lg bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-all active:scale-95 flex items-center justify-center gap-3">
+      <span class="material-symbols-outlined text-2xl">where_to_vote</span>Ich bin da!
+    </button>
+    <p class="text-white/20 text-xs font-body mt-4">Angemeldet als ${esc(user.email)}</p>`
+
+  window._checkinUser = user
+  window._checkinTournament = t
+}
+
+function showSuccess(t) {
+  app.innerHTML = `
+    <div class="relative inline-flex items-center justify-center w-28 h-28 mx-auto mb-6 pulse-ring">
+      <div class="relative z-10 w-28 h-28 rounded-full bg-secondary-fixed flex items-center justify-center pop shadow-[0_0_40px_rgba(219,237,80,.4)]">
+        <span class="material-symbols-outlined text-5xl text-on-secondary-fixed" style="font-variation-settings:'FILL' 1,'wght' 700,'GRAD' 0,'opsz' 48">check_circle</span>
+      </div>
+    </div>
+    <h1 class="text-3xl font-headline font-bold text-white mt-2 mb-2">Check-in!</h1>
+    <p class="text-white/50 font-body">Du bist für <strong class="text-white/80">${esc(t.name)}</strong> erfasst.<br>Wir losen gleich los 🎾</p>`
+}
+
+function showError(msg) {
+  app.innerHTML = `
+    <div class="text-5xl mb-4">⚠️</div>
+    <p class="text-white/50 font-body">${esc(msg)}</p>`
+}
+
+// ── Check-in action ───────────────────────────────────────────
+async function doCheckin() {
+  const btn = document.getElementById('btn-checkin')
+  btn.disabled = true
+  btn.innerHTML = '<span class="material-symbols-outlined text-xl animate-spin">progress_activity</span>'
+
+  if (DEMO_MODE) {
+    const regs = DS.regs
+    const idx = regs.findIndex(r => r.tournament_id === tournamentId && r.user_id === 'demo')
+    if (idx >= 0) regs[idx].checked_in = true
+    else regs.push({ tournament_id: tournamentId, user_id: 'demo', checked_in: true })
+    DS.regs = regs
+    showSuccess(window._checkinTournament); return
+  }
+
+  const { error } = await sb.from('tournament_participants')
+    .update({ checked_in: true, checked_in_at: new Date().toISOString() })
+    .eq('tournament_id', tournamentId)
+    .eq('user_id', window._checkinUser.id)
+
+  if (error) { btn.disabled = false; btn.textContent = 'Fehler – nochmal versuchen'; return }
+  showSuccess(window._checkinTournament)
+}
+
+boot()
+</script>
+</body>
+</html>
