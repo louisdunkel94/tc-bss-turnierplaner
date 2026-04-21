@@ -369,11 +369,19 @@ async function renderVeranstalter(app) {
       </button>
     </div>
     ${!tourneys?.length
-      ? `<div class="text-center py-20 text-white/30 font-body">
+      ? `<div class="text-center py-16 text-white/30 font-body">
            <span class="material-symbols-outlined text-4xl block mb-3">add_circle</span>
-           Noch keine Turniere — erstelle das erste!
+           <p class="mb-5">Noch keine Turniere — erstelle das erste!</p>
+           <button onclick="loadExampleTournament()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-headline font-semibold bg-white/5 text-white/30 hover:text-secondary-fixed hover:bg-white/8 transition-colors">
+             <span class="material-symbols-outlined text-sm">science</span>Beispielturnier laden
+           </button>
          </div>`
-      : `<div class="grid gap-4 md:grid-cols-2">${tourneys.map(t => tournamentCard(t, myIds.has(t.id), true)).join('')}</div>`}
+      : `<div class="grid gap-4 md:grid-cols-2">${tourneys.map(t => tournamentCard(t, myIds.has(t.id), true)).join('')}</div>
+         ${DEMO_MODE ? `<div class="text-center mt-6">
+           <button onclick="loadExampleTournament()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-headline font-semibold text-white/20 hover:text-secondary-fixed hover:bg-white/5 transition-colors">
+             <span class="material-symbols-outlined text-sm">science</span>Beispielturnier neu laden
+           </button>
+         </div>` : ''}`}
   `
 }
 
@@ -679,8 +687,8 @@ async function refreshCheckins() {
   if (DEMO_MODE) {
     const regs = DS.regs.filter(r => r.tournament_id === _qrTournamentId)
     participants = regs.map(r => ({
-      display_name: r.user_id === 'demo' ? (currentProfile?.display_name || 'Demo User') : r.user_id,
-      email: currentUser.email,
+      display_name: r.display_name || (r.user_id === 'demo' ? (currentProfile?.display_name || 'Demo User') : r.user_id),
+      email: r.user_id === 'demo' ? currentUser.email : '',
       gender: r.gender,
       checked_in: r.checked_in || false,
       checked_in_at: null
@@ -712,6 +720,58 @@ async function refreshCheckins() {
         : `<span class="text-xs text-white/20 font-body">Ausstehend</span>`}
     </div>`
   }).join('')
+}
+
+// ── Beispielturnier ───────────────────────────────────────────
+function loadExampleTournament() {
+  const id = 'example_' + Date.now()
+  const start = new Date()
+  start.setDate(start.getDate() + 7)
+  start.setHours(14, 0, 0, 0)
+
+  const tourney = {
+    id,
+    name: 'Donatocup 2025',
+    created_by: 'demo',
+    game_mode: 'geloste_paarungen',
+    gender_requirement: 'mixed',
+    skill_requirement: 'LK 10–25',
+    start_at: start.toISOString(),
+    duration_hours: 4,
+    max_participants: 24,
+    num_courts: 6,
+    num_rounds: 5,
+    status: 'open',
+    created_at: new Date().toISOString()
+  }
+
+  const names = [
+    { name: 'Max Müller',      gender: 'herr' },
+    { name: 'Felix Wagner',    gender: 'herr' },
+    { name: 'Tobias Klein',    gender: 'herr' },
+    { name: 'Jonas Becker',    gender: 'herr' },
+    { name: 'Stefan Braun',    gender: 'herr' },
+    { name: 'Lukas Hoffmann',  gender: 'herr' },
+    { name: 'Anna Schmidt',    gender: 'dame' },
+    { name: 'Laura Fischer',   gender: 'dame' },
+    { name: 'Sarah Meyer',     gender: 'dame' },
+    { name: 'Julia Weber',     gender: 'dame' },
+    { name: 'Lisa Schulz',     gender: 'dame' },
+    { name: 'Marie Richter',   gender: 'dame' },
+  ]
+
+  const regs = names.map((p, i) => ({
+    tournament_id: id,
+    user_id: 'player_' + i,
+    gender: p.gender,
+    display_name: p.name,
+    checked_in: i < 8, // erste 8 bereits eingecheckt
+  }))
+
+  DS.tourneys = [tourney, ...DS.tourneys.filter(t => !t.id.startsWith('example_'))]
+  DS.regs = [...DS.regs.filter(r => r.tournament_id !== id), ...regs]
+  toast('Beispielturnier erstellt!')
+  render()
 }
 
 // ── Toast ─────────────────────────────────────────────────────
