@@ -659,17 +659,26 @@ function openQR(tournamentId, tournamentName) {
 function printQR() {
   const canvas = document.getElementById('qr-canvas')
   const name   = document.getElementById('qr-tourney-name').textContent
-  const w = window.open('', '_blank')
-  w.document.write(`<!DOCTYPE html><html><head><title>Check-in QR</title>
-    <style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;background:#fff;}
-    h2{font-size:1.4rem;font-weight:900;color:#003908;margin-bottom:1rem;text-align:center;}
-    p{color:#555;font-size:.9rem;margin-top:.75rem;}</style></head><body>
-    <h2>${name}</h2>
-    <img src="${canvas.toDataURL()}" width="280"/>
-    <p>QR-Code scannen zum Einchecken</p>
-    <scr` + `ipt>window.onload=()=>{window.print();window.close()}</scr` + `ipt>
-    </body></html>`)
-  w.document.close()
+  const img    = canvas.toDataURL()
+  const scriptOpen  = '<scr' + 'ipt>'
+  const scriptClose = '<\/scr' + 'ipt>'
+  const html = [
+    '<!DOCTYPE html><html>',
+    '<head><title>Check-in QR</title>',
+    '<style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;background:#fff;}',
+    'h2{font-size:1.4rem;font-weight:900;color:#003908;margin-bottom:1rem;text-align:center;}',
+    'p{color:#555;font-size:.9rem;margin-top:.75rem;}</style>',
+    '</head><body>',
+    '<h2>' + name + '</h2>',
+    '<img src="' + img + '" width="280"/>',
+    '<p>QR-Code scannen zum Einchecken</p>',
+    scriptOpen + 'window.onload=function(){window.print();window.close()}' + scriptClose,
+    '</body></html>'
+  ].join('')
+  const blob = new Blob([html], { type: 'text/html' })
+  const url  = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+  setTimeout(function(){ URL.revokeObjectURL(url) }, 5000)
 }
 
 // ── Check-in overview ─────────────────────────────────────────
