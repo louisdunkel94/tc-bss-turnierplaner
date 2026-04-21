@@ -89,8 +89,22 @@ UPDATE profiles SET role = 'admin' WHERE email = 'deine@email.de';
 
 ---
 
-## Lokale Nutzung (ohne Supabase)
+## Demo-Modus (ohne Supabase)
 
-`tournament.html` funktioniert auch standalone ohne Backend – der Zustand wird in `localStorage` gespeichert. Login und Rollenverwaltung sind dann nicht verfügbar.
+Solange `YOUR_SUPABASE_URL` nicht ersetzt ist, läuft die gesamte App im **Demo-Modus**:
 
-Einfach `tournament.html` im Browser öffnen.
+- Kein Login erforderlich – die Session startet automatisch als **Admin**
+- Alle Daten werden lokal im Browser (`localStorage`) gespeichert
+- Keine Daten verlassen den Browser
+
+Einfach `dashboard.html` im Browser öffnen.
+
+---
+
+## Neue Seiten
+
+| Datei | Beschreibung |
+|---|---|
+| `checkin.html` | Self-Check-in via QR-Code (Spieler scannen den Code am Eingang) |
+| `impressum.html` | Impressum gemäß § 5 TMG |
+| `datenschutz.html` | Datenschutzerklärung gemäß DSGVO |

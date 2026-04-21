@@ -13,7 +13,7 @@ let activeTournamentId = null
 async function boot() {
   if (DEMO_MODE) {
     currentUser = { id: 'demo', email: 'demo@tc-bss.de' }
-    currentProfile = { id: 'demo', display_name: 'Demo Veranstalter', role: 'veranstalter', email: 'demo@tc-bss.de' }
+    currentProfile = { id: 'demo', display_name: 'Demo Admin', role: 'admin', email: 'demo@tc-bss.de' }
     showDemoBanner()
   } else {
     const { data: { session } } = await sb.auth.getSession()
