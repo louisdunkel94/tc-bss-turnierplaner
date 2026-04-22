@@ -9,53 +9,33 @@ let activeTournamentId = null
 
 // ── Boot ─────────────────────────────────────────────────────
 async function boot() {
+  if (sessionStorage.getItem('tc_auth') !== '1') { window.location.replace('index.html'); return }
+
+  currentUser = { id: 'admin' }
+  currentProfile = { id: 'admin', display_name: 'TC BSS', role: 'admin' }
+
   if (DEMO_MODE) {
-    if (sessionStorage.getItem('tc_auth') !== '1') { window.location.replace('index.html'); return }
-    currentUser = { id: 'demo', email: 'demo@tc-bss.de' }
-    currentProfile = { id: 'demo', display_name: 'Admin', role: 'admin', email: 'demo@tc-bss.de', gender: 'herr' }
-    showDemoBanner()
-  } else {
-    if (!pb.authStore.isValid) { window.location.replace('index.html'); return }
-    currentUser = pb.authStore.model
-    currentProfile = pb.authStore.model
+    const banner = document.createElement('div')
+    banner.className = 'fixed top-0 left-0 right-0 z-[100] bg-yellow-500/90 text-black text-xs font-headline font-bold text-center py-1.5 px-4'
+    banner.textContent = '⚠ Lokaler Modus – Daten werden nur in diesem Browser gespeichert.'
+    document.body.prepend(banner)
+    document.querySelector('header').style.top = '28px'
   }
 
   const chip = document.getElementById('user-chip')
   chip.classList.remove('hidden'); chip.classList.add('flex')
-  const name = currentProfile?.display_name || currentUser.email
-  document.getElementById('user-avatar').textContent = name.slice(0,2).toUpperCase()
-  document.getElementById('user-name').textContent = name
-  document.getElementById('user-role-badge').textContent = roleLabel(currentProfile?.role)
+  document.getElementById('user-avatar').textContent = 'TC'
+  document.getElementById('user-name').textContent = 'TC BSS'
+  document.getElementById('user-role-badge').textContent = 'Administrator'
 
   render()
-}
-
-function showDemoBanner() {
-  const banner = document.createElement('div')
-  banner.className = 'fixed top-0 left-0 right-0 z-[100] bg-yellow-500/90 text-black text-xs font-headline font-bold text-center py-1.5 px-4'
-  banner.textContent = '⚠ Demo-Modus – PocketBase noch nicht konfiguriert. Daten werden nicht gespeichert.'
-  document.body.prepend(banner)
-  document.querySelector('header').style.top = '28px'
-}
-
-function roleLabel(role) {
-  return { admin: 'Administrator', veranstalter: 'Veranstalter', mitglied: 'Mitglied' }[role] || 'Mitglied'
 }
 
 function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
 // ── Render ───────────────────────────────────────────────────
 async function render() {
-  const role = currentProfile?.role || 'mitglied'
-  const app = document.getElementById('app')
-
-  if (role === 'admin') {
-    await renderAdmin(app)
-  } else if (role === 'veranstalter') {
-    await renderVeranstalter(app)
-  } else {
-    await renderMitglied(app)
-  }
+  await renderVeranstalter(document.getElementById('app'))
 }
 
 // ── Demo store (localStorage fallback) ───────────────────────
@@ -99,14 +79,7 @@ function findCachedTourney(id) {
 
 async function dbMyRegs() {
   if (DEMO_MODE) return DS.regs.filter(r => r.user_id === currentUser.id)
-  const items = await pb.collection('participants').getFullList({ filter: `user = "${currentUser.id}"`, fields: 'tournament' })
-  return items.map(p => ({ tournament_id: p.tournament }))
-}
-
-async function dbMembers() {
-  if (DEMO_MODE) return [currentProfile]
-  const items = await pb.collection('users').getFullList({ sort: '-created' })
-  return items.map(m => ({ ...m, created_at: m.created }))
+  return []
 }
 
 // ── Mitglied ─────────────────────────────────────────────────
@@ -447,7 +420,7 @@ async function handleCreateTournament(e) {
       await pb.collection('tournaments').update(_editingId, payload)
       toast('Turnier gespeichert!')
     } else {
-      await pb.collection('tournaments').create({ ...payload, created_by: currentUser.id, status: 'draft' })
+      await pb.collection('tournaments').create({ ...payload, status: 'draft' })
       toast('Turnier erstellt!')
     }
     btn.disabled = false; btn.textContent = 'Speichern'
@@ -567,22 +540,18 @@ function openQR(tournamentId) {
   _qrTournamentId = tournamentId
   const tournamentName = findCachedTourney(tournamentId)?.name || ''
   document.getElementById('qr-tourney-name').textContent = tournamentName
-  document.getElementById('modal-qr').showModal()
   const base = location.href.replace(/[^/]*(\?.*)?$/, '')
   const url  = base + 'checkin.html?t=' + tournamentId
-  setTimeout(() => {
-    try {
-      QRCode.toCanvas(document.getElementById('qr-canvas'), url, {
-        width: 220, margin: 1, color: { dark: '#0a1f0b', light: '#ffffff' }
-      })
-    } catch(e) { console.error('QR error:', e) }
-  }, 50)
+  QRCode.toDataURL(url, { width: 220, margin: 1, color: { dark: '#0a1f0b', light: '#ffffff' } })
+    .then(dataUrl => { document.getElementById('qr-img').src = dataUrl })
+    .catch(e => console.error('QR error:', e))
+  document.getElementById('modal-qr').showModal()
 }
 
 function printQR() {
-  const canvas = document.getElementById('qr-canvas')
-  const name   = document.getElementById('qr-tourney-name').textContent
-  const img    = canvas.toDataURL()
+  const name = document.getElementById('qr-tourney-name').textContent
+  const img  = document.getElementById('qr-img').src
+  if (!img) return
   const scriptOpen  = '<scr' + 'ipt>'
   const scriptClose = '<\/scr' + 'ipt>'
   const html = [
