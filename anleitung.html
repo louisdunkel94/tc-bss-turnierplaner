@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TC Bad Soden-Salmünster – Anleitung</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script>
+tailwind.config = {
+  darkMode:"class",
+  theme:{extend:{
+    colors:{
+      "primary":"#003908","primary-container":"#115217",
+      "on-primary-container":"#83c57c",
+      "secondary-fixed":"#dbed50","on-secondary-fixed":"#1a1e00",
+      "secondary-fixed-dim":"#bfd035",
+      "outline-variant":"#c0c9bb","error":"#ba1a1a"
+    },
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Plus Jakarta Sans","sans-serif"]},
+    borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
+  }}
+}
+</script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;background-color:#0a1f0b;color:#fff;min-height:100vh;}
+  .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
+  .bg-hero{background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(219,237,80,.10) 0%, transparent 60%), linear-gradient(180deg, #0a1f0b 0%, #115217 50%, #0a1f0b 100%);}
+  .section{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.75rem;padding:1.25rem 1.5rem;}
+  .badge{display:inline-flex;align-items:center;gap:4px;background:rgba(219,237,80,0.12);color:#dbed50;font-size:0.7rem;font-family:'Lexend',sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:9999px;border:1px solid rgba(219,237,80,0.2);}
+  .warn{background:rgba(186,26,26,0.12);border:1px solid rgba(186,26,26,0.25);border-radius:0.5rem;padding:0.75rem 1rem;color:#fca5a5;}
+  .tip{background:rgba(219,237,80,0.07);border:1px solid rgba(219,237,80,0.18);border-radius:0.5rem;padding:0.75rem 1rem;color:rgba(219,237,80,0.85);}
+  li{margin-bottom:0.35rem;}
+  code{background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:4px;font-size:0.85em;font-family:monospace;}
+</style>
+</head>
+<body class="bg-hero">
+
+<div class="max-w-2xl mx-auto px-4 py-12">
+
+  <!-- Header -->
+  <div class="flex items-center gap-3 mb-8">
+    <img src="logo.png" alt="Logo" class="w-12 h-12 object-contain"/>
+    <div>
+      <div class="font-headline font-black text-xl text-white leading-tight">TC Bad Soden-Salmünster</div>
+      <div class="font-headline text-xs uppercase tracking-[.2em] text-secondary-fixed opacity-70 mt-0.5">Turnierplaner · Anleitung</div>
+    </div>
+    <span class="badge ml-auto">Beta</span>
+  </div>
+
+  <!-- Einschränkungen zuerst -->
+  <div class="warn mb-6 flex gap-3">
+    <span class="material-symbols-outlined text-red-400 flex-shrink-0 mt-0.5">warning</span>
+    <div class="text-sm leading-relaxed">
+      <div class="font-headline font-bold text-red-300 mb-1">Beta-Einschränkungen</div>
+      <ul class="list-disc list-inside space-y-1 text-red-200/80">
+        <li>Daten werden nur im Browser gespeichert (localStorage). Beim Löschen des Browser-Caches gehen alle Daten verloren.</li>
+        <li>Keine Synchronisation zwischen Geräten – jedes Gerät hat eigene Daten.</li>
+        <li>Kein echter Nutzeraccount – alle Nutzer des gleichen Geräts sehen dieselben Daten.</li>
+        <li>Passwort (<code>tcbss</code>) schützt nur die Seite, nicht die Daten selbst.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Login -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">lock</span>
+      <h2 class="font-headline font-bold text-base">1. Anmeldung</h2>
+    </div>
+    <p class="text-sm text-white/60 leading-relaxed">
+      Die Seite ist mit einem gemeinsamen Passwort geschützt. Passwort: <code>tcbss</code>
+    </p>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">dashboard</span>
+      <h2 class="font-headline font-bold text-base">2. Dashboard – Turnier anlegen</h2>
+    </div>
+    <ol class="text-sm text-white/60 leading-relaxed list-decimal list-inside space-y-1.5">
+      <li>Auf <strong class="text-white">„Neues Turnier"</strong> tippen.</li>
+      <li>Name, Datum, Spielmodus und Anzahl Plätze eingeben.</li>
+      <li>Turnier speichern – es erscheint in der Übersicht.</li>
+    </ol>
+  </div>
+
+  <!-- Teilnehmer -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">group</span>
+      <h2 class="font-headline font-bold text-base">3. Teilnehmer verwalten</h2>
+    </div>
+    <p class="text-sm text-white/60 leading-relaxed mb-2">
+      Über das Personen-Symbol beim Turnier die Teilnehmerliste öffnen. Spieler können einzeln eingetragen oder per CSV importiert werden.
+    </p>
+    <div class="tip text-xs">
+      <span class="font-headline font-bold block mb-1">CSV-Format</span>
+      Eine Zeile pro Spieler: <code>Name;Geschlecht</code><br/>
+      Geschlecht: <code>herr</code> oder <code>dame</code><br/>
+      Beispiel: <code>Max Mustermann;herr</code>
+    </div>
+  </div>
+
+  <!-- QR Code -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">qr_code_2</span>
+      <h2 class="font-headline font-bold text-base">4. QR-Code teilen</h2>
+    </div>
+    <p class="text-sm text-white/60 leading-relaxed">
+      Über das QR-Symbol beim Turnier wird ein QR-Code generiert, der direkt auf den Turnierplan verlinkt. Dieser kann gedruckt oder am Eingang ausgehängt werden.
+    </p>
+  </div>
+
+  <!-- Turnierplan -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">sports_tennis</span>
+      <h2 class="font-headline font-bold text-base">5. Turnierplan durchführen</h2>
+    </div>
+    <ol class="text-sm text-white/60 leading-relaxed list-decimal list-inside space-y-1.5">
+      <li>Turnier in der Übersicht öffnen → Turnierplan-Seite.</li>
+      <li>Ggf. Spieler hinzufügen oder entfernen.</li>
+      <li><strong class="text-white">„Auslosung starten"</strong> – der Plan wird generiert.</li>
+      <li>Ergebnisse direkt in die Felder eintragen.</li>
+      <li>Bei Schweizer System: nach jeder Runde <strong class="text-white">„Nächste Runde"</strong> tippen.</li>
+    </ol>
+  </div>
+
+  <!-- Spielmodi -->
+  <div class="section mb-6">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">tune</span>
+      <h2 class="font-headline font-bold text-base">6. Spielmodi im Überblick</h2>
+    </div>
+    <ul class="text-sm text-white/60 leading-relaxed space-y-2">
+      <li><strong class="text-white">Geloste Paarungen</strong> – zufällige Doppel-Teams, mehrere Runden, gemischte Spieler.</li>
+      <li><strong class="text-white">Americano</strong> – Partner wechseln jede Runde, Wiederholungen werden minimiert.</li>
+      <li><strong class="text-white">Jeder gegen jeden</strong> – jeder spielt gegen jeden, vollständiger Plan im Voraus.</li>
+      <li><strong class="text-white">Schweizer System</strong> – Runde für Runde, Paarungen nach aktuellem Tabellenstand.</li>
+      <li><strong class="text-white">Einfaches KO</strong> – klassisches Knockout-Turnier mit Bracket-Ansicht.</li>
+      <li><strong class="text-white">Doppeltes KO</strong> – nach einer Niederlage kommt man in die Verliererseite, erst die zweite scheidet man aus.</li>
+      <li><strong class="text-white">Gruppenphase + KO</strong> – automatische Gruppen, Jeder-gegen-jeden je Gruppe, dann KO-Runde aus den Gruppenersten.</li>
+    </ul>
+  </div>
+
+  <!-- Back -->
+  <div class="flex justify-center">
+    <a href="dashboard.html" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-secondary-fixed text-on-secondary-fixed font-headline font-bold text-sm hover:bg-secondary-fixed-dim transition-colors">
+      <span class="material-symbols-outlined text-base">arrow_back</span>Zum Dashboard
+    </a>
+  </div>
+
+  <p class="text-white/15 text-xs text-center mt-8 font-body">TC Bad Soden-Salmünster · Turnierplaner Beta</p>
+</div>
+
+</body>
+</html>
