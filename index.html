@@ -30,7 +30,7 @@ tailwind.config = {
   .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
   .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
   .bg-hero{background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(219,237,80,.12) 0%, transparent 60%), linear-gradient(180deg, #0a1f0b 0%, #115217 50%, #0a1f0b 100%);}
-  input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px #1a2e1b inset!important;-webkit-text-fill-color:#fff!important;}
+  input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px #fff inset!important;-webkit-text-fill-color:#111!important;}
 </style>
 </head>
 <body class="bg-hero">
@@ -67,13 +67,13 @@ tailwind.config = {
       <div>
         <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">E-Mail</label>
         <input type="email" id="login-email" required placeholder="deine@email.de"
-          class="w-full bg-white/8 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors"/>
+          class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors"/>
       </div>
       <div>
         <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">Passwort</label>
         <div class="relative">
           <input type="password" id="login-pw" required placeholder="••••••••"
-            class="w-full bg-white/8 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors pr-11"/>
+            class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors pr-11"/>
           <button type="button" onclick="togglePw('login-pw',this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
             <span class="material-symbols-outlined text-base">visibility</span>
           </button>
@@ -91,24 +91,24 @@ tailwind.config = {
         <div>
           <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">Vorname</label>
           <input type="text" id="reg-first" required placeholder="Anna"
-            class="w-full bg-white/8 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors"/>
+            class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors"/>
         </div>
         <div>
           <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">Nachname</label>
           <input type="text" id="reg-last" required placeholder="Müller"
-            class="w-full bg-white/8 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors"/>
+            class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors"/>
         </div>
       </div>
       <div>
         <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">E-Mail</label>
         <input type="email" id="reg-email" required placeholder="deine@email.de"
-          class="w-full bg-white/8 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors"/>
+          class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors"/>
       </div>
       <div>
         <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">Passwort</label>
         <div class="relative">
           <input type="password" id="reg-pw" required placeholder="min. 8 Zeichen" minlength="8"
-            class="w-full bg-white/8 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors pr-11"/>
+            class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors pr-11"/>
           <button type="button" onclick="togglePw('reg-pw',this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
             <span class="material-symbols-outlined text-base">visibility</span>
           </button>
@@ -136,6 +136,14 @@ tailwind.config = {
     </form>
   </div>
 
+  <!-- ── Demo Banner ── -->
+  <div id="demo-banner" class="hidden w-full max-w-sm mt-6 px-4 py-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-center">
+    <p class="text-yellow-300 text-xs font-body mb-3">Demo-Modus aktiv – kein Login erforderlich.</p>
+    <a href="dashboard.html" class="inline-flex items-center gap-2 px-5 py-2 rounded-full font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+      <span class="material-symbols-outlined text-base">dashboard</span>Zum Dashboard
+    </a>
+  </div>
+
   <!-- ── Footer ── -->
   <p class="text-white/20 text-xs font-body mt-10 text-center">
     Mit der Registrierung stimmst du der Nutzung deiner Daten für den Turnierbetrieb beim TC Bad Soden-Salmünster zu.
@@ -149,9 +157,7 @@ const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
 const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
 
 // ── Redirect if already logged in ──────────────────────────
-if (DEMO_MODE) {
-  window.location.replace('dashboard.html')
-} else if (pb.authStore.isValid) {
+if (!DEMO_MODE && pb.authStore.isValid) {
   window.location.replace('dashboard.html')
 }
 
@@ -166,6 +172,7 @@ function switchTab(tab) {
   clearMsg()
 }
 switchTab('login')
+if (DEMO_MODE) document.getElementById('demo-banner').classList.remove('hidden')
 
 // ── Messages ────────────────────────────────────────────────
 function showMsg(text, type = 'error') {
@@ -196,6 +203,11 @@ function setLoading(btnId, loading) {
 async function handleLogin(e) {
   e.preventDefault()
   clearMsg()
+  if (DEMO_MODE) {
+    showMsg('Demo-Modus aktiv – kein Login nötig.', 'success')
+    setTimeout(() => window.location.replace('dashboard.html'), 800)
+    return
+  }
   setLoading('btn-login', true)
   const email = document.getElementById('login-email').value.trim()
   const password = document.getElementById('login-pw').value
@@ -214,13 +226,20 @@ async function handleRegister(e) {
   clearMsg()
   const gender = document.querySelector('input[name="gender"]:checked')?.value
   if (!gender) { showMsg('Bitte Geschlecht auswählen'); return }
-  setLoading('btn-register', true)
   const first = document.getElementById('reg-first').value.trim()
   const last  = document.getElementById('reg-last').value.trim()
   const email = document.getElementById('reg-email').value.trim()
   const pw    = document.getElementById('reg-pw').value
   const display_name = `${first} ${last}`
 
+  if (DEMO_MODE) {
+    localStorage.setItem('tc_demo_session', JSON.stringify({ display_name, email, gender }))
+    showMsg(`Willkommen, ${first}! (Demo-Modus – Daten nur lokal gespeichert)`, 'success')
+    setTimeout(() => window.location.replace('dashboard.html'), 1200)
+    return
+  }
+
+  setLoading('btn-register', true)
   try {
     await pb.collection('users').create({ email, password: pw, passwordConfirm: pw, display_name, gender, role: 'mitglied' })
     await pb.collection('users').authWithPassword(email, pw)

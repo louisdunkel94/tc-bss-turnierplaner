@@ -10,8 +10,9 @@ let activeTournamentId = null
 // ── Boot ─────────────────────────────────────────────────────
 async function boot() {
   if (DEMO_MODE) {
-    currentUser = { id: 'demo', email: 'demo@tc-bss.de' }
-    currentProfile = { id: 'demo', display_name: 'Demo Admin', role: 'admin', email: 'demo@tc-bss.de' }
+    const session = JSON.parse(localStorage.getItem('tc_demo_session') || 'null')
+    currentUser = { id: 'demo', email: session?.email || 'demo@tc-bss.de' }
+    currentProfile = { id: 'demo', display_name: session?.display_name || 'Demo Admin', role: 'admin', email: session?.email || 'demo@tc-bss.de', gender: session?.gender || 'herr' }
     showDemoBanner()
   } else {
     if (!pb.authStore.isValid) { window.location.replace('index.html'); return }

@@ -22,7 +22,8 @@
       "WebFetch(domain:www.tennisclub-bss.de)",
       "Bash(git -C /Users/louisdunkelprivat/Dev/Donatocup status)",
       "Bash(git -C /Users/louisdunkelprivat/Dev/Donatocup remote get-url origin)",
-      "Bash(gh issue *)"
+      "Bash(gh issue *)",
+      "Bash(curl -s http://127.0.0.1:8090/api/health)"
     ]
   }
 }
