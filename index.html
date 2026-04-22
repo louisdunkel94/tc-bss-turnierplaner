@@ -7,7 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+<script src="config.js"></script>
 <script>
 tailwind.config = {
   darkMode:"class",
@@ -142,15 +143,17 @@ tailwind.config = {
 </div>
 
 <script>
-// ── Supabase ────────────────────────────────────────────────
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// ── PocketBase ──────────────────────────────────────────────
+const POCKETBASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.POCKETBASE_URL : null) || 'YOUR_POCKETBASE_URL'
+const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
+const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
 
 // ── Redirect if already logged in ──────────────────────────
-sb.auth.getSession().then(({ data }) => {
-  if (data.session) window.location.replace('dashboard.html')
-})
+if (DEMO_MODE) {
+  window.location.replace('dashboard.html')
+} else if (pb.authStore.isValid) {
+  window.location.replace('dashboard.html')
+}
 
 // ── Tab switching ───────────────────────────────────────────
 let activeTab = 'login'
@@ -196,10 +199,13 @@ async function handleLogin(e) {
   setLoading('btn-login', true)
   const email = document.getElementById('login-email').value.trim()
   const password = document.getElementById('login-pw').value
-  const { error } = await sb.auth.signInWithPassword({ email, password })
-  setLoading('btn-login', false)
-  if (error) { showMsg(translateError(error.message)); return }
-  window.location.replace('dashboard.html')
+  try {
+    await pb.collection('users').authWithPassword(email, password)
+    window.location.replace('dashboard.html')
+  } catch(err) {
+    setLoading('btn-login', false)
+    showMsg(translateError(err.message))
+  }
 }
 
 // ── Register ─────────────────────────────────────────────────
@@ -215,21 +221,21 @@ async function handleRegister(e) {
   const pw    = document.getElementById('reg-pw').value
   const display_name = `${first} ${last}`
 
-  const { error } = await sb.auth.signUp({
-    email, password: pw,
-    options: { data: { display_name, gender } }
-  })
-  setLoading('btn-register', false)
-  if (error) { showMsg(translateError(error.message)); return }
-  showMsg('Registrierung erfolgreich! Bitte bestätige deine E-Mail-Adresse, dann kannst du dich anmelden.', 'success')
-  document.getElementById('form-register').reset()
+  try {
+    await pb.collection('users').create({ email, password: pw, passwordConfirm: pw, display_name, gender, role: 'mitglied' })
+    await pb.collection('users').authWithPassword(email, pw)
+    window.location.replace('dashboard.html')
+  } catch(err) {
+    setLoading('btn-register', false)
+    showMsg(translateError(err.message))
+  }
 }
 
 function translateError(msg) {
-  if (msg.includes('Invalid login')) return 'E-Mail oder Passwort falsch.'
-  if (msg.includes('already registered')) return 'Diese E-Mail ist bereits registriert.'
-  if (msg.includes('Password should')) return 'Passwort muss mindestens 8 Zeichen haben.'
-  if (msg.includes('valid email')) return 'Bitte gültige E-Mail-Adresse eingeben.'
+  if (/invalid.*credentials|wrong.*password/i.test(msg)) return 'E-Mail oder Passwort falsch.'
+  if (/already exists/i.test(msg)) return 'Diese E-Mail ist bereits registriert.'
+  if (/password.*least/i.test(msg)) return 'Passwort muss mindestens 8 Zeichen haben.'
+  if (/valid email/i.test(msg)) return 'Bitte gültige E-Mail-Adresse eingeben.'
   return msg
 }
 </script>

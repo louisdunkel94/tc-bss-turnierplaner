@@ -19,7 +19,10 @@
       "Bash(python3 -c ' *)",
       "Bash(python3)",
       "Bash(node --check /Users/louisdunkelprivat/Dev/Donatocup/dashboard.js)",
-      "WebFetch(domain:www.tennisclub-bss.de)"
+      "WebFetch(domain:www.tennisclub-bss.de)",
+      "Bash(git -C /Users/louisdunkelprivat/Dev/Donatocup status)",
+      "Bash(git -C /Users/louisdunkelprivat/Dev/Donatocup remote get-url origin)",
+      "Bash(gh issue *)"
     ]
   }
 }

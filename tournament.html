@@ -8,7 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+<script src="config.js"></script>
 <script>
 tailwind.config = {
   darkMode:"class",
@@ -99,21 +100,17 @@ tailwind.config = {
 
 <script>
 // ════════════════════════════════════════════════
-//  SUPABASE + AUTH
+//  POCKETBASE + AUTH
 // ════════════════════════════════════════════════
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'
-const DEMO_MODE = SUPABASE_URL === 'YOUR_SUPABASE_URL'
-const sb = DEMO_MODE ? null : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const POCKETBASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.POCKETBASE_URL : null) || 'YOUR_POCKETBASE_URL'
+const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
+const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
 
-let _sbUser = null
 let _tournamentId = new URLSearchParams(location.search).get('id')
 
 async function initAuth() {
-  if (DEMO_MODE) { _sbUser = { id: 'demo' }; return true }
-  const { data: { session } } = await sb.auth.getSession()
-  if (!session) { window.location.replace('index.html'); return false }
-  _sbUser = session.user
+  if (DEMO_MODE) { return true }
+  if (!pb.authStore.isValid) { window.location.replace('index.html'); return false }
   return true
 }
 
@@ -127,8 +124,9 @@ async function sbSave() {
     } catch(e) {}
     return
   }
-  if (!_sbUser) return
-  await sb.from('tournaments').update({ state: S }).eq('id', _tournamentId)
+  try {
+    await pb.collection('tournaments').update(_tournamentId, { state: S })
+  } catch(e) {}
 }
 
 async function sbLoad() {
@@ -150,14 +148,13 @@ async function sbLoad() {
       return true
     } catch(e) { return false }
   }
-  const { data } = await sb.from('tournaments').select('name, state').eq('id', _tournamentId).single()
-  if (!data) return false
-  if (data.name) {
+  try {
+    const data = await pb.collection('tournaments').getOne(_tournamentId, { fields: 'id,name,state,num_rounds,num_courts' })
     const el = document.getElementById('tournament-title')
-    if (el) el.textContent = data.name
-  }
-  if (data.state) { S = { ...S, ...data.state }; return true }
-  return false
+    if (el && data.name) el.textContent = data.name
+    if (data.state) { S = { ...S, ...data.state }; return true }
+    return false
+  } catch(e) { return false }
 }
 
 // ════════════════════════════════════════════════
@@ -369,7 +366,7 @@ function resetTournament() {
         if (idx >= 0) { delete tourneys[idx].state; localStorage.setItem('tc_tourneys', JSON.stringify(tourneys)) }
       } catch(e) {}
     } else {
-      sb.from('tournaments').update({state:null}).eq('id',_tournamentId)
+      pb.collection('tournaments').update(_tournamentId, { state: null }).catch(()=>{})
     }
   }
   render();

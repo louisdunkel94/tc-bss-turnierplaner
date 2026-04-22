@@ -7,7 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+<script src="config.js"></script>
 <script>
 tailwind.config = {
   theme:{extend:{
@@ -42,10 +43,9 @@ tailwind.config = {
 </div>
 
 <script>
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'
-const DEMO_MODE = SUPABASE_URL === 'YOUR_SUPABASE_URL'
-const sb = DEMO_MODE ? null : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const POCKETBASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.POCKETBASE_URL : null) || 'YOUR_POCKETBASE_URL'
+const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
+const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
 
 const params = new URLSearchParams(location.search)
 const tournamentId = params.get('t')
@@ -72,17 +72,25 @@ async function boot() {
     alreadyRegistered = !!reg
     alreadyCheckedIn  = reg?.checked_in === true
   } else {
-    const { data: { session } } = await sb.auth.getSession()
-    if (!session) { showLogin(); return }
-    user = session.user
+    if (!pb.authStore.isValid) { showLogin(); return }
+    user = pb.authStore.model
 
-    const [{ data: t }, { data: reg }] = await Promise.all([
-      sb.from('tournaments').select('name, status, start_at').eq('id', tournamentId).single(),
-      sb.from('tournament_participants').select('checked_in').eq('tournament_id', tournamentId).eq('user_id', user.id).single()
-    ])
-    tournament = t
-    alreadyRegistered = !!reg
-    alreadyCheckedIn  = reg?.checked_in === true
+    try {
+      const [t, reg] = await Promise.all([
+        pb.collection('tournaments').getOne(tournamentId, { fields: 'id,name,status,start_at' }),
+        pb.collection('participants').getFirstListItem(
+          `tournament = "${tournamentId}" && user = "${user.id}"`,
+          { fields: 'id,checked_in' }
+        ).catch(() => null)
+      ])
+      tournament = t
+      alreadyRegistered = !!reg
+      alreadyCheckedIn  = reg?.checked_in === true
+      window._checkinParticipantId = reg?.id || null
+    } catch(e) {
+      showError('Turnier nicht gefunden.')
+      return
+    }
   }
 
   if (!tournament) { showError('Turnier nicht gefunden.'); return }
@@ -174,13 +182,18 @@ async function doCheckin() {
     showSuccess(window._checkinTournament); return
   }
 
-  const { error } = await sb.from('tournament_participants')
-    .update({ checked_in: true, checked_in_at: new Date().toISOString() })
-    .eq('tournament_id', tournamentId)
-    .eq('user_id', window._checkinUser.id)
-
-  if (error) { btn.disabled = false; btn.textContent = 'Fehler – nochmal versuchen'; return }
-  showSuccess(window._checkinTournament)
+  try {
+    const participantId = window._checkinParticipantId
+    if (!participantId) throw new Error('Keine Anmeldung gefunden')
+    await pb.collection('participants').update(participantId, {
+      checked_in: true,
+      checked_in_at: new Date().toISOString()
+    })
+    showSuccess(window._checkinTournament)
+  } catch(e) {
+    btn.disabled = false
+    btn.textContent = 'Fehler – nochmal versuchen'
+  }
 }
 
 boot()

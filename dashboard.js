@@ -1,9 +1,7 @@
-// ── Supabase ─────────────────────────────────────────────────
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'
-const DEMO_MODE = SUPABASE_URL === 'YOUR_SUPABASE_URL'
-
-const sb = DEMO_MODE ? null : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// ── PocketBase ────────────────────────────────────────────────
+const POCKETBASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.POCKETBASE_URL : null) || 'YOUR_POCKETBASE_URL'
+const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
+const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
 
 let currentUser = null
 let currentProfile = null
@@ -16,11 +14,9 @@ async function boot() {
     currentProfile = { id: 'demo', display_name: 'Demo Admin', role: 'admin', email: 'demo@tc-bss.de' }
     showDemoBanner()
   } else {
-    const { data: { session } } = await sb.auth.getSession()
-    if (!session) { window.location.replace('index.html'); return }
-    currentUser = session.user
-    const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single()
-    currentProfile = profile
+    if (!pb.authStore.isValid) { window.location.replace('index.html'); return }
+    currentUser = pb.authStore.model
+    currentProfile = pb.authStore.model
   }
 
   const chip = document.getElementById('user-chip')
@@ -36,7 +32,7 @@ async function boot() {
 function showDemoBanner() {
   const banner = document.createElement('div')
   banner.className = 'fixed top-0 left-0 right-0 z-[100] bg-yellow-500/90 text-black text-xs font-headline font-bold text-center py-1.5 px-4'
-  banner.textContent = '⚠ Demo-Modus – Supabase noch nicht konfiguriert. Daten werden nicht gespeichert.'
+  banner.textContent = '⚠ Demo-Modus – PocketBase noch nicht konfiguriert. Daten werden nicht gespeichert.'
   document.body.prepend(banner)
   document.querySelector('header').style.top = '28px'
 }
@@ -69,35 +65,47 @@ const DS = {
   set regs(v)     { localStorage.setItem('tc_regs', JSON.stringify(v)) },
 }
 
-// In-memory cache so openEditModal/saveAsTemplate work in Supabase mode too
 const _cache = { tourneys: [] }
 
 async function dbTourneys(statusFilter) {
   if (DEMO_MODE) {
     let t = DS.tourneys
     if (statusFilter) t = t.filter(x => statusFilter.includes(x.status))
-    const result = t.map(t => ({ ...t, tournament_participants: [{ count: DS.regs.filter(r=>r.tournament_id===t.id).length }] }))
+    const result = t.map(t => ({ ...t, _participant_count: DS.regs.filter(r=>r.tournament_id===t.id).length }))
     _cache.tourneys = DS.tourneys
     return result
   }
-  const q = sb.from('tournaments').select('*, tournament_participants(count)').order('created_at', { ascending: false })
-  const { data } = statusFilter ? await q.in('status', statusFilter) : await q
-  _cache.tourneys = data || []
-  return data || []
+
+  let filter = ''
+  if (statusFilter) filter = statusFilter.map(s => `status = "${s}"`).join(' || ')
+
+  const [tourneys, allParticipants] = await Promise.all([
+    pb.collection('tournaments').getFullList({ filter, sort: '-created' }),
+    pb.collection('participants').getFullList({ fields: 'tournament' })
+  ])
+
+  const countMap = {}
+  allParticipants.forEach(p => { countMap[p.tournament] = (countMap[p.tournament] || 0) + 1 })
+
+  const result = tourneys.map(t => ({ ...t, _participant_count: countMap[t.id] || 0 }))
+  _cache.tourneys = tourneys
+  return result
 }
 
 function findCachedTourney(id) {
   return _cache.tourneys.find(t => t.id === id) || DS.tourneys.find(t => t.id === id)
 }
+
 async function dbMyRegs() {
   if (DEMO_MODE) return DS.regs.filter(r => r.user_id === currentUser.id)
-  const { data } = await sb.from('tournament_participants').select('tournament_id').eq('user_id', currentUser.id)
-  return data || []
+  const items = await pb.collection('participants').getFullList({ filter: `user = "${currentUser.id}"`, fields: 'tournament' })
+  return items.map(p => ({ tournament_id: p.tournament }))
 }
+
 async function dbMembers() {
   if (DEMO_MODE) return [currentProfile]
-  const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false })
-  return data || []
+  const items = await pb.collection('users').getFullList({ sort: '-created' })
+  return items.map(m => ({ ...m, created_at: m.created }))
 }
 
 // ── Mitglied ─────────────────────────────────────────────────
@@ -158,8 +166,6 @@ async function renderAdmin(app) {
   const [tourneys, members, myRegs] = await Promise.all([dbTourneys(), dbMembers(), dbMyRegs()])
   const myIds = new Set(myRegs.map(r => r.tournament_id))
 
-  const roleColors = { admin: 'bg-red-500/15 text-red-300 border-red-500/20', veranstalter: 'bg-blue-500/15 text-blue-300 border-blue-500/20', mitglied: 'bg-white/10 text-white/50 border-white/10' }
-
   app.innerHTML = `
     <div class="mb-8">
       <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Admin</h1>
@@ -199,7 +205,7 @@ async function renderAdmin(app) {
                       ${['mitglied','veranstalter','admin'].map(r => `<option value="${r}" ${m.role===r?'selected':''} class="bg-[#1a3320]">${roleLabel(r)}</option>`).join('')}
                     </select>
                   </td>
-                  <td class="px-4 py-3 text-white/30 hidden md:table-cell">${new Date(m.created_at).toLocaleDateString('de-DE')}</td>
+                  <td class="px-4 py-3 text-white/30 hidden md:table-cell">${new Date(m.created_at||m.created).toLocaleDateString('de-DE')}</td>
                 </tr>`).join('')}
             </tbody>
           </table>
@@ -233,7 +239,7 @@ function tournamentCard(t, isRegistered, isOrganizer) {
   const modeLabels = Object.fromEntries(Object.entries(MODES).map(([k,v]) => [k, v.label]))
   const genderLabels = { mixed: 'Mixed', herren: 'Nur Herren', damen: 'Nur Damen', offen: 'Offen' }
   const sc = statusConfig[t.status] || statusConfig.draft
-  const count = t.tournament_participants?.[0]?.count ?? 0
+  const count = t._participant_count ?? 0
   const full = count >= t.max_participants
   const canRegister = t.status === 'open' && !isRegistered && !full
 
@@ -304,9 +310,10 @@ async function registerForTournament(id) {
     DS.regs = [...DS.regs, { tournament_id: id, user_id: currentUser.id, gender: currentProfile?.gender || 'offen' }]
     toast('Erfolgreich angemeldet!'); render(); return
   }
-  const { error } = await sb.from('tournament_participants').insert({ tournament_id: id, user_id: currentUser.id, gender: currentProfile?.gender })
-  if (error) { toast('Fehler: ' + error.message); return }
-  toast('Erfolgreich angemeldet!'); render()
+  try {
+    await pb.collection('participants').create({ tournament: id, user: currentUser.id, gender: currentProfile?.gender })
+    toast('Erfolgreich angemeldet!'); render()
+  } catch(e) { toast('Fehler: ' + e.message) }
 }
 
 async function unregisterFromTournament(id) {
@@ -314,9 +321,11 @@ async function unregisterFromTournament(id) {
     DS.regs = DS.regs.filter(r => !(r.tournament_id === id && r.user_id === currentUser.id))
     toast('Abgemeldet.'); render(); return
   }
-  const { error } = await sb.from('tournament_participants').delete().eq('tournament_id', id).eq('user_id', currentUser.id)
-  if (error) { toast('Fehler: ' + error.message); return }
-  toast('Abgemeldet.'); render()
+  try {
+    const record = await pb.collection('participants').getFirstListItem(`tournament = "${id}" && user = "${currentUser.id}"`)
+    await pb.collection('participants').delete(record.id)
+    toast('Abgemeldet.'); render()
+  } catch(e) { toast('Fehler: ' + e.message) }
 }
 
 async function setTournamentStatus(id, status) {
@@ -324,16 +333,18 @@ async function setTournamentStatus(id, status) {
     DS.tourneys = DS.tourneys.map(t => t.id === id ? { ...t, status } : t)
     toast(`Status: ${status}`); render(); return
   }
-  const { error } = await sb.from('tournaments').update({ status }).eq('id', id)
-  if (error) { toast('Fehler: ' + error.message); return }
-  toast(`Status: ${status}`); render()
+  try {
+    await pb.collection('tournaments').update(id, { status })
+    toast(`Status: ${status}`); render()
+  } catch(e) { toast('Fehler: ' + e.message) }
 }
 
 async function changeRole(userId, role) {
   if (DEMO_MODE) { toast('Im Demo-Modus nicht verfügbar'); return }
-  const { error } = await sb.from('profiles').update({ role }).eq('id', userId)
-  if (error) { toast('Fehler: ' + error.message); return }
-  toast(`Rolle geändert: ${roleLabel(role)}`)
+  try {
+    await pb.collection('users').update(userId, { role })
+    toast(`Rolle geändert: ${roleLabel(role)}`)
+  } catch(e) { toast('Fehler: ' + e.message) }
 }
 
 // ── Tournament Modes ─────────────────────────────────────────
@@ -430,19 +441,20 @@ async function handleCreateTournament(e) {
     closeModal(); render(); return
   }
 
-  if (_editingId) {
-    const { error } = await sb.from('tournaments').update(payload).eq('id', _editingId)
+  try {
+    if (_editingId) {
+      await pb.collection('tournaments').update(_editingId, payload)
+      toast('Turnier gespeichert!')
+    } else {
+      await pb.collection('tournaments').create({ ...payload, created_by: currentUser.id, status: 'draft' })
+      toast('Turnier erstellt!')
+    }
     btn.disabled = false; btn.textContent = 'Speichern'
-    if (error) { toast('Fehler: ' + error.message); return }
-    toast('Turnier gespeichert!')
-  } else {
-    const { error } = await sb.from('tournaments').insert({ ...payload, created_by: currentUser.id, status: 'draft' })
+    closeModal(); render()
+  } catch(e) {
     btn.disabled = false; btn.textContent = 'Speichern'
-    if (error) { toast('Fehler: ' + error.message); return }
-    toast('Turnier erstellt!')
+    toast('Fehler: ' + e.message)
   }
-  closeModal()
-  render()
 }
 
 // ── Delete Tournament ─────────────────────────────────────────
@@ -453,9 +465,10 @@ async function deleteTournament(id) {
     DS.regs = DS.regs.filter(r => r.tournament_id !== id)
     toast('Turnier gelöscht'); render(); return
   }
-  const { error } = await sb.from('tournaments').delete().eq('id', id)
-  if (error) { toast('Fehler: ' + error.message); return }
-  toast('Turnier gelöscht'); render()
+  try {
+    await pb.collection('tournaments').delete(id)
+    toast('Turnier gelöscht'); render()
+  } catch(e) { toast('Fehler: ' + e.message) }
 }
 
 // ── Templates ─────────────────────────────────────────────────
@@ -521,21 +534,27 @@ async function sendEmail() {
     document.getElementById('modal-email').close()
     toast('Demo-Modus: E-Mail würde versendet werden'); return
   }
-  const { error } = await sb.functions.invoke('send-email', {
-    body: { tournament_id: activeTournamentId, subject, body }
-  })
 
-  btn.disabled = false
-  if (error) { toast('Fehler beim Senden: ' + error.message); return }
-  document.getElementById('modal-email').close()
-  document.getElementById('email-subject').value = ''
-  document.getElementById('email-body').value = ''
-  toast('E-Mails versendet!')
+  try {
+    await fetch(POCKETBASE_URL + '/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': pb.authStore.token },
+      body: JSON.stringify({ tournament_id: activeTournamentId, subject, body })
+    })
+    document.getElementById('modal-email').close()
+    document.getElementById('email-subject').value = ''
+    document.getElementById('email-body').value = ''
+    toast('E-Mails versendet!')
+  } catch(e) {
+    toast('Fehler beim Senden: ' + e.message)
+  } finally {
+    btn.disabled = false
+  }
 }
 
 // ── Logout ────────────────────────────────────────────────────
-async function logout() {
-  if (!DEMO_MODE) await sb.auth.signOut()
+function logout() {
+  if (!DEMO_MODE) pb.authStore.clear()
   window.location.replace('index.html')
 }
 
@@ -602,14 +621,19 @@ async function refreshCheckins() {
       email: r.user_id === 'demo' ? currentUser.email : '',
       gender: r.gender,
       checked_in: r.checked_in || false,
-      checked_in_at: null
     }))
   } else {
-    const { data } = await sb.from('tournament_participants')
-      .select('checked_in, checked_in_at, gender, profiles(display_name, email)')
-      .eq('tournament_id', _qrTournamentId)
-      .order('checked_in', { ascending: false })
-    participants = (data || []).map(p => ({ ...p.profiles, gender: p.gender, checked_in: p.checked_in, checked_in_at: p.checked_in_at }))
+    const items = await pb.collection('participants').getFullList({
+      filter: `tournament = "${_qrTournamentId}"`,
+      expand: 'user',
+      sort: '-checked_in'
+    })
+    participants = items.map(p => ({
+      display_name: p.expand?.user?.display_name || p.display_name || p.expand?.user?.email || '–',
+      gender: p.gender,
+      checked_in: p.checked_in || false,
+      checked_in_at: p.checked_in_at || null
+    }))
   }
 
   const checkedIn = participants.filter(p => p.checked_in).length
@@ -621,7 +645,7 @@ async function refreshCheckins() {
   }
 
   list.innerHTML = participants.map(p => {
-    const name = p.display_name || p.email || '–'
+    const name = p.display_name || '–'
     const ic   = p.gender === 'herr' ? 'text-blue-400' : 'text-pink-400'
     return `<div class="flex items-center gap-3 px-3 py-2.5 rounded-xl ${p.checked_in ? 'bg-secondary-fixed/8 border border-secondary-fixed/15' : 'bg-white/5 border border-white/5'}">
       <span class="material-symbols-outlined text-base ${ic}">person</span>
@@ -655,16 +679,22 @@ async function refreshParticipants() {
   if (DEMO_MODE) {
     const regs = DS.regs.filter(r => r.tournament_id === _participantsTournamentId)
     participants = regs.map(r => ({
+      id: r.user_id,
       display_name: r.display_name || r.user_id,
       gender: r.gender,
       checked_in: r.checked_in || false,
-      user_id: r.user_id,
     }))
   } else {
-    const { data } = await sb.from('tournament_participants')
-      .select('gender, checked_in, user_id, profiles(display_name, email)')
-      .eq('tournament_id', _participantsTournamentId)
-    participants = (data || []).map(p => ({ display_name: p.profiles?.display_name || p.profiles?.email || '–', gender: p.gender, checked_in: p.checked_in, user_id: p.user_id }))
+    const items = await pb.collection('participants').getFullList({
+      filter: `tournament = "${_participantsTournamentId}"`,
+      expand: 'user'
+    })
+    participants = items.map(p => ({
+      id: p.id,
+      display_name: p.expand?.user?.display_name || p.display_name || p.expand?.user?.email || '–',
+      gender: p.gender,
+      checked_in: p.checked_in || false,
+    }))
   }
 
   if (!participants.length) {
@@ -675,7 +705,7 @@ async function refreshParticipants() {
   list.innerHTML = participants.map(p => {
     const ic = p.gender === 'herr' ? 'text-blue-400' : 'text-pink-400'
     const removeBtn = _participantsIsOrganizer
-      ? `<button onclick="removeParticipant('${p.user_id}')" class="text-white/20 hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-sm">person_remove</span></button>`
+      ? `<button onclick="removeParticipant('${p.id}')" class="text-white/20 hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-sm">person_remove</span></button>`
       : ''
     return `<div class="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 border border-white/5">
       <span class="material-symbols-outlined text-base ${ic}">person</span>
@@ -699,20 +729,33 @@ async function addManualParticipant() {
     render()
     return
   }
-  toast('Im Live-Modus: Spieler müssen sich selbst registrieren')
+
+  try {
+    await pb.collection('participants').create({
+      tournament: _participantsTournamentId,
+      display_name: name,
+      gender,
+      checked_in: false
+    })
+    document.getElementById('p-name').value = ''
+    await refreshParticipants()
+    render()
+  } catch(e) { toast('Fehler: ' + e.message) }
 }
 
-async function removeParticipant(userId) {
+async function removeParticipant(id) {
   if (!confirm('Teilnehmer entfernen?')) return
   if (DEMO_MODE) {
-    DS.regs = DS.regs.filter(r => !(r.tournament_id === _participantsTournamentId && r.user_id === userId))
+    DS.regs = DS.regs.filter(r => !(r.tournament_id === _participantsTournamentId && r.user_id === id))
     await refreshParticipants()
     render()
     return
   }
-  await sb.from('tournament_participants').delete().eq('tournament_id', _participantsTournamentId).eq('user_id', userId)
-  await refreshParticipants()
-  render()
+  try {
+    await pb.collection('participants').delete(id)
+    await refreshParticipants()
+    render()
+  } catch(e) { toast('Fehler: ' + e.message) }
 }
 
 // ── Beispielturnier ───────────────────────────────────────────
@@ -758,7 +801,7 @@ function loadExampleTournament() {
     user_id: 'player_' + i,
     gender: p.gender,
     display_name: p.name,
-    checked_in: i < 8, // erste 8 bereits eingecheckt
+    checked_in: i < 8,
   }))
 
   DS.tourneys = [tourney, ...DS.tourneys.filter(t => !t.id.startsWith('example_'))]
