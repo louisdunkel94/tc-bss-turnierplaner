@@ -542,9 +542,8 @@ function openQR(tournamentId) {
   document.getElementById('qr-tourney-name').textContent = tournamentName
   const base = location.href.replace(/[^/]*(\?.*)?$/, '')
   const url  = base + 'checkin.html?t=' + tournamentId
-  QRCode.toDataURL(url, { width: 220, margin: 1, color: { dark: '#0a1f0b', light: '#ffffff' } })
-    .then(dataUrl => { document.getElementById('qr-img').src = dataUrl })
-    .catch(e => console.error('QR error:', e))
+  const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url) + '&bgcolor=ffffff&color=0a1f0b&margin=10'
+  document.getElementById('qr-img').src = qrSrc
   document.getElementById('modal-qr').showModal()
 }
 
