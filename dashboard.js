@@ -10,9 +10,9 @@ let activeTournamentId = null
 // ── Boot ─────────────────────────────────────────────────────
 async function boot() {
   if (DEMO_MODE) {
-    const session = JSON.parse(localStorage.getItem('tc_demo_session') || 'null')
-    currentUser = { id: 'demo', email: session?.email || 'demo@tc-bss.de' }
-    currentProfile = { id: 'demo', display_name: session?.display_name || 'Demo Admin', role: 'admin', email: session?.email || 'demo@tc-bss.de', gender: session?.gender || 'herr' }
+    if (sessionStorage.getItem('tc_auth') !== '1') { window.location.replace('index.html'); return }
+    currentUser = { id: 'demo', email: 'demo@tc-bss.de' }
+    currentProfile = { id: 'demo', display_name: 'Admin', role: 'admin', email: 'demo@tc-bss.de', gender: 'herr' }
     showDemoBanner()
   } else {
     if (!pb.authStore.isValid) { window.location.replace('index.html'); return }
@@ -555,7 +555,8 @@ async function sendEmail() {
 
 // ── Logout ────────────────────────────────────────────────────
 function logout() {
-  if (!DEMO_MODE) pb.authStore.clear()
+  if (DEMO_MODE) sessionStorage.removeItem('tc_auth')
+  else pb.authStore.clear()
   window.location.replace('index.html')
 }
 
@@ -742,6 +743,47 @@ async function addManualParticipant() {
     await refreshParticipants()
     render()
   } catch(e) { toast('Fehler: ' + e.message) }
+}
+
+async function importCSV(input) {
+  const file = input.files[0]
+  if (!file) return
+  const text = await file.text()
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+
+  let added = 0
+  for (const line of lines) {
+    const parts = line.split(/[;,]/).map(p => p.trim())
+    const name = parts[0]
+    if (!name || name.toLowerCase() === 'name') continue
+
+    let gender = ''
+    if (parts[1]) {
+      const g = parts[1].toLowerCase()
+      if (g === 'dame' || g === 'w' || g === 'f' || g === 'weiblich') gender = 'dame'
+      else if (g === 'herr' || g === 'm' || g === 'männlich') gender = 'herr'
+    }
+
+    if (DEMO_MODE) {
+      DS.regs = [...DS.regs, {
+        tournament_id: _participantsTournamentId,
+        user_id: 'manual_' + Date.now() + '_' + added,
+        display_name: name,
+        gender,
+        checked_in: false
+      }]
+    } else {
+      try {
+        await pb.collection('participants').create({ tournament: _participantsTournamentId, display_name: name, gender, checked_in: false })
+      } catch(e) { toast('Fehler bei ' + name + ': ' + e.message); continue }
+    }
+    added++
+  }
+
+  input.value = ''
+  await refreshParticipants()
+  render()
+  toast(`${added} Spieler importiert`)
 }
 
 async function removeParticipant(id) {
