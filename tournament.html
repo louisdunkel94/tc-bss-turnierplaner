@@ -1035,6 +1035,56 @@ function renderGroupKOPlan() {
 }
 
 // ════════════════════════════════════════════════
+//  EXPORT
+// ════════════════════════════════════════════════
+function exportTournament() {
+  const wb = XLSX.utils.book_new()
+  const title = document.getElementById('tournament-title')?.textContent || 'Turnier'
+
+  // Sheet 1: Tabelle
+  const standings = calcStandings()
+  const tRows = [['Platz','Name','Punkte','Spiele','Siege','Unentschieden','Niederlagen']]
+  standings.forEach((s,i) => tRows.push([i+1, s.name, s.pts, s.played, s.w, s.d||0, s.l]))
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tRows), 'Tabelle')
+
+  // Sheet 2: Alle Runden (mixed modes)
+  if(isMixed() && S.schedule.length) {
+    const mRows = [['Runde','Platz','Herr 1','Dame 1','Ergebnis','Herr 2','Dame 2']]
+    S.schedule.forEach(rnd => rnd.matches.forEach(m => {
+      const res = m.result==='team1'?'T1 gewinnt':m.result==='team2'?'T2 gewinnt':m.result==='draw'?'Unentschieden':''
+      mRows.push([rnd.round, m.court||'', m.herr1, m.dame1, res, m.herr2, m.dame2])
+    }))
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mRows), 'Spielplan')
+  }
+
+  // Sheet 2: Alle Runden (individual modes)
+  if(!isMixed() && !isGroup() && S.schedule.length) {
+    const mRows = [['Runde','Spieler 1','Spieler 2','Ergebnis']]
+    S.schedule.forEach(rnd => {
+      if(rnd.bye) mRows.push([rnd.round, rnd.bye, 'Freilos', ''])
+      rnd.matches.forEach(m => {
+        const res = m.result==='p1'?m.player1+' gewinnt':m.result==='p2'?m.player2+' gewinnt':m.result==='draw'?'Unentschieden':''
+        mRows.push([rnd.round, m.player1||'TBD', m.player2||'TBD', res])
+      })
+    })
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mRows), 'Spielplan')
+  }
+
+  // Sheet 3: Gruppenphase
+  if(isGroup() && S.groups.length) {
+    const gRows = [['Gruppe','Runde','Spieler 1','Spieler 2','Ergebnis']]
+    S.groups.forEach(g => g.schedule.forEach(rnd => rnd.matches.forEach(m => {
+      const res = m.result==='p1'?m.player1+' gewinnt':m.result==='p2'?m.player2+' gewinnt':m.result==='draw'?'Unentschieden':''
+      gRows.push([g.name, rnd.round, m.player1||'TBD', m.player2||'TBD', res])
+    })))
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(gRows), 'Gruppen')
+  }
+
+  XLSX.writeFile(wb, title.replace(/[^a-z0-9äöü ]/gi,'_') + '_Ergebnisse.xlsx')
+  toast('Export heruntergeladen')
+}
+
+// ════════════════════════════════════════════════
 //  RENDER: TABELLE
 // ════════════════════════════════════════════════
 function renderTabelle() {
@@ -1052,7 +1102,9 @@ function renderTabelle() {
     </div>`:''}
     <div class="flex justify-between items-center mb-5">
       <h2 class="text-2xl md:text-3xl font-headline font-bold text-white">Tabelle</h2>
-      <div class="text-xs text-white/35 font-body">${rows.length} Spieler</div>
+      <button onclick="exportTournament()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
+        <span class="material-symbols-outlined text-sm">download</span>Excel
+      </button>
     </div>
     ${!rows.length||rows.every(r=>r.played===0)
       ?`<div class="text-center py-16 text-white/30 font-body"><span class="material-symbols-outlined text-4xl block mb-3">leaderboard</span>Noch keine Ergebnisse</div>`
