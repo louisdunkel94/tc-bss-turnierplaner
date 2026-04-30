@@ -274,6 +274,9 @@ function tournamentCard(t, isRegistered, isOrganizer) {
           ${t.status === 'running' ? `<a href="tournament.html?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
             <span class="material-symbols-outlined text-xs">open_in_new</span>Spielplan
           </a>` : ''}
+          ${t.status === 'closed' ? `<a href="tournament.html?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors no-underline">
+            <span class="material-symbols-outlined text-xs">leaderboard</span>Ergebnisse
+          </a>` : ''}
           ${(t.status === 'open' || t.status === 'running') ? `<button onclick="openQR('${t.id}')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
             <span class="material-symbols-outlined text-xs">qr_code_2</span>Check-in
           </button>` : ''}

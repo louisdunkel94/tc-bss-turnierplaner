@@ -683,9 +683,9 @@ function renderSpieler() {
     <div class="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
       <div class="w-8 h-8 rounded-full ${gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-xs font-bold text-white font-headline flex-shrink-0">${initials(name)}</div>
       <span class="text-sm font-body text-white font-medium flex-1 truncate">${esc(name)}</span>
-      <button onclick="removePlayer('${gender}',${idx})" class="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0">
+      ${S.done?'':`<button onclick="removePlayer('${gender}',${idx})" class="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0">
         <span class="material-symbols-outlined text-sm">close</span>
-      </button>
+      </button>`}
     </div>`
   return `
     <div class="relative border-2 border-dashed border-white/15 rounded-2xl p-5 text-center cursor-pointer hover:border-secondary-fixed/40 hover:bg-white/5 transition-all mb-4" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
@@ -730,13 +730,13 @@ function renderSpieler() {
             <span class="text-xs font-headline font-bold uppercase tracking-widest text-white/50">${g==='herr'?'Herren':'Damen'}</span>
             <span class="ml-auto text-xs font-bold bg-white/10 text-white/50 px-2 py-0.5 rounded-full font-headline">${list.length}</span>
           </div>
-          <div class="flex gap-2 mb-2.5">
+          ${S.done?'':`<div class="flex gap-2 mb-2.5">
             <input type="text" id="input-${g}" placeholder="Name…" onkeydown="if(event.key==='Enter')addPlayer('${g}')"
               class="flex-1 bg-white/10 border border-white/10 text-white placeholder-white/25 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors min-w-0"/>
             <button onclick="addPlayer('${g}')" class="w-9 h-9 bg-secondary-fixed text-on-secondary-fixed rounded-xl flex items-center justify-center hover:bg-secondary-fixed-dim transition-colors flex-shrink-0">
               <span class="material-symbols-outlined text-base">add</span>
             </button>
-          </div>
+          </div>`}
           <div class="space-y-1.5 max-h-64 overflow-y-auto scrollbar-hide">
             ${list.map((n,i)=>playerItem(n,g,i)).join('')}
           </div>
@@ -747,14 +747,14 @@ function renderSpieler() {
       <button onclick="loadTestData()" class="flex items-center gap-1.5 text-sm text-white/35 hover:text-secondary-fixed transition-colors font-headline font-semibold px-3 py-2 rounded-xl hover:bg-white/5">
         <span class="material-symbols-outlined text-base">science</span>Testdaten
       </button>
-      ${inT
+      ${S.done?'':(inT
         ?`<button onclick="setView('plan')" class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
             <span class="material-symbols-outlined text-base">arrow_forward</span>Zum Spielplan
           </button>`
         :`<button onclick="startTournament()" ${ok?'':'disabled'}
             class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-headline font-bold text-sm transition-colors ${ok?'bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim':'bg-white/10 text-white/25 cursor-not-allowed'}">
             Turnier starten<span class="material-symbols-outlined text-base">arrow_forward</span>
-          </button>`}
+          </button>`)}
     </div>`
 }
 
@@ -791,7 +791,7 @@ function renderMixedCard(m,rIdx,mIdx) {
     </div>
     <div class="flex flex-col items-center gap-2 shrink-0">
       ${score}
-      <div class="flex gap-1">${btn('team1','◀','T1')}${btn('draw','=','=')}${btn('team2','▶','T2')}</div>
+      ${S.done?'':`<div class="flex gap-1">${btn('team1','◀','T1')}${btn('draw','=','=')}${btn('team2','▶','T2')}</div>`}
     </div>
     <div class="flex-1 w-full md:text-right">
       <div class="flex items-center gap-2 md:flex-row-reverse"><span class="material-symbols-outlined text-blue-400 text-sm">person</span><span class="font-body font-bold text-sm ${w2?'text-secondary-fixed':'text-white'}">${esc(m.herr2)}</span></div>
@@ -820,11 +820,11 @@ function renderIndividualCard(m,setResultFn,allowDraw=true) {
     </div>
     <div class="flex flex-col items-center gap-2 shrink-0">
       ${score}
-      <div class="flex gap-1">
+      ${S.done?'': `<div class="flex gap-1">
         <button onclick="${setResultFn}('p1')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs transition-all active:scale-95 ${res==='p1'?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">◀</button>
         ${allowDraw?`<button onclick="${setResultFn}('draw')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs transition-all active:scale-95 ${res==='draw'?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">=</button>`:''}
         <button onclick="${setResultFn}('p2')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs transition-all active:scale-95 ${res==='p2'?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">▶</button>
-      </div>
+      </div>`}
     </div>
     <div class="flex items-center gap-2 flex-1 w-full md:flex-row-reverse">
       <span class="material-symbols-outlined ${isHerr2?'text-blue-400':'text-pink-400'} text-sm">person</span>
@@ -1137,9 +1137,12 @@ function renderPaarungen() {
 //  CHROME
 // ════════════════════════════════════════════════
 function updateChrome() {
+  const resetBtn=document.querySelector('button[onclick="resetTournament()"]')
+  if(resetBtn) resetBtn.style.display=S.done?'none':''
   const badge=document.getElementById('header-badge')
   if(badge) {
-    if(S.step==='tournament') {
+    if(S.done) { badge.textContent='Abgeschlossen'; badge.classList.remove('hidden') }
+    else if(S.step==='tournament') {
       let done=0, total=0
       if(isGroup()&&!S.koPhase) {
         (S.groups||[]).forEach(g=>g.schedule.forEach(r=>{total+=r.matches.length;done+=r.matches.filter(m=>m.result).length}))
