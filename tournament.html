@@ -162,6 +162,7 @@ let S = {
   loserSchedule:[],   // double KO losers bracket
   groups:       [],   // group phase groups
   koPhase:      null, // group phase KO rounds
+  done:         false,
 }
 
 const MIXED_MODES = new Set(['geloste_paarungen','americano'])
@@ -544,6 +545,15 @@ function nextGelosteRound() {
   save(); render(); toast('Nächste Runde ausgelost')
 }
 
+function finishTournament() {
+  S.done=true; S.view='tabelle'
+  if(_tournamentId) {
+    if(DEMO_MODE){try{const t=JSON.parse(localStorage.getItem('tc_tourneys')||'[]');const i=t.findIndex(x=>x.id===_tournamentId);if(i>=0){t[i].status='closed';localStorage.setItem('tc_tourneys',JSON.stringify(t))}}catch(e){}}
+    else pb.collection('tournaments').update(_tournamentId,{status:'closed'}).catch(()=>{})
+  }
+  save(); render(); toast('Turnier beendet')
+}
+
 function nextSwissRound() {
   if(S.schedule.length>=S.numRounds){toast('Maximale Rundenzahl erreicht');return}
   const last=S.schedule[S.schedule.length-1]
@@ -843,9 +853,15 @@ function renderMixedPlan() {
     </div>
     ${bye}
     <div class="space-y-3">${rnd.matches.map((m,mi)=>renderMixedCard(m,S.currentRound,mi)).join('')}</div>
-    ${canNextGeloste?`<button onclick="nextGelosteRound()" class="mt-6 w-full py-3 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2">
-      <span class="material-symbols-outlined text-base">shuffle</span>Nächste Runde auslosen
-    </button>`:''}
+    ${S.mode==='geloste_paarungen'&&isLastRound&&roundDone(rnd)?`
+    <div class="mt-6 flex flex-col sm:flex-row gap-3">
+      ${S.schedule.length<S.numRounds?`<button onclick="nextGelosteRound()" class="flex-1 py-3 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-base">shuffle</span>Nächste Runde auslosen
+      </button>`:''}
+      <button onclick="finishTournament()" class="flex-1 py-3 rounded-xl font-headline font-bold text-sm bg-white/10 text-white/70 hover:bg-white/15 border border-white/10 transition-colors flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-base">emoji_events</span>Turnier beenden
+      </button>
+    </div>`:''}
   `
 }
 
@@ -1010,6 +1026,13 @@ function renderTabelle() {
   const medals=['🥇','🥈','🥉']
   const accents=['border-l-[3px] border-yellow-400','border-l-[3px] border-zinc-500','border-l-[3px] border-amber-700']
   return `
+    ${S.done?`<div class="mb-6 rounded-2xl bg-secondary-fixed/10 border border-secondary-fixed/25 px-5 py-4 flex items-center gap-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-2xl">emoji_events</span>
+      <div>
+        <div class="font-headline font-bold text-secondary-fixed">Turnier beendet</div>
+        <div class="text-xs text-white/40 font-body mt-0.5">Endabrechnung – alle Runden gespielt</div>
+      </div>
+    </div>`:''}
     <div class="flex justify-between items-center mb-5">
       <h2 class="text-2xl md:text-3xl font-headline font-bold text-white">Tabelle</h2>
       <div class="text-xs text-white/35 font-body">${rows.length} Spieler</div>
