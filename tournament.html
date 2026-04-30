@@ -1035,8 +1035,35 @@ function renderGroupKOPlan() {
 }
 
 // ════════════════════════════════════════════════
-//  EXPORT
+//  EXPORT / BACKUP / REIMPORT
 // ════════════════════════════════════════════════
+function backupTournament() {
+  const title = document.getElementById('tournament-title')?.textContent || 'Turnier'
+  const data = JSON.stringify({_backup:true, _version:1, _title:title, state:S}, null, 2)
+  const a = document.createElement('a')
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data)
+  a.download = title.replace(/[^a-z0-9äöü ]/gi,'_') + '_Backup.json'
+  a.click()
+  toast('Backup heruntergeladen')
+}
+
+function importBackup(input) {
+  const file = input.files[0]; if(!file) return
+  const reader = new FileReader()
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result)
+      if(!data._backup || !data.state) { toast('Ungültige Backup-Datei'); return }
+      if(!confirm('Aktuellen Stand überschreiben und Backup wiederherstellen?')) { input.value=''; return }
+      S = {...S, ...data.state}
+      save(); render()
+      toast('Backup wiederhergestellt')
+    } catch(err) { toast('Fehler beim Lesen der Datei') }
+    input.value = ''
+  }
+  reader.readAsText(file)
+}
+
 function exportTournament() {
   const wb = XLSX.utils.book_new()
   const title = document.getElementById('tournament-title')?.textContent || 'Turnier'
@@ -1102,9 +1129,18 @@ function renderTabelle() {
     </div>`:''}
     <div class="flex justify-between items-center mb-5">
       <h2 class="text-2xl md:text-3xl font-headline font-bold text-white">Tabelle</h2>
-      <button onclick="exportTournament()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
-        <span class="material-symbols-outlined text-sm">download</span>Excel
-      </button>
+      <div class="flex items-center gap-2">
+        <button onclick="exportTournament()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
+          <span class="material-symbols-outlined text-sm">download</span>Excel
+        </button>
+        <button onclick="backupTournament()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
+          <span class="material-symbols-outlined text-sm">save</span>Backup
+        </button>
+        ${S.done?'': `<label class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-sm">upload</span>Wiederherstellen
+          <input type="file" accept=".json" class="sr-only" onchange="importBackup(this)"/>
+        </label>`}
+      </div>
     </div>
     ${!rows.length||rows.every(r=>r.played===0)
       ?`<div class="text-center py-16 text-white/30 font-body"><span class="material-symbols-outlined text-4xl block mb-3">leaderboard</span>Noch keine Ergebnisse</div>`
