@@ -2,109 +2,82 @@
 
 Web-App zur Verwaltung von Vereinsturnieren. Läuft vollständig im Browser, kein Build-Schritt nötig.
 
+**Live:** `https://louisdunkel94.github.io/tc-bss-turnierplaner/`  
+**Passwort:** `tcbss`
+
+> **Beta** – Daten werden lokal im Browser gespeichert. Keine geräteübergreifende Synchronisation.
+
+---
+
+## Schnellstart
+
+```
+index.html → Passwort eingeben → Dashboard → Turnier erstellen → Spielplan starten
+```
+
+Alle Seiten funktionieren ohne Server – einfach `index.html` im Browser öffnen oder über GitHub Pages aufrufen.
+
 ---
 
 ## Dateien
 
 | Datei | Beschreibung |
 |---|---|
-| `index.html` | Login & Registrierung |
-| `dashboard.html` | Rollenbasiertes Dashboard (Mitglied / Veranstalter / Admin) |
-| `tournament.html` | Spielplan-App (Auslosung, Ergebnisse, Tabelle, Paarungsstatistik) |
-| `logo.png` | Vereinslogo (transparent, wird von allen Seiten verwendet) |
-| `SUPABASE_SETUP.sql` | Datenbankschema + RLS-Policies für Supabase |
-| `supabase/functions/send-email/index.ts` | Edge Function zum Mailversand via Resend |
+| `index.html` | Login-Seite (Passwortschutz) |
+| `dashboard.html` / `dashboard.js` | Turnier-Übersicht, Verwaltung, Archiv |
+| `tournament.html` | Spielplan, Auslosung, Ergebnisse, Tabelle |
+| `checkin.html` | QR-Code Check-in-Seite |
+| `anleitung.html` | Benutzeranleitung (Beta-Hinweise) |
+| `impressum.html` / `datenschutz.html` | Rechtliche Seiten |
+| `config.js` | Konfiguration (gitignored) |
+| `logo.png` | Vereinslogo |
 
 ---
 
-## Rollen
+## Spielmodi
 
-| Rolle | Rechte |
+| Modus | Beschreibung |
 |---|---|
-| **Mitglied** | Offene Turniere sehen und sich anmelden/abmelden |
-| **Veranstalter** | Turniere erstellen, verwalten, Spielplan starten, Info-Mails senden |
-| **Admin** | Alles vom Veranstalter + Mitgliederverwaltung (Rollen ändern) |
-
-Neue Registrierungen erhalten automatisch die Rolle **Mitglied**.
+| **Geloste Paarungen** | Mixed-Doppel, Paare werden jede Runde neu ausgelost (mit Wiederholungsminimierung). Unbegrenzte Runden, manuell beendet. |
+| **Americano** | Wie Geloste Paarungen, Partner rotieren systematisch. |
+| **Jeder gegen jeden** | Vollständiger Round-Robin-Plan, alle Matches im Voraus. |
+| **Schweizer System** | Runde für Runde, Paarungen nach aktuellem Tabellenstand. |
+| **Einfaches KO** | Klassisches Knockout-Bracket. |
+| **Doppeltes KO** | Zweite Chance nach erster Niederlage (Winners/Losers Bracket). |
+| **Gruppenphase + KO** | Automatische Gruppen → Jeder-gegen-jeden → KO aus Gruppenersten. |
 
 ---
 
-## Turnier-Spielmodi
+## Datenspeicherung
 
-### Geloste Paarungen (Standard)
-Jede Runde werden 3 Töpfe neu gemischt:
-- **Topf 1** – alle Herren
-- **Topf 2** – alle Damen
-- **Topf 3** – alle Plätze (1–6)
+Aktuell **Demo-Modus**: alle Daten im `localStorage` des Browsers.
 
-Pro Ziehung: 1 Herr + 1 Dame = Mixed-Team. Je zwei Teams bilden ein Match auf einem zufällig gezogenen Platz. Maximal so viele Matches wie Plätze vorhanden. Übrige Paare erhalten ein Freilos.
-
-### Ergebniseingabe
-Jedes Match hat drei Schaltflächen: **◀ Team 1 gewinnt · = Unentschieden · Team 2 ▶**. Nochmaliges Klicken setzt das Ergebnis zurück.
-
-### Wertung
-| Ergebnis | Punkte |
+| Key | Inhalt |
 |---|---|
-| Sieg | 2 |
-| Unentschieden | 1 |
-| Niederlage | 0 |
+| `tc_tourneys` | Turniere inkl. gespeichertem Turnierstand (`state`) |
+| `tc_regs` | Teilnehmer-Anmeldungen |
+| `donatocup_v4` | Fallback-Spielstand (turnierseitig) |
+
+⚠️ Daten gehen verloren wenn der Browser-Cache geleert wird. Backup-Funktion verwenden.
 
 ---
 
-## Einrichtung (einmalig)
+## Branch-Strategie
 
-### 1. Supabase-Projekt anlegen
-1. Account unter [supabase.com](https://supabase.com) erstellen
-2. Neues Projekt anlegen
-3. Im **SQL-Editor** den Inhalt von `SUPABASE_SETUP.sql` ausführen
-4. Unter *Settings → API*: `URL` und `anon key` kopieren
-
-### 2. Credentials eintragen
-In diesen drei Dateien `YOUR_SUPABASE_URL` und `YOUR_SUPABASE_ANON_KEY` ersetzen:
-- `index.html`
-- `dashboard.html`
-- `tournament.html`
-
-### 3. Ersten Admin anlegen
-Nach erster Registrierung im Supabase **SQL-Editor**:
-```sql
-UPDATE profiles SET role = 'admin' WHERE email = 'deine@email.de';
-```
-
-### 4. E-Mail-Versand einrichten (Resend)
-1. Account bei [resend.com](https://resend.com), eigene Domain verifizieren
-2. API-Key erstellen
-3. Supabase CLI installieren: `npm install -g supabase`
-4. Edge Function deployen:
-   ```bash
-   supabase login
-   supabase link --project-ref DEIN_PROJECT_REF
-   supabase functions deploy send-email
-   supabase secrets set RESEND_API_KEY=re_...
-   ```
-5. In `supabase/functions/send-email/index.ts` die `FROM_EMAIL`-Adresse anpassen
-
-### 5. Logo
-`logo.png` (Vereinslogo, transparenter Hintergrund) ins Projektverzeichnis legen – wird von allen Seiten automatisch eingebunden.
-
----
-
-## Demo-Modus (ohne Supabase)
-
-Solange `YOUR_SUPABASE_URL` nicht ersetzt ist, läuft die gesamte App im **Demo-Modus**:
-
-- Kein Login erforderlich – die Session startet automatisch als **Admin**
-- Alle Daten werden lokal im Browser (`localStorage`) gespeichert
-- Keine Daten verlassen den Browser
-
-Einfach `dashboard.html` im Browser öffnen.
-
----
-
-## Neue Seiten
-
-| Datei | Beschreibung |
+| Branch | Zweck |
 |---|---|
-| `checkin.html` | Self-Check-in via QR-Code (Spieler scannen den Code am Eingang) |
-| `impressum.html` | Impressum gemäß § 5 TMG |
-| `datenschutz.html` | Datenschutzerklärung gemäß DSGVO |
+| `main` | Produktiv – deployed via GitHub Pages |
+| `dev` | Entwicklung & Tests – vor Merge in main prüfen |
+
+---
+
+## Backup & Export
+
+Im Turnier unter **Tabelle**:
+- **Excel** – Ergebnisse als `.xlsx` (Tabelle + Spielplan)
+- **Backup** – Vollständiger Spielstand als `.json`
+- **Wiederherstellen** – `.json`-Backup reimportieren
+
+---
+
+Detaillierte technische Dokumentation: [`DOCS.md`](DOCS.md)
