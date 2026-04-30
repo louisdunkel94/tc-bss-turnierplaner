@@ -208,12 +208,27 @@ function toast(msg) {
 // ════════════════════════════════════════════════
 function drawGeloste(num) {
   const n = Math.min(S.herren.length, S.damen.length)
-  const topf1 = shuffle(S.herren.slice(0,n))
-  const topf2 = shuffle(S.damen.slice(0,n))
+  // Count how often each herr-dame pair has played together to minimize repeats
+  const pairCount = {}
+  S.schedule.forEach(rnd => rnd.matches.forEach(m => {
+    const k1=m.herr1+'|'+m.dame1, k2=m.herr2+'|'+m.dame2
+    pairCount[k1]=(pairCount[k1]||0)+1; pairCount[k2]=(pairCount[k2]||0)+1
+  }))
+  // Greedy assignment: each man gets the woman he's played with least (random among ties)
+  const herren = shuffle(S.herren.slice(0,n))
+  const availDamen = [...S.damen.slice(0,n)]
+  const pairs = []
+  for(const herr of herren) {
+    availDamen.sort((a,b)=>(pairCount[herr+'|'+a]||0)-(pairCount[herr+'|'+b]||0))
+    const minC = pairCount[herr+'|'+availDamen[0]]||0
+    const tied = availDamen.filter(d=>(pairCount[herr+'|'+d]||0)===minC)
+    const dame = tied[Math.floor(Math.random()*tied.length)]
+    pairs.push({herr,dame}); availDamen.splice(availDamen.indexOf(dame),1)
+  }
+  const sp = shuffle(pairs)
   const courts = shuffle(Array.from({length:S.numCourts},(_,i)=>i+1))
-  let pairs = shuffle(topf1.map((h,i)=>({herr:h,dame:topf2[i]})))
-  const maxM = Math.min(S.numCourts, Math.floor(pairs.length/2))
-  const active = pairs.slice(0,maxM*2), byePairs = pairs.slice(maxM*2)
+  const maxM = Math.min(S.numCourts, Math.floor(sp.length/2))
+  const active = sp.slice(0,maxM*2), byePairs = sp.slice(maxM*2)
   const matches = []
   for(let i=0;i<active.length;i+=2)
     matches.push({herr1:active[i].herr,dame1:active[i].dame,herr2:active[i+1].herr,dame2:active[i+1].dame,result:null,court:courts[i/2]})
