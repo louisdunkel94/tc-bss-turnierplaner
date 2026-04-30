@@ -6,6 +6,7 @@ const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
 let currentUser = null
 let currentProfile = null
 let activeTournamentId = null
+let _showArchive = false
 
 // ── Boot ─────────────────────────────────────────────────────
 async function boot() {
@@ -108,6 +109,9 @@ async function renderVeranstalter(app) {
   const myRegs   = await dbMyRegs()
   const myIds    = new Set(myRegs.map(r => r.tournament_id))
 
+  const active   = (tourneys||[]).filter(t => t.status !== 'closed')
+  const archived = (tourneys||[]).filter(t => t.status === 'closed')
+
   app.innerHTML = `
     <div class="flex items-start justify-between mb-8 flex-wrap gap-4">
       <div>
@@ -118,7 +122,7 @@ async function renderVeranstalter(app) {
         <span class="material-symbols-outlined text-base">add</span>Turnier erstellen
       </button>
     </div>
-    ${!tourneys?.length
+    ${!active.length && !archived.length
       ? `<div class="text-center py-16 text-white/30 font-body">
            <span class="material-symbols-outlined text-4xl block mb-3">add_circle</span>
            <p class="mb-5">Noch keine Turniere — erstelle das erste!</p>
@@ -126,12 +130,27 @@ async function renderVeranstalter(app) {
              <span class="material-symbols-outlined text-sm">science</span>Beispielturnier laden
            </button>
          </div>`
-      : `<div class="grid gap-4 md:grid-cols-2">${tourneys.map(t => tournamentCard(t, myIds.has(t.id), true)).join('')}</div>
-         ${DEMO_MODE ? `<div class="text-center mt-6">
-           <button onclick="loadExampleTournament()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-headline font-semibold text-white/20 hover:text-secondary-fixed hover:bg-white/5 transition-colors">
-             <span class="material-symbols-outlined text-sm">science</span>Beispielturnier neu laden
-           </button>
-         </div>` : ''}`}
+      : `
+        ${active.length
+          ? `<div class="grid gap-4 md:grid-cols-2">${active.map(t => tournamentCard(t, myIds.has(t.id), true)).join('')}</div>`
+          : `<div class="text-center py-12 text-white/30 font-body">
+               <span class="material-symbols-outlined text-3xl block mb-2">event_busy</span>
+               Keine aktiven Turniere
+             </div>`}
+        ${archived.length ? `
+        <section class="mt-10">
+          <button onclick="_showArchive=!_showArchive;render()" class="flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors font-headline font-semibold text-sm mb-1">
+            <span class="material-symbols-outlined text-base">inventory_2</span>
+            Archiv <span class="text-white/25 font-normal">(${archived.length})</span>
+            <span class="material-symbols-outlined text-base ml-1">${_showArchive ? 'expand_less' : 'expand_more'}</span>
+          </button>
+          ${_showArchive ? `<div class="grid gap-4 md:grid-cols-2 mt-4 opacity-60">${archived.map(t => tournamentCard(t, myIds.has(t.id), true)).join('')}</div>` : ''}
+        </section>` : ''}
+        ${DEMO_MODE ? `<div class="text-center mt-6">
+          <button onclick="loadExampleTournament()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-headline font-semibold text-white/20 hover:text-secondary-fixed hover:bg-white/5 transition-colors">
+            <span class="material-symbols-outlined text-sm">science</span>Beispielturnier neu laden
+          </button>
+        </div>` : ''}`}
   `
 }
 

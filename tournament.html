@@ -460,7 +460,9 @@ function syncSchedule() {
     if(roundHasSomeResult(rnd)) return rnd
     redrawn++; return drawFn(rnd.round)
   })
-  while(S.schedule.length<S.numRounds){S.schedule.push(drawFn(S.schedule.length+1));redrawn++}
+  if(S.mode!=='geloste_paarungen'){
+    while(S.schedule.length<S.numRounds){S.schedule.push(drawFn(S.schedule.length+1));redrawn++}
+  }
   while(S.schedule.length>S.numRounds){
     const last=S.schedule[S.schedule.length-1]
     if(!roundHasSomeResult(last)) S.schedule.pop(); else break
@@ -513,7 +515,7 @@ function startTournament() {
   S.step='tournament'; S.view='plan'; S.currentRound=0
   S.schedule=[]; S.loserSchedule=[]; S.groups=[]; S.koPhase=null
   switch(S.mode) {
-    case 'geloste_paarungen': for(let i=1;i<=S.numRounds;i++) S.schedule.push(drawGeloste(i)); break
+    case 'geloste_paarungen': S.schedule.push(drawGeloste(1)); break
     case 'americano':         for(let i=1;i<=S.numRounds;i++) S.schedule.push(drawAmericano(i)); break
     case 'round_robin':       S.schedule=generateRoundRobin(); break
     case 'schweizer_system':  S.schedule=[generateSwissRound(1)]; break
@@ -532,6 +534,15 @@ function redrawRound(idx) {
 }
 
 function setRound(i) { S.currentRound=i; render() }
+
+function nextGelosteRound() {
+  if(S.schedule.length>=S.numRounds){toast('Maximale Rundenzahl erreicht');return}
+  const last=S.schedule[S.schedule.length-1]
+  if(!roundDone(last)){toast('Bitte erst alle Ergebnisse eintragen');return}
+  S.schedule.push(drawGeloste(S.schedule.length+1))
+  S.currentRound=S.schedule.length-1
+  save(); render(); toast('Nächste Runde ausgelost')
+}
 
 function nextSwissRound() {
   if(S.schedule.length>=S.numRounds){toast('Maximale Rundenzahl erreicht');return}
@@ -811,6 +822,8 @@ function renderMixedPlan() {
   const canRedraw=!roundHasSomeResult(rnd)
   const doneCnt=S.schedule.filter(roundDone).length
   const byePairs=rnd.byePairs||[]
+  const isLastRound=S.currentRound===S.schedule.length-1
+  const canNextGeloste=S.mode==='geloste_paarungen'&&isLastRound&&roundDone(rnd)&&S.schedule.length<S.numRounds
   const bye=byePairs.length?`<div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white/50 text-sm font-body mb-3">
     <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-white/30 mb-1.5 flex items-center gap-1.5">
       <span class="material-symbols-outlined text-xs">weekend</span>Freilos
@@ -820,7 +833,7 @@ function renderMixedPlan() {
   return `
     <div class="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">${renderRoundPills(S.schedule,S.currentRound)}</div>
     <div class="flex justify-between items-center mb-5">
-      <h2 class="text-2xl font-headline font-bold text-white">Runde ${rnd.round}<span class="text-base font-normal text-white/35 ml-2">von ${S.schedule.length}</span></h2>
+      <h2 class="text-2xl font-headline font-bold text-white">Runde ${rnd.round}<span class="text-base font-normal text-white/35 ml-2">von ${S.numRounds}</span></h2>
       <div class="flex items-center gap-2">
         <span class="text-xs font-bold bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-full font-headline">${doneCnt}/${S.schedule.length} fertig</span>
         ${canRedraw?`<button onclick="redrawRound(${S.currentRound})" class="text-xs text-white/35 hover:text-secondary-fixed transition-colors font-headline font-semibold flex items-center gap-1 px-2.5 py-1.5 rounded-xl hover:bg-white/5">
@@ -829,7 +842,11 @@ function renderMixedPlan() {
       </div>
     </div>
     ${bye}
-    <div class="space-y-3">${rnd.matches.map((m,mi)=>renderMixedCard(m,S.currentRound,mi)).join('')}</div>`
+    <div class="space-y-3">${rnd.matches.map((m,mi)=>renderMixedCard(m,S.currentRound,mi)).join('')}</div>
+    ${canNextGeloste?`<button onclick="nextGelosteRound()" class="mt-6 w-full py-3 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2">
+      <span class="material-symbols-outlined text-base">shuffle</span>Nächste Runde auslosen
+    </button>`:''}
+  `
 }
 
 function renderRRPlan() {
