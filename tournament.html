@@ -163,6 +163,7 @@ let S = {
   groups:       [],   // group phase groups
   koPhase:      null, // group phase KO rounds
   done:         false,
+  pausedPlayers:[],
 }
 
 const MIXED_MODES = new Set(['geloste_paarungen','americano'])
@@ -207,16 +208,18 @@ function toast(msg) {
 //  DRAW: GELOSTE PAARUNGEN
 // ════════════════════════════════════════════════
 function drawGeloste(num) {
-  const n = Math.min(S.herren.length, S.damen.length)
-  // Count how often each herr-dame pair has played together to minimize repeats
+  const paused = new Set(S.pausedPlayers||[])
+  const activeHerren = S.herren.filter(h=>!paused.has(h))
+  const activeDamen  = S.damen.filter(d=>!paused.has(d))
+  const pausedPairs  = [...paused].map(p=>({name:p,gender:S.herren.includes(p)?'herr':'dame'}))
+  const n = Math.min(activeHerren.length, activeDamen.length)
   const pairCount = {}
   S.schedule.forEach(rnd => rnd.matches.forEach(m => {
     const k1=m.herr1+'|'+m.dame1, k2=m.herr2+'|'+m.dame2
     pairCount[k1]=(pairCount[k1]||0)+1; pairCount[k2]=(pairCount[k2]||0)+1
   }))
-  // Greedy assignment: each man gets the woman he's played with least (random among ties)
-  const herren = shuffle(S.herren.slice(0,n))
-  const availDamen = [...S.damen.slice(0,n)]
+  const herren = shuffle(activeHerren.slice(0,n))
+  const availDamen = [...activeDamen.slice(0,n)]
   const pairs = []
   for(const herr of herren) {
     availDamen.sort((a,b)=>(pairCount[herr+'|'+a]||0)-(pairCount[herr+'|'+b]||0))
@@ -232,21 +235,25 @@ function drawGeloste(num) {
   const matches = []
   for(let i=0;i<active.length;i+=2)
     matches.push({herr1:active[i].herr,dame1:active[i].dame,herr2:active[i+1].herr,dame2:active[i+1].dame,result:null,court:courts[i/2]})
-  return {round:num,matches,byePairs}
+  return {round:num,matches,byePairs,pausedPairs}
 }
 
 // ════════════════════════════════════════════════
 //  DRAW: AMERICANO (minimiert Wiederholungen)
 // ════════════════════════════════════════════════
 function drawAmericano(num) {
-  const n = Math.min(S.herren.length, S.damen.length)
+  const paused = new Set(S.pausedPlayers||[])
+  const activeHerren = S.herren.filter(h=>!paused.has(h))
+  const activeDamen  = S.damen.filter(d=>!paused.has(d))
+  const pausedPairs  = [...paused].map(p=>({name:p,gender:S.herren.includes(p)?'herr':'dame'}))
+  const n = Math.min(activeHerren.length, activeDamen.length)
   const partnerCount = {}
   S.schedule.forEach(rnd => rnd.matches.forEach(m => {
     const k1=m.herr1+'|'+m.dame1, k2=m.herr2+'|'+m.dame2
     partnerCount[k1]=(partnerCount[k1]||0)+1; partnerCount[k2]=(partnerCount[k2]||0)+1
   }))
-  const herren = shuffle(S.herren.slice(0,n))
-  const availDamen = [...S.damen.slice(0,n)]
+  const herren = shuffle(activeHerren.slice(0,n))
+  const availDamen = [...activeDamen.slice(0,n)]
   const pairs = []
   for (const herr of herren) {
     availDamen.sort((a,b)=>(partnerCount[herr+'|'+a]||0)-(partnerCount[herr+'|'+b]||0))
@@ -262,7 +269,7 @@ function drawAmericano(num) {
   const matches = []
   for(let i=0;i<active.length;i+=2)
     matches.push({herr1:active[i].herr,dame1:active[i].dame,herr2:active[i+1].herr,dame2:active[i+1].dame,result:null,court:courts[Math.floor(i/2)]})
-  return {round:num,matches,byePairs}
+  return {round:num,matches,byePairs,pausedPairs}
 }
 
 // ════════════════════════════════════════════════
@@ -497,6 +504,12 @@ function setView(v) {
   S.view=v; save(); render()
 }
 
+function togglePause(name) {
+  const p = S.pausedPlayers||[]
+  S.pausedPlayers = p.includes(name) ? p.filter(x=>x!==name) : [...p, name]
+  save(); render()
+}
+
 function addPlayer(gender) {
   const inp=document.getElementById('input-'+gender)
   const val=(inp?.value||'').trim(); if(!val) return
@@ -679,14 +692,21 @@ function renderSpieler() {
   const inT=S.step==='tournament'
   const ok=isMixed() ? (Math.min(S.herren.length,S.damen.length)>=2&&S.herren.length===S.damen.length) : allPlayers().length>=2
   const unbalanced=isMixed()&&S.herren.length!==S.damen.length&&allPlayers().length>0
-  const playerItem=(name,gender,idx)=>`
-    <div class="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
-      <div class="w-8 h-8 rounded-full ${gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-xs font-bold text-white font-headline flex-shrink-0">${initials(name)}</div>
-      <span class="text-sm font-body text-white font-medium flex-1 truncate">${esc(name)}</span>
+  const pausedPlayers = S.pausedPlayers||[]
+  const playerItem=(name,gender,idx)=>{
+    const isPaused=pausedPlayers.includes(name)
+    return `
+    <div class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors group ${isPaused?'bg-yellow-900/20 border border-yellow-500/20':'bg-white/5 hover:bg-white/10'}">
+      <div class="w-8 h-8 rounded-full ${gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-xs font-bold text-white font-headline flex-shrink-0 ${isPaused?'opacity-40':''}">${initials(name)}</div>
+      <span class="text-sm font-body font-medium flex-1 truncate ${isPaused?'text-white/35 line-through':'text-white'}">${esc(name)}</span>
+      ${inT&&!S.done?`<button onclick="togglePause('${esc(name)}')" title="${isPaused?'Wieder einsetzen':'Pausieren'}" class="flex-shrink-0 transition-colors ${isPaused?'text-yellow-400 hover:text-yellow-300':'text-white/20 hover:text-yellow-400 opacity-0 group-hover:opacity-100'}">
+        <span class="material-symbols-outlined text-sm">${isPaused?'play_circle':'pause_circle'}</span>
+      </button>`:''}
       ${S.done?'':`<button onclick="removePlayer('${gender}',${idx})" class="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0">
         <span class="material-symbols-outlined text-sm">close</span>
       </button>`}
     </div>`
+  }
   return `
     <div class="relative border-2 border-dashed border-white/15 rounded-2xl p-5 text-center cursor-pointer hover:border-secondary-fixed/40 hover:bg-white/5 transition-all mb-4" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
       <input type="file" accept=".xlsx,.xls,.csv" class="import-input" onchange="handleFileInput(event)"/>
@@ -851,11 +871,22 @@ function renderMixedPlan() {
   const byePairs=rnd.byePairs||[]
   const isLastRound=S.currentRound===S.schedule.length-1
   const isGeloste=S.mode==='geloste_paarungen'
-  const bye=byePairs.length?`<div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white/50 text-sm font-body mb-3">
-    <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-white/30 mb-1.5 flex items-center gap-1.5">
-      <span class="material-symbols-outlined text-xs">weekend</span>Freilos
+  const rndPaused=rnd.pausedPairs||[]
+  const bye=byePairs.length||rndPaused.length?`<div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white/50 text-sm font-body mb-3">
+    <div class="flex flex-wrap gap-4">
+      ${byePairs.length?`<div>
+        <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-white/30 mb-1.5 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-xs">weekend</span>Freilos
+        </div>
+        <div class="flex flex-wrap gap-2">${byePairs.map(p=>`<span class="text-xs px-2 py-1 rounded-lg bg-white/5 font-body text-white/40">${esc(p.herr)} &amp; ${esc(p.dame)}</span>`).join('')}</div>
+      </div>`:''}
+      ${rndPaused.length?`<div>
+        <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-yellow-500/50 mb-1.5 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-xs">pause_circle</span>Pause
+        </div>
+        <div class="flex flex-wrap gap-2">${rndPaused.map(p=>`<span class="text-xs px-2 py-1 rounded-lg bg-yellow-900/20 border border-yellow-500/20 font-body text-yellow-300/60">${esc(p.name)}</span>`).join('')}</div>
+      </div>`:''}
     </div>
-    <div class="flex flex-wrap gap-2">${byePairs.map(p=>`<span class="text-xs px-2 py-1 rounded-lg bg-white/5 font-body text-white/40">${esc(p.herr)} &amp; ${esc(p.dame)}</span>`).join('')}</div>
   </div>`:''
   return `
     <div class="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">${renderRoundPills(S.schedule,S.currentRound)}</div>
