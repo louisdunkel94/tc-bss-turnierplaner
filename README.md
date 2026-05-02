@@ -38,8 +38,8 @@ Alle Seiten funktionieren ohne Server – einfach `index.html` im Browser öffne
 
 | Modus | Beschreibung |
 |---|---|
-| **Geloste Paarungen** | Mixed-Doppel, Paare werden jede Runde neu ausgelost (mit Wiederholungsminimierung). Unbegrenzte Runden, manuell beendet. |
-| **Americano** | Wie Geloste Paarungen, Partner rotieren systematisch. |
+| **Balanced Draw** | Mixed-Doppel, Paare werden jede Runde neu ausgelost. Algorithmus minimiert Wiederholungen bei Partner und Gegner. Unbegrenzte Runden, manuell beendet. |
+| **Americano** | Wie Balanced Draw, alle Runden werden vorab ausgelost. |
 | **Jeder gegen jeden** | Vollständiger Round-Robin-Plan, alle Matches im Voraus. |
 | **Schweizer System** | Runde für Runde, Paarungen nach aktuellem Tabellenstand. |
 | **Einfaches KO** | Klassisches Knockout-Bracket. |

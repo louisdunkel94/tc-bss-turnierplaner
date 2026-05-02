@@ -175,7 +175,7 @@ function isRR()     { return S.mode==='round_robin' }
 function allPlayers() { return [...S.herren, ...S.damen] }
 
 const MODE_LABEL = {
-  geloste_paarungen:'Geloste Paarungen', americano:'Americano',
+  geloste_paarungen:'Balanced Draw', americano:'Americano',
   round_robin:'Jeder gegen jeden', gruppenphase_ko:'Gruppenphase + KO',
   einfaches_ko:'Einfaches KO', doppeltes_ko:'Doppeltes KO', schweizer_system:'Schweizer System'
 }
@@ -213,11 +213,26 @@ function drawGeloste(num) {
   const activeDamen  = S.damen.filter(d=>!paused.has(d))
   const pausedPairs  = [...paused].map(p=>({name:p,gender:S.herren.includes(p)?'herr':'dame'}))
   const n = Math.min(activeHerren.length, activeDamen.length)
+
+  // Partner history: avoid repeated partnerships
   const pairCount = {}
   S.schedule.forEach(rnd => rnd.matches.forEach(m => {
     const k1=m.herr1+'|'+m.dame1, k2=m.herr2+'|'+m.dame2
     pairCount[k1]=(pairCount[k1]||0)+1; pairCount[k2]=(pairCount[k2]||0)+1
   }))
+
+  // Opponent history: avoid repeated cross-team encounters
+  const oppCount = {}
+  const addOpp = (a,b) => { if(!oppCount[a]) oppCount[a]={}; oppCount[a][b]=(oppCount[a][b]||0)+1 }
+  S.schedule.forEach(rnd => rnd.matches.forEach(m => {
+    addOpp(m.herr1,m.herr2); addOpp(m.herr2,m.herr1)
+    addOpp(m.herr1,m.dame2); addOpp(m.dame2,m.herr1)
+    addOpp(m.dame1,m.herr2); addOpp(m.herr2,m.dame1)
+    addOpp(m.dame1,m.dame2); addOpp(m.dame2,m.dame1)
+  }))
+  const opp = (a,b) => (oppCount[a]&&oppCount[a][b])||0
+
+  // Step 1: Assign partners (minimize repeated partnerships)
   const herren = shuffle(activeHerren.slice(0,n))
   const availDamen = [...activeDamen.slice(0,n)]
   const pairs = []
@@ -228,13 +243,32 @@ function drawGeloste(num) {
     const dame = tied[Math.floor(Math.random()*tied.length)]
     pairs.push({herr,dame}); availDamen.splice(availDamen.indexOf(dame),1)
   }
-  const sp = shuffle(pairs)
+
+  // Step 2: Split into active (on court) and bye pairs
   const courts = shuffle(Array.from({length:S.numCourts},(_,i)=>i+1))
-  const maxM = Math.min(S.numCourts, Math.floor(sp.length/2))
+  const maxM = Math.min(S.numCourts, Math.floor(pairs.length/2))
+  const sp = shuffle(pairs)
   const active = sp.slice(0,maxM*2), byePairs = sp.slice(maxM*2)
+
+  // Step 3: Match pairs as opponents (minimize repeated cross-team encounters)
+  // Score = total prior encounters between any player on team A and any player on team B
+  const matchScore = (t1,t2) =>
+    opp(t1.herr,t2.herr)+opp(t1.herr,t2.dame)+opp(t1.dame,t2.herr)+opp(t1.dame,t2.dame)
+
+  const unmatched = [...active]
   const matches = []
-  for(let i=0;i<active.length;i+=2)
-    matches.push({herr1:active[i].herr,dame1:active[i].dame,herr2:active[i+1].herr,dame2:active[i+1].dame,result:null,court:courts[i/2]})
+  let courtIdx = 0
+  while(unmatched.length >= 2) {
+    const pick = Math.floor(Math.random()*unmatched.length)
+    const t1 = unmatched.splice(pick, 1)[0]
+    const scored = unmatched.map((t2,i)=>({i,score:matchScore(t1,t2)}))
+    scored.sort((a,b)=>a.score-b.score)
+    const minS = scored[0].score
+    const best = scored.filter(x=>x.score===minS)
+    const chosen = best[Math.floor(Math.random()*best.length)]
+    const t2 = unmatched.splice(chosen.i, 1)[0]
+    matches.push({herr1:t1.herr,dame1:t1.dame,herr2:t2.herr,dame2:t2.dame,result:null,court:courts[courtIdx++]})
+  }
   return {round:num,matches,byePairs,pausedPairs}
 }
 

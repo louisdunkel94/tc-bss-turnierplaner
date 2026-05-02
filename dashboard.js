@@ -345,7 +345,7 @@ async function changeRole(userId, role) {
 
 // ── Tournament Modes ─────────────────────────────────────────
 const MODES = {
-  geloste_paarungen: { label: 'Geloste Paarungen',       icon: 'shuffle',      desc: 'Zufällige Mixed-Teams jede Runde per 3-Topf-Losverfahren. Punkte laufen individuell.' },
+  geloste_paarungen: { label: 'Balanced Draw',            icon: 'shuffle',      desc: 'Mixed-Teams werden jede Runde neu ausgelost – Wiederholungen bei Partner und Gegner werden minimiert.' },
   americano:         { label: 'Amerikanisches Turnier',  icon: 'sync_alt',     desc: 'Spieler rotieren Partner jede Runde – soziales Format, jeder spielt mit jedem zusammen.' },
   round_robin:       { label: 'Jeder gegen jeden',       icon: 'grid_view',    desc: 'Alle spielen gegen alle in festen Paarungen. Die Tabelle entscheidet den Sieger.' },
   gruppenphase_ko:   { label: 'Gruppenphase + KO',       icon: 'account_tree', desc: 'Gruppenspiele in Pools, dann KO-Runden für die Besten jeder Gruppe.' },

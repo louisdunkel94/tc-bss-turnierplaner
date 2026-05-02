@@ -104,16 +104,17 @@ Alle Daten im `localStorage` des Browsers.
 
 ## Spielmodi – Technische Details
 
-### Geloste Paarungen (`geloste_paarungen`)
+### Balanced Draw (`geloste_paarungen`)
 - Nur Runde 1 wird beim Start ausgelost
 - Jede weitere Runde wird erst ausgelost wenn die vorherige vollständig abgeschlossen ist
-- Algorithmus: Greedy-Zuweisung nach Paarungshistorie (jeder Mann bekommt bevorzugt die Frau, mit der er bisher am wenigsten gespielt hat; bei Gleichstand zufällig)
 - Keine feste Rundenzahl – Turnier wird manuell beendet
+- **Partner-Algorithmus:** Greedy nach Partnerhistorie (jeder Mann bekommt die Frau, mit der er bisher am wenigsten gespielt hat; bei Gleichstand zufällig)
+- **Gegner-Algorithmus:** Nach der Partnerzuweisung werden Teams als Gegner gematcht. Score = Summe der bisherigen Begegnungen zwischen je zwei Spielern aus Team A und Team B. Bevorzugt werden Paarungen mit niedrigstem Score; bei Gleichstand zufällig.
 - Relevante Funktionen: `drawGeloste()`, `nextGelosteRound()`, `finishTournament()`
 
 ### Americano (`americano`)
 - Alle Runden werden beim Start ausgelost
-- Gleicher Algorithmus wie Geloste Paarungen (Wiederholungsminimierung)
+- Gleicher Partner-Algorithmus wie Balanced Draw (Wiederholungsminimierung); Gegner-Matching rein zufällig
 - Unterschied: feste Rundenzahl, alle Runden vorab generiert
 - Relevante Funktionen: `drawAmericano()`
 
