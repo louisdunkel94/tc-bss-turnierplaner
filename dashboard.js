@@ -562,6 +562,75 @@ async function renderVeranstalter(app) {
   `
 }
 
+// ── Booking rules (admin) ─────────────────────────────────────
+function getBookingRules() {
+  const def = {
+    mitglied:     { singles: { maxDurationMins: 90,  maxPerPeriod: 2,  periodDays: 7 }, doubles: { maxDurationMins: 120, maxPerPeriod: 3,  periodDays: 7 } },
+    veranstalter: { singles: { maxDurationMins: 180, maxPerPeriod: 10, periodDays: 7 }, doubles: { maxDurationMins: 180, maxPerPeriod: 10, periodDays: 7 } }
+  }
+  const saved = JSON.parse(localStorage.getItem('tc_settings') || '{}').bookingRules || {}
+  return {
+    mitglied:     { singles: { ...def.mitglied.singles,     ...(saved.mitglied?.singles     || {}) }, doubles: { ...def.mitglied.doubles,     ...(saved.mitglied?.doubles     || {}) } },
+    veranstalter: { singles: { ...def.veranstalter.singles, ...(saved.veranstalter?.singles || {}) }, doubles: { ...def.veranstalter.doubles, ...(saved.veranstalter?.doubles || {}) } }
+  }
+}
+
+function saveBookingRules() {
+  const n = id => parseInt(document.getElementById(id)?.value) || 0
+  const rules = {
+    mitglied:     { singles: { maxDurationMins: n('rule-m-s-dur')||90,  maxPerPeriod: n('rule-m-s-cnt')||2,  periodDays: n('rule-m-s-days')||7 },
+                    doubles: { maxDurationMins: n('rule-m-d-dur')||120, maxPerPeriod: n('rule-m-d-cnt')||3,  periodDays: n('rule-m-d-days')||7 } },
+    veranstalter: { singles: { maxDurationMins: n('rule-v-s-dur')||180, maxPerPeriod: n('rule-v-s-cnt')||10, periodDays: n('rule-v-s-days')||7 },
+                    doubles: { maxDurationMins: n('rule-v-d-dur')||180, maxPerPeriod: n('rule-v-d-cnt')||10, periodDays: n('rule-v-d-days')||7 } }
+  }
+  const s = JSON.parse(localStorage.getItem('tc_settings') || '{}')
+  s.bookingRules = rules
+  localStorage.setItem('tc_settings', JSON.stringify(s))
+  toast('Buchungsregeln gespeichert')
+}
+
+function renderBookingRulesEditor() {
+  const r = getBookingRules()
+  const inp = (id, val, mn, mx) =>
+    `<input type="number" id="${id}" value="${val}" min="${mn}" max="${mx}" class="w-16 bg-white/10 border border-white/10 text-white rounded-lg px-2 py-1 text-sm font-body text-center focus:outline-none focus:border-secondary-fixed"/>`
+  const cells = (label, prefix, rules) =>
+    `<td class="px-4 py-2.5 text-white/60 whitespace-nowrap font-body text-sm">${label}</td>
+     <td class="px-4 py-2.5 text-center">${inp(prefix+'-dur',  rules.maxDurationMins, 30, 480)}</td>
+     <td class="px-4 py-2.5 text-center">${inp(prefix+'-cnt',  rules.maxPerPeriod,    1,  99)}</td>
+     <td class="px-4 py-2.5 text-center">${inp(prefix+'-days', rules.periodDays,       1, 365)}</td>`
+  return `
+    <section class="mb-10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-headline font-bold text-white flex items-center gap-2">
+          <span class="material-symbols-outlined text-base text-white/40">rule</span>
+          Buchungsregeln
+        </h2>
+        <button onclick="saveBookingRules()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+          <span class="material-symbols-outlined text-base">save</span>Speichern
+        </button>
+      </div>
+      <div class="rounded-2xl border border-white/5 overflow-hidden bg-black/20">
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead><tr class="border-b border-white/5 text-white/30 uppercase tracking-wider">
+              <th class="text-left px-4 py-3">Gruppe</th>
+              <th class="text-center px-4 py-3">Max. Dauer (min)</th>
+              <th class="text-center px-4 py-3">Max. Buchungen</th>
+              <th class="text-center px-4 py-3">pro … Tage</th>
+            </tr></thead>
+            <tbody class="divide-y divide-white/5">
+              <tr>${cells('Mitglied · Einzel',     'rule-m-s', r.mitglied.singles)}</tr>
+              <tr>${cells('Mitglied · Doppel',     'rule-m-d', r.mitglied.doubles)}</tr>
+              <tr>${cells('Veranstalter · Einzel', 'rule-v-s', r.veranstalter.singles)}</tr>
+              <tr>${cells('Veranstalter · Doppel', 'rule-v-d', r.veranstalter.doubles)}</tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="text-xs text-white/30 font-body mt-2">Admins sind von diesen Regeln ausgenommen.</p>
+    </section>`
+}
+
 // ── Admin ─────────────────────────────────────────────────────
 async function renderAdmin(app) {
   const [tourneys, members, myRegs] = await Promise.all([dbTourneys(), dbMembers(), dbMyRegs()])
@@ -572,6 +641,8 @@ async function renderAdmin(app) {
       <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Admin</h1>
       <p class="text-white/40 font-body mt-1">Übersicht aller Mitglieder und Turniere.</p>
     </div>
+
+    ${renderBookingRulesEditor()}
 
     <section class="mb-10">
       <h2 class="text-lg font-headline font-bold text-white mb-4 flex items-center gap-2">

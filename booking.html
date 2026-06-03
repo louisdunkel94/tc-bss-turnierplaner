@@ -538,7 +538,11 @@ function openBook(date, court, timeStart) {
   const endMin = Math.min(toMinutes(timeStart) + 60, TIME_END)
   buildTimeOptions(document.getElementById('book-end'), fromMinutes(endMin))
 
-  document.getElementById('book-member').value = ''
+  // Auto-fill logged-in user's display name
+  const _autoName = currentUserId
+    ? (JSON.parse(localStorage.getItem('tc_profiles') || '{}')[currentUserId]?.display_name || '')
+    : ''
+  document.getElementById('book-member').value = _autoName
   document.getElementById('book-note').value = ''
   document.getElementById('book-conflict').classList.add('hidden')
   document.getElementById('suggest-list').classList.add('hidden')
