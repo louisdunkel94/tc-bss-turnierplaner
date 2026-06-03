@@ -10,24 +10,26 @@
 <meta name="apple-mobile-web-app-title" content="TC BSS">
 <link rel="apple-touch-icon" href="logo.png">
 <title>Impressum – TC Bad Soden-Salmünster Turniere</title>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
   theme:{extend:{
     colors:{
-      "primary-container":"#115217",
-      "secondary-fixed":"#dbed50","on-secondary-fixed":"#1a1e00",
+      "primary":"#115217","primary-container":"#2d6b2d",
+      "on-primary-container":"#a5e99c",
+      "secondary-fixed":"#dbed50","secondary-fixed-dim":"#c0d034",
+      "on-secondary-fixed":"#1a1e00","outline-variant":"#c0c9bb",
     },
-    fontFamily:{headline:["Lexend","sans-serif"],body:["Plus Jakarta Sans","sans-serif"]},
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Inter","sans-serif"]},
     borderRadius:{DEFAULT:"0.125rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
   }}
 }
 </script>
 <style>
-  body{font-family:'Plus Jakarta Sans',sans-serif;background-color:#115217;color:#fff;}
+  body{font-family:'Inter',sans-serif;background-color:#115217;color:#fff;}
   .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
-  a{color:#dbed50;}a:hover{color:#bfd035;}
+  a{color:#dbed50;}a:hover{color:#c0d034;}
 </style>
 </head>
 <body class="min-h-screen">

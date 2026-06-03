@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="TC BSS">
 <link rel="apple-touch-icon" href="logo.png">
 <title>Check-in – TC Bad Soden-Salmünster</title>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
@@ -19,17 +19,21 @@
 tailwind.config = {
   theme:{extend:{
     colors:{
-      "primary-container":"#115217",
-      "secondary-fixed":"#dbed50","on-secondary-fixed":"#1a1e00",
-      "secondary-fixed-dim":"#bfd035",
+      "primary":"#115217","primary-container":"#2d6b2d",
+      "on-primary-container":"#a5e99c","primary-fixed":"#aff4a6","primary-fixed-dim":"#94d78c",
+      "on-primary":"#ffffff","on-primary-fixed":"#002203",
+      "secondary-fixed":"#dbed50","secondary-fixed-dim":"#c0d034",
+      "on-secondary-fixed":"#1a1e00","on-secondary-fixed-variant":"#434b00",
+      "outline-variant":"#c0c9bb","error":"#ba1a1a",
+      "tertiary":"#39475c","on-tertiary":"#ffffff",
     },
-    fontFamily:{headline:["Lexend","sans-serif"],body:["Plus Jakarta Sans","sans-serif"]},
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Inter","sans-serif"]},
     borderRadius:{DEFAULT:"0.125rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
   }}
 }
 </script>
 <style>
-  body{font-family:'Plus Jakarta Sans',sans-serif;background:#0a1f0b;color:#fff;min-height:100vh;}
+  body{font-family:'Inter',sans-serif;background:#0a1f0b;color:#fff;min-height:100vh;}
   .font-headline,h1,h2{font-family:'Lexend',sans-serif;}
   .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
   @keyframes pop{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
