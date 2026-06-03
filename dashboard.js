@@ -47,7 +47,8 @@ async function boot() {
   document.getElementById('user-name').textContent = currentProfile.display_name
   document.getElementById('user-role-badge').textContent = currentProfile.role === 'admin' ? 'Administrator' : 'Mitglied'
 
-  render()
+  await render()
+  checkBackupWarning()
 }
 
 function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
@@ -62,12 +63,25 @@ async function render() {
   }
 }
 
+// ── Safe localStorage write ───────────────────────────────────
+function safeStore(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+    return true
+  } catch(e) {
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22) {
+      toast('⚠️ Speicher voll! Bitte Backup erstellen und Browser-Cache leeren.')
+    }
+    return false
+  }
+}
+
 // ── Demo store (localStorage fallback) ───────────────────────
 const DS = {
   get tourneys()  { try { return JSON.parse(localStorage.getItem('tc_tourneys')||'[]') } catch{ return [] } },
-  set tourneys(v) { localStorage.setItem('tc_tourneys', JSON.stringify(v)) },
+  set tourneys(v) { safeStore('tc_tourneys', v) },
   get regs()      { try { return JSON.parse(localStorage.getItem('tc_regs')||'[]') } catch{ return [] } },
-  set regs(v)     { localStorage.setItem('tc_regs', JSON.stringify(v)) },
+  set regs(v)     { safeStore('tc_regs', v) },
 }
 
 function getProfiles() { try { return JSON.parse(localStorage.getItem('tc_profiles')||'{}') } catch { return {} } }
@@ -83,6 +97,143 @@ function getProfile(email) {
     notifications: { tournament_invite: true, match_results: true, ...(saved.notifications || {}) },
     privacy: { show_lk: true, show_matches: true, show_email: false, ...(saved.privacy || {}) },
   }
+}
+
+// ── Vereinsmitglieder ─────────────────────────────────────────
+function getMembers() { try { return JSON.parse(localStorage.getItem('tc_members')||'[]') } catch { return [] } }
+function setMembers(v) { safeStore('tc_members', v) }
+
+function addMember(name, gender) {
+  const members = getMembers()
+  if (!name || members.some(m => m.name.toLowerCase() === name.toLowerCase())) return false
+  setMembers([...members, { name: name.trim(), gender }])
+  return true
+}
+
+function removeMember(name) {
+  setMembers(getMembers().filter(m => m.name !== name))
+}
+
+function importMembersFromTourneys() {
+  const existing = new Set(getMembers().map(m => m.name.toLowerCase()))
+  const toAdd = []
+  DS.tourneys.forEach(t => {
+    const state = t.state || {}
+    ;(state.herren || []).forEach(n => { if (n && !existing.has(n.toLowerCase())) { toAdd.push({ name: n, gender: 'herr' }); existing.add(n.toLowerCase()) } })
+    ;(state.damen  || []).forEach(n => { if (n && !existing.has(n.toLowerCase())) { toAdd.push({ name: n, gender: 'dame' }); existing.add(n.toLowerCase()) } })
+  })
+  DS.regs.forEach(r => {
+    const n = r.display_name
+    if (n && !existing.has(n.toLowerCase())) {
+      toAdd.push({ name: n, gender: r.gender || 'herr' })
+      existing.add(n.toLowerCase())
+    }
+  })
+  if (toAdd.length) setMembers([...getMembers(), ...toAdd])
+  return toAdd.length
+}
+
+// ── Backup ─────────────────────────────────────────────────────
+function exportAllData() {
+  const date = new Date().toISOString().slice(0, 10)
+  const data = {
+    _backup: true, _version: 2,
+    exported_at: new Date().toISOString(),
+    tc_tourneys: DS.tourneys,
+    tc_regs: DS.regs,
+    tc_members: getMembers(),
+    tc_profiles: getProfiles(),
+  }
+  const a = document.createElement('a')
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2))
+  a.download = `tc_bss_backup_${date}.json`
+  a.click()
+  localStorage.setItem('tc_last_backup', new Date().toISOString())
+  toast('Backup gespeichert!')
+  document.getElementById('backup-warning-banner')?.remove()
+}
+
+function checkBackupWarning() {
+  if (!DS.tourneys.length) return
+  const lastBackup = localStorage.getItem('tc_last_backup')
+  const app = document.getElementById('app')
+  if (!app) return
+  let msg, color
+  if (!lastBackup) {
+    msg = 'Noch kein Backup erstellt – Daten können bei Cache-Löschung verloren gehen!'
+    color = 'bg-yellow-500/15 border-yellow-500/30 text-yellow-200'
+  } else {
+    const days = Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000)
+    if (days < 7) return
+    msg = `Letztes Backup: vor ${days} Tagen`
+    color = 'bg-orange-500/15 border-orange-500/30 text-orange-200'
+  }
+  const banner = document.createElement('div')
+  banner.id = 'backup-warning-banner'
+  banner.className = `flex items-center justify-between gap-3 px-4 py-3 rounded-xl mb-6 border ${color}`
+  banner.innerHTML = `
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="material-symbols-outlined text-base flex-shrink-0">warning</span>
+      <span class="text-sm font-body truncate">${msg}</span>
+    </div>
+    <button onclick="exportAllData()" class="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-headline font-bold text-xs bg-white/10 hover:bg-white/20 transition-colors whitespace-nowrap">
+      <span class="material-symbols-outlined text-xs">save</span>Jetzt sichern
+    </button>`
+  app.prepend(banner)
+}
+
+// ── Members Modal ─────────────────────────────────────────────
+function openMembersModal() {
+  document.getElementById('modal-members').showModal()
+  renderMembersList()
+}
+
+function renderMembersList() {
+  const members = getMembers()
+  const list = document.getElementById('members-list')
+  if (!list) return
+  if (!members.length) {
+    list.innerHTML = '<p class="text-white/30 text-sm font-body text-center py-4">Noch keine Mitglieder — importieren oder manuell hinzufügen</p>'
+    return
+  }
+  const herren = members.filter(m => m.gender === 'herr').sort((a,b) => a.name.localeCompare(b.name, 'de'))
+  const damen  = members.filter(m => m.gender === 'dame').sort((a,b) => a.name.localeCompare(b.name, 'de'))
+  const section = (title, arr, g) => arr.length ? `
+    <div class="mb-3">
+      <div class="flex items-center gap-1.5 text-[10px] font-headline uppercase tracking-widest text-white/30 mb-1.5">
+        <div class="w-2 h-2 rounded-full ${g==='herr'?'bg-blue-400':'bg-pink-400'}"></div>${title} (${arr.length})
+      </div>
+      ${arr.map(m => `
+        <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/5 mb-1">
+          <span class="flex-1 text-sm font-body text-white/80">${esc(m.name)}</span>
+          <button onclick="removeMemberUI(${JSON.stringify(m.name)})" class="text-white/20 hover:text-red-400 transition-colors">
+            <span class="material-symbols-outlined text-sm">person_remove</span>
+          </button>
+        </div>`).join('')}
+    </div>` : ''
+  list.innerHTML = section('Herren', herren, 'herr') + section('Damen', damen, 'dame')
+}
+
+function addMemberUI() {
+  const name = document.getElementById('m-name').value.trim().slice(0, 60)
+  const gender = document.getElementById('m-gender').value
+  if (!name) return
+  if (!addMember(name, gender)) { toast('Bereits vorhanden'); return }
+  document.getElementById('m-name').value = ''
+  renderMembersList()
+  toast('Mitglied hinzugefügt')
+}
+
+function removeMemberUI(name) {
+  removeMember(name)
+  renderMembersList()
+  toast('Mitglied entfernt')
+}
+
+function importMembersUI() {
+  const count = importMembersFromTourneys()
+  renderMembersList()
+  toast(count ? `${count} Mitglieder importiert` : 'Keine neuen Mitglieder gefunden')
 }
 
 const _cache = { tourneys: [] }
@@ -165,6 +316,9 @@ async function renderVeranstalter(app) {
         <a href="stats.html" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors no-underline">
           <span class="material-symbols-outlined text-base">bar_chart</span><span class="hidden md:inline">Statistiken</span>
         </a>
+        <button onclick="openMembersModal()" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors">
+          <span class="material-symbols-outlined text-base">group</span><span class="hidden md:inline">Mitglieder</span>
+        </button>
         <button onclick="openCreateModal()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
           <span class="material-symbols-outlined text-base">add</span>Turnier erstellen
         </button>

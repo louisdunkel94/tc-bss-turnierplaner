@@ -52,6 +52,16 @@ tailwind.config = {
   .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none;}
   .import-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 </style>
+<style media="print">
+  @page { size: A4 portrait; margin: 1.5cm; }
+  header, nav, #toast, .no-print, button, label[for] { display: none !important; }
+  body { background: white !important; padding-bottom: 0 !important; }
+  main { padding: 0 !important; max-width: 100% !important; }
+  * { color: #111 !important; background: transparent !important; border-color: #ddd !important; box-shadow: none !important; text-shadow: none !important; }
+  .rounded-xl, .rounded-2xl { border: 1px solid #ddd; border-radius: 4px !important; }
+  .space-y-3 > * + *, .space-y-2 > * + * { margin-top: 0.5rem; }
+  h2 { font-size: 1.5rem; margin-bottom: 1rem; }
+</style>
 </head>
 <body class="min-h-screen pb-24 md:pb-8">
 
@@ -129,7 +139,7 @@ async function sbSave() {
     try {
       const tourneys = JSON.parse(localStorage.getItem('tc_tourneys')||'[]')
       const idx = tourneys.findIndex(t => t.id === _tournamentId)
-      if (idx >= 0) { tourneys[idx].state = S; localStorage.setItem('tc_tourneys', JSON.stringify(tourneys)) }
+      if (idx >= 0) { tourneys[idx].state = S; safeStore('tc_tourneys', tourneys) }
     } catch(e) {}
     return
   }
@@ -201,6 +211,17 @@ const MODE_LABEL = {
   round_robin:'Jeder gegen jeden', gruppenphase_ko:'Gruppenphase + KO',
   einfaches_ko:'Einfaches KO', doppeltes_ko:'Doppeltes KO', schweizer_system:'Schweizer System'
 }
+
+function safeStore(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); return true }
+  catch(e) {
+    if (e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'||e.code===22)
+      toast('⚠️ Speicher voll! Bitte Backup erstellen und Browser-Cache leeren.')
+    return false
+  }
+}
+
+function getMembers() { try { return JSON.parse(localStorage.getItem('tc_members')||'[]') } catch { return [] } }
 
 function save() {
   try { localStorage.setItem('donatocup_v4', JSON.stringify(S)) } catch(e) {}
@@ -847,13 +868,20 @@ function renderSpieler() {
             <span class="text-xs font-headline font-bold uppercase tracking-widest text-white/50">${g==='herr'?'Herren':'Damen'}</span>
             <span class="ml-auto text-xs font-bold bg-white/10 text-white/50 px-2 py-0.5 rounded-full font-headline">${list.length}</span>
           </div>
-          ${S.done?'':`<div class="flex gap-2 mb-2.5">
-            <input type="text" id="input-${g}" placeholder="Name…" onkeydown="if(event.key==='Enter')addPlayer('${g}')"
-              class="flex-1 bg-white/10 border border-white/10 text-white placeholder-white/25 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors min-w-0"/>
-            <button onclick="addPlayer('${g}')" class="w-9 h-9 bg-secondary-fixed text-on-secondary-fixed rounded-xl flex items-center justify-center hover:bg-secondary-fixed-dim transition-colors flex-shrink-0">
-              <span class="material-symbols-outlined text-base">add</span>
-            </button>
-          </div>`}
+          ${S.done?'':`<div class="relative mb-2.5">
+            <div class="flex gap-2">
+              <input type="text" id="input-${g}" placeholder="Name…"
+                onkeydown="if(event.key==='Enter')addPlayer('${g}');else if(event.key==='Escape')closeSuggest('${g}')"
+                oninput="updateSuggest('${g}')" onfocus="updateSuggest('${g}')"
+                onblur="setTimeout(()=>closeSuggest('${g}'),150)"
+                class="flex-1 bg-white/10 border border-white/10 text-white placeholder-white/25 rounded-xl px-3 py-2 text-base font-body focus:outline-none focus:border-secondary-fixed/50 transition-colors min-w-0"/>
+              <button onclick="addPlayer('${g}')" class="w-10 h-10 bg-secondary-fixed text-on-secondary-fixed rounded-xl flex items-center justify-center hover:bg-secondary-fixed-dim transition-colors flex-shrink-0 min-h-[2.5rem]">
+                <span class="material-symbols-outlined text-base">add</span>
+              </button>
+            </div>
+            <div id="suggest-${g}" class="absolute z-30 left-0 right-0 top-full mt-1 bg-[#1a3320] border border-white/15 rounded-xl overflow-hidden shadow-2xl hidden"></div>
+          </div>
+          ${(()=>{const members=getMembers();const current=g==='herr'?S.herren:S.damen;const chips=members.filter(m=>m.gender===g&&!current.includes(m.name));return chips.length?`<div class="flex flex-wrap gap-1.5 mb-2.5">${chips.slice(0,8).map(m=>`<button onclick="quickAdd('${g}',${JSON.stringify(m.name)})" class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-body text-white/35 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-colors"><span class="material-symbols-outlined text-xs" style="font-size:12px">add</span>${esc(m.name)}</button>`).join('')}</div>`:''})()}`}
           <div class="space-y-1.5 max-h-64 overflow-y-auto scrollbar-hide">
             ${list.map((n,i)=>playerItem(n,g,i)).join('')}
           </div>
@@ -1256,6 +1284,7 @@ function backupTournament() {
   a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data)
   a.download = title.replace(/[^a-z0-9äöü ]/gi,'_') + '_Backup.json'
   a.click()
+  localStorage.setItem('tc_last_backup', new Date().toISOString())
   toast('Backup heruntergeladen')
 }
 
@@ -1265,12 +1294,21 @@ function importBackup(input) {
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result)
-      if(!data._backup || !data.state) { toast('Ungültige Backup-Datei'); return }
-      if(!confirm('Aktuellen Stand überschreiben und Backup wiederherstellen?')) { input.value=''; return }
+      if(!data._backup) { toast('❌ Keine gültige Backup-Datei'); input.value=''; return }
+      if(!data.state) { toast('❌ Backup enthält keinen Spielstand'); input.value=''; return }
+      if(data.state.schedule && !Array.isArray(data.state.schedule)) { toast('❌ Backup-Format ungültig'); input.value=''; return }
+      const KNOWN_MODES = ['geloste_paarungen','americano','round_robin','gruppenphase_ko','einfaches_ko','doppeltes_ko','schweizer_system']
+      if(data.state.mode && !KNOWN_MODES.includes(data.state.mode)) { toast('❌ Unbekannter Spielmodus im Backup'); input.value=''; return }
+      const curTitle = document.getElementById('tournament-title')?.textContent || ''
+      const backupTitle = data._title || ''
+      let msg = 'Aktuellen Stand überschreiben und Backup wiederherstellen?'
+      if(backupTitle && curTitle && backupTitle !== curTitle)
+        msg = `Das Backup gehört zu "${backupTitle}", dieses Turnier heißt "${curTitle}".\n\nTrotzdem laden?`
+      if(!confirm(msg)) { input.value=''; return }
       S = {...S, ...data.state}
       save(); render()
-      toast('Backup wiederhergestellt')
-    } catch(err) { toast('Fehler beim Lesen der Datei') }
+      toast('✓ Backup wiederhergestellt')
+    } catch(err) { toast('❌ Fehler: ' + err.message) }
     input.value = ''
   }
   reader.readAsText(file)
@@ -1355,14 +1393,20 @@ function renderTabelle() {
     </div>`:''}
     <div class="flex justify-between items-center mb-5">
       <h2 class="text-2xl md:text-3xl font-headline font-bold text-white">Tabelle</h2>
-      <div class="flex items-center gap-2">
-        <button onclick="exportTournament()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
+      <div class="flex items-center gap-2 flex-wrap justify-end">
+        <button onclick="window.print()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors no-print">
+          <span class="material-symbols-outlined text-sm">print</span>Drucken
+        </button>
+        ${S.step==='tournament'?`<button onclick="showDisplayQR()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors no-print">
+          <span class="material-symbols-outlined text-sm">qr_code_2</span>Anzeigetafel QR
+        </button>`:''}
+        <button onclick="exportTournament()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors no-print">
           <span class="material-symbols-outlined text-sm">download</span>Excel
         </button>
-        <button onclick="backupTournament()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
+        <button onclick="backupTournament()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors no-print">
           <span class="material-symbols-outlined text-sm">save</span>Backup
         </button>
-        ${S.done?'': `<label class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors cursor-pointer">
+        ${S.done?'': `<label class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors cursor-pointer no-print">
           <span class="material-symbols-outlined text-sm">upload</span>Wiederherstellen
           <input type="file" accept=".json" class="sr-only" onchange="importBackup(this)"/>
         </label>`}
@@ -1498,6 +1542,59 @@ function render() {
   updateChrome()
 }
 
+// ════════════════════════════════════════════════
+//  MEMBER AUTOCOMPLETE
+// ════════════════════════════════════════════════
+function updateSuggest(gender) {
+  const inp=document.getElementById('input-'+gender)
+  const box=document.getElementById('suggest-'+gender)
+  if(!inp||!box) return
+  const query=inp.value.trim().toLowerCase()
+  const current=gender==='herr'?S.herren:S.damen
+  const suggestions=getMembers()
+    .filter(m=>m.gender===gender&&!current.includes(m.name)&&(!query||m.name.toLowerCase().includes(query)))
+    .slice(0,6)
+  if(!suggestions.length){box.classList.add('hidden');return}
+  box.classList.remove('hidden')
+  box.innerHTML=suggestions.map(m=>`<button type="button" onmousedown="selectSuggest('${gender}',${JSON.stringify(m.name)})"
+    class="w-full text-left px-3 py-2.5 text-sm font-body text-white/80 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">${esc(m.name)}</button>`).join('')
+}
+
+function closeSuggest(gender) {
+  const box=document.getElementById('suggest-'+gender)
+  if(box) box.classList.add('hidden')
+}
+
+function selectSuggest(gender, name) {
+  const inp=document.getElementById('input-'+gender)
+  if(inp) inp.value=name
+  closeSuggest(gender)
+  addPlayer(gender)
+}
+
+function quickAdd(gender, name) {
+  if(gender==='herr') S.herren.push(name); else S.damen.push(name)
+  const n=syncSchedule(); save(); render()
+  if(n>0) toast(n+' Runde'+(n>1?'n':'')+' neu ausgelost')
+}
+
+// ════════════════════════════════════════════════
+//  QR CODE – ANZEIGETAFEL
+// ════════════════════════════════════════════════
+function showDisplayQR() {
+  const base=location.href.replace(/tournament\.html.*$/,'')
+  const url=base+'display.html?t='+(_tournamentId||'')
+  const qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(url)+'&bgcolor=ffffff&color=0a1f0b&margin=10'
+  document.getElementById('display-qr-img').src=qrSrc
+  document.getElementById('display-qr-url').textContent=url
+  document.getElementById('modal-display-qr').showModal()
+}
+
+function copyDisplayUrl() {
+  const url=document.getElementById('display-qr-url').textContent
+  navigator.clipboard.writeText(url).then(()=>toast('URL kopiert!')).catch(()=>toast('Kopieren nicht möglich'))
+}
+
 // Boot
 initAuth().then(async ok => {
   if(!ok) return
@@ -1506,6 +1603,35 @@ initAuth().then(async ok => {
   render()
 })
 </script>
+<!-- ── Display QR Modal ── -->
+<dialog id="modal-display-qr" style="background:transparent;border:none;padding:0;max-width:100vw;max-height:100vh;">
+  <div class="w-full max-w-sm mx-auto mt-12 px-4">
+    <div class="bg-[#1a3320] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
+        <h2 class="font-headline font-bold text-lg text-white">Anzeigetafel QR-Code</h2>
+        <button onclick="document.getElementById('modal-display-qr').close()" class="text-white/40 hover:text-white transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="p-6 flex flex-col items-center gap-4">
+        <p class="text-sm text-white/50 font-body text-center">Diesen Code scannen um die Anzeigetafel auf einem anderen Gerät zu öffnen.</p>
+        <div class="bg-white rounded-2xl p-4 shadow-lg">
+          <img id="display-qr-img" alt="QR Code" class="w-[220px] h-[220px] block"/>
+        </div>
+        <p id="display-qr-url" class="text-xs font-body text-white/30 text-center break-all select-all px-2"></p>
+        <div class="flex gap-2 w-full">
+          <button onclick="copyDisplayUrl()" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
+            <span class="material-symbols-outlined text-base">content_copy</span>Link kopieren
+          </button>
+          <button onclick="document.getElementById('modal-display-qr').close()" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+            Schließen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+<style>dialog{background:transparent;border:none;padding:0;max-width:100vw;max-height:100vh;}dialog::backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(4px);}</style>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'))

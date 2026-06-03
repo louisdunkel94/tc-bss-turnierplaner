@@ -104,7 +104,15 @@ const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
 function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
 function getProfiles() { try { return JSON.parse(localStorage.getItem('tc_profiles')||'{}') } catch { return {} } }
-function saveProfiles(p) { localStorage.setItem('tc_profiles', JSON.stringify(p)) }
+function saveProfiles(p) {
+  try {
+    localStorage.setItem('tc_profiles', JSON.stringify(p))
+  } catch(e) {
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22) {
+      toast('⚠️ Speicher voll! Profilbild zu groß oder Browser-Cache voll.')
+    }
+  }
+}
 
 function getProfile(email) {
   const saved = getProfiles()[email] || {}
