@@ -29,7 +29,13 @@
       "Bash(grep -n \"von \\\\${S.numRounds}\" /Users/louisdunkelprivat/Dev/Donatocup/tournament.html)",
       "Bash(grep -n \"von \\\\${S\" /Users/louisdunkelprivat/Dev/Donatocup/tournament.html)",
       "Bash(grep -n \"numRounds\\\\|von \\\\$\" /Users/louisdunkelprivat/Dev/Donatocup/tournament.html)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(git merge dev --no-ff -m ' *)",
+      "Bash(git stash *)",
+      "Bash(curl -s -I https://www.tennisclub-bss.de/)",
+      "Bash(curl -s https://www.tennisclub-bss.de/)",
+      "Bash(grep -oE '#[0-9a-fA-F]{3,6}')",
+      "Bash(git rm *)"
     ]
   }
 }

@@ -6,10 +6,11 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#115217",
+  "background_color": "#ffffff",
   "theme_color": "#115217",
   "icons": [
     { "src": "logo.png", "sizes": "any", "type": "image/png", "purpose": "any" },
-    { "src": "logo.png", "sizes": "any", "type": "image/png", "purpose": "maskable" }
+    { "src": "icon-hd.jpg", "sizes": "2048x2048", "type": "image/jpeg", "purpose": "any" },
+    { "src": "icon-hd.jpg", "sizes": "2048x2048", "type": "image/jpeg", "purpose": "maskable" }
   ]
 }
