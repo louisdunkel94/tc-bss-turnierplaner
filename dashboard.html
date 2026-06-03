@@ -67,13 +67,13 @@ tailwind.config = {
     </a>
   </div>
   <div class="flex items-center gap-3">
-    <div id="user-chip" class="hidden items-center gap-2 text-sm font-body">
-      <div id="user-avatar" class="w-8 h-8 rounded-full bg-secondary-fixed/20 flex items-center justify-center font-headline font-bold text-xs text-secondary-fixed"></div>
+    <a id="user-chip" href="profile.html" class="hidden items-center gap-2 text-sm font-body hover:opacity-80 transition-opacity no-underline" title="Mein Profil">
+      <div id="user-avatar" class="w-8 h-8 rounded-full bg-secondary-fixed/20 flex items-center justify-center font-headline font-bold text-xs text-secondary-fixed overflow-hidden"></div>
       <div class="hidden md:block">
         <div id="user-name" class="text-white text-sm font-semibold leading-none"></div>
         <div id="user-role-badge" class="text-[10px] text-white/40 font-headline uppercase tracking-widest mt-0.5"></div>
       </div>
-    </div>
+    </a>
     <button onclick="tcToggleTheme()" class="theme-toggle-btn" title="Design wechseln">
       <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
     </button>

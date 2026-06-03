@@ -236,14 +236,25 @@ function collectStats(playerName, yearFilter, monthFilter) {
   return { total, partners, opponents }
 }
 
+function resolveProfileEmail(displayName) {
+  try {
+    const profiles = JSON.parse(localStorage.getItem('tc_profiles') || '{}')
+    return Object.entries(profiles).find(([, p]) => p.display_name === displayName)?.[0] || null
+  } catch { return null }
+}
+
 function tableRows(map) {
   return Object.entries(map)
     .sort((a, b) => b[1].games - a[1].games)
     .map(([name, e]) => {
       const pct = e.games ? Math.round((e.wins / e.games) * 100) : 0
+      const profileEmail = resolveProfileEmail(name)
+      const nameHtml = profileEmail
+        ? `<a href="profile.html?email=${encodeURIComponent(profileEmail)}" class="font-body font-semibold text-white text-sm truncate hover:text-secondary-fixed transition-colors no-underline">${esc(name)}</a>`
+        : `<div class="font-body font-semibold text-white text-sm truncate">${esc(name)}</div>`
       return `<div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0">
         <div class="flex-1 min-w-0">
-          <div class="font-body font-semibold text-white text-sm truncate">${esc(name)}</div>
+          ${nameHtml}
           <div class="text-xs font-body text-white/40 mt-0.5">${e.games} Spiel${e.games !== 1 ? 'e' : ''} &middot; <span class="text-secondary-fixed/80">${e.wins}S</span> <span class="text-white/30">${e.draws}U</span> <span class="text-red-400/70">${e.losses}N</span></div>
         </div>
         <div class="flex items-center gap-2 w-28 flex-shrink-0">
