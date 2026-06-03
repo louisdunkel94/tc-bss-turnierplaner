@@ -119,7 +119,7 @@ let allTourneys = []
 function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
 async function boot() {
-  if (sessionStorage.getItem('tc_auth') !== '1') { window.location.replace('index.html'); return }
+  if (!sessionStorage.getItem('tc_auth')) { window.location.replace('index.html'); return }
 
   if (DEMO_MODE) {
     try { allTourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]') } catch { allTourneys = [] }

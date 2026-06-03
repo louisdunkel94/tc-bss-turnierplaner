@@ -10,10 +10,16 @@ let _showArchive = false
 
 // ── Boot ─────────────────────────────────────────────────────
 async function boot() {
-  if (sessionStorage.getItem('tc_auth') !== '1') { window.location.replace('index.html'); return }
+  const authEmail = sessionStorage.getItem('tc_auth')
+  if (!authEmail) { window.location.replace('index.html'); return }
 
-  currentUser = { id: 'admin' }
-  currentProfile = { id: 'admin', display_name: 'TC BSS', role: 'admin' }
+  const isAdmin = authEmail === 'admin@tennisclub-bss.de'
+  currentUser   = { id: authEmail }
+  currentProfile = {
+    id: authEmail,
+    display_name: isAdmin ? 'TC BSS Admin' : 'Testmitglied',
+    role: isAdmin ? 'admin' : 'mitglied',
+  }
 
   if (DEMO_MODE) {
     const banner = document.createElement('div')
@@ -25,9 +31,9 @@ async function boot() {
 
   const chip = document.getElementById('user-chip')
   chip.classList.remove('hidden'); chip.classList.add('flex')
-  document.getElementById('user-avatar').textContent = 'TC'
-  document.getElementById('user-name').textContent = 'TC BSS'
-  document.getElementById('user-role-badge').textContent = 'Administrator'
+  document.getElementById('user-avatar').textContent = isAdmin ? 'A' : 'T'
+  document.getElementById('user-name').textContent = currentProfile.display_name
+  document.getElementById('user-role-badge').textContent = isAdmin ? 'Administrator' : 'Mitglied'
 
   render()
 }
@@ -36,7 +42,12 @@ function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 
 // ── Render ───────────────────────────────────────────────────
 async function render() {
-  await renderVeranstalter(document.getElementById('app'))
+  const app = document.getElementById('app')
+  if (currentProfile?.role === 'mitglied') {
+    await renderMitglied(app)
+  } else {
+    await renderVeranstalter(app)
+  }
 }
 
 // ── Demo store (localStorage fallback) ───────────────────────

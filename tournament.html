@@ -119,7 +119,7 @@ let _tournamentId = new URLSearchParams(location.search).get('id')
 
 async function initAuth() {
   if (DEMO_MODE) return true
-  if (sessionStorage.getItem('tc_auth') !== '1') { window.location.replace('index.html'); return false }
+  if (!sessionStorage.getItem('tc_auth')) { window.location.replace('index.html'); return false }
   return true
 }
 
