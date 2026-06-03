@@ -86,6 +86,13 @@ const DS = {
 
 function getProfiles() { try { return JSON.parse(localStorage.getItem('tc_profiles')||'{}') } catch { return {} } }
 
+function getBookings() { try { return JSON.parse(localStorage.getItem('tc_bookings')||'[]') } catch { return [] } }
+function getTodayBookings() {
+  const today = new Date()
+  const iso = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0')
+  return getBookings().filter(b => b.date === iso).sort((a,b) => a.timeStart.localeCompare(b.timeStart))
+}
+
 function getProfile(email) {
   const saved = getProfiles()[email] || {}
   const isAdmin = email === 'admin@tennisclub-bss.de'
@@ -306,7 +313,33 @@ async function renderVeranstalter(app) {
   const active   = (tourneys||[]).filter(t => t.status !== 'closed')
   const archived = (tourneys||[]).filter(t => t.status === 'closed')
 
+  const todayBookings = getTodayBookings()
+  const todayBookingsHtml = todayBookings.length
+    ? `<div class="space-y-1.5 mb-3">${todayBookings.map(b => `
+        <div class="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 border border-white/8 text-sm">
+          <span class="font-headline font-bold text-secondary-fixed w-5 text-center">${b.court}</span>
+          <span class="text-white/40 font-body text-xs">${b.timeStart}–${b.timeEnd}</span>
+          <span class="font-body text-white/80 flex-1 truncate">${esc(b.memberName)}</span>
+          ${b.note ? `<span class="text-white/30 text-xs font-body truncate max-w-[100px]">${esc(b.note)}</span>` : ''}
+        </div>`).join('')}</div>`
+    : `<p class="text-white/30 font-body text-sm mb-3">Heute keine Buchungen.</p>`
+
   app.innerHTML = `
+    <section class="mb-10 p-5 rounded-2xl bg-black/10 border border-white/8">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary-fixed text-xl">sports_tennis</span>
+          <h2 class="font-headline font-bold text-white text-base">Platzbuchungen heute</h2>
+        </div>
+        <a href="booking.html" class="text-xs font-headline font-bold text-secondary-fixed hover:underline flex items-center gap-0.5">
+          Alle<span class="material-symbols-outlined text-sm">arrow_forward</span>
+        </a>
+      </div>
+      ${todayBookingsHtml}
+      <a href="booking.html" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
+        <span class="material-symbols-outlined text-base">add</span>Platz buchen
+      </a>
+    </section>
     <div class="flex items-start justify-between mb-8 flex-wrap gap-4">
       <div>
         <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Turniere</h1>

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script>try{if((localStorage.getItem('tc-theme')||'light')==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.classList.add('dark')}</script>
+<link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#115217">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TC BSS">
+<link rel="apple-touch-icon" href="icon-hd.jpg">
+<title>TC Bad Soden-Salmünster – TC BSS App</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="config.js"></script>
+<script src="theme.js"></script>
+<script>
+tailwind.config = {
+  darkMode:"class",
+  theme:{extend:{
+    colors:{
+      "primary":"#115217","primary-container":"#2d6b2d",
+      "on-primary-container":"#a5e99c","primary-fixed":"#aff4a6","primary-fixed-dim":"#94d78c",
+      "on-primary":"#ffffff","on-primary-fixed":"#002203","on-primary-fixed-variant":"#115217",
+      "secondary":"#5a6400","secondary-container":"#d9ea4d",
+      "secondary-fixed":"#dbed50","secondary-fixed-dim":"#c0d034",
+      "on-secondary":"#ffffff","on-secondary-container":"#5e6800",
+      "on-secondary-fixed":"#1a1e00","on-secondary-fixed-variant":"#434b00",
+      "on-surface":"#191c1a","on-surface-variant":"#41493e",
+      "outline":"#717a6d","outline-variant":"#c0c9bb",
+      "inverse-primary":"#94d78c","inverse-on-surface":"#eff1ec","inverse-surface":"#2e312e",
+      "error":"#ba1a1a","error-container":"#ffdad6","on-error":"#ffffff","on-error-container":"#93000a",
+      "tertiary":"#39475c","tertiary-container":"#515f74",
+      "on-tertiary":"#ffffff","tertiary-fixed":"#d5e3fd","tertiary-fixed-dim":"#b9c7e0",
+      "on-tertiary-fixed":"#0d1c2f","on-tertiary-fixed-variant":"#3a485c","on-tertiary-container":"#cbd9f2",
+      "background":"#f8faf5","surface-container-lowest":"#ffffff","surface-container":"#ecefea","surface-container-low":"#f2f4ef","on-background":"#191c1a",
+    },
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Inter","sans-serif"]},
+    borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
+  }}
+}
+</script>
+<style>
+  body{font-family:'Inter',sans-serif;background-color:var(--page-bg,#f8faf5);color:var(--text,#191c1a);}
+  .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
+  .scrollbar-hide::-webkit-scrollbar{display:none;}
+  .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none;}
+  dialog::backdrop{background:rgba(0,0,0,.55);backdrop-filter:blur(4px);}
+  dialog{background:transparent;border:none;padding:0;max-width:100vw;max-height:100vh;}
+
+  /* Grid cell hover */
+  .slot-cell { transition: background-color .1s; cursor: pointer; }
+  .slot-cell:hover { background-color: rgba(17,82,23,0.06); }
+  .dark .slot-cell:hover { background-color: rgba(255,255,255,0.06); }
+
+  /* Court color bands */
+  .court-color-1 { background-color: rgba(17,82,23,0.75); }
+  .court-color-2 { background-color: rgba(90,100,0,0.80); }
+  .court-color-3 { background-color: rgba(57,71,92,0.80); }
+  .court-color-4 { background-color: rgba(130,50,130,0.80); }
+  .court-color-5 { background-color: rgba(180,90,20,0.80); }
+  .court-color-6 { background-color: rgba(180,30,80,0.80); }
+  .court-color-7 { background-color: rgba(20,100,160,0.80); }
+  .court-color-8 { background-color: rgba(20,140,100,0.80); }
+
+  /* autocomplete */
+  #suggest-list { position:absolute; z-index:50; background:var(--card-bg,#fff); border:1px solid var(--border,rgba(17,82,23,0.12)); border-radius:0.5rem; box-shadow:0 4px 16px rgba(0,0,0,.1); max-height:160px; overflow-y:auto; width:100%; }
+  #suggest-list li { padding:0.5rem 0.75rem; cursor:pointer; font-size:0.875rem; }
+  #suggest-list li:hover { background:var(--card-bg2,#f2f4ef); }
+</style>
+</head>
+<body class="min-h-screen pb-20">
+
+<!-- ── Header ── -->
+<header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
+  <div class="flex items-center gap-3">
+    <a href="dashboard.html" class="text-white/30 hover:text-white transition-colors flex-shrink-0 flex items-center" title="Zurück">
+      <span class="material-symbols-outlined text-xl">arrow_back</span>
+    </a>
+    <img src="icon-hd.jpg" alt="TC BSS" class="w-9 h-9 object-cover flex-shrink-0 rounded-xl"/>
+    <div>
+      <div class="text-base font-black text-white tracking-tight font-headline leading-none">Platzbuchung</div>
+      <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">TC BSS App</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <button onclick="tcToggleTheme()" class="theme-toggle-btn" title="Design wechseln">
+      <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
+    </button>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-3 py-5">
+
+  <!-- ── Toolbar ── -->
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <!-- Week navigation -->
+    <div class="flex items-center gap-1">
+      <button onclick="prevWeek()" class="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
+        <span class="material-symbols-outlined text-base">chevron_left</span>
+      </button>
+      <button onclick="goToday()" class="px-3 py-2 rounded-xl text-xs font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/60">
+        Heute
+      </button>
+      <button onclick="nextWeek()" class="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
+        <span class="material-symbols-outlined text-base">chevron_right</span>
+      </button>
+      <span id="week-label" class="ml-2 text-sm font-headline font-bold text-white"></span>
+    </div>
+    <!-- Courts setting -->
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-white/40 font-body">Plätze:</span>
+      <button onclick="setCourts(-1)" class="w-7 h-7 rounded-lg bg-black/10 hover:bg-black/20 text-white/60 flex items-center justify-center text-base font-bold transition-colors">−</button>
+      <span id="courts-count" class="text-sm font-headline font-bold text-white w-4 text-center"></span>
+      <button onclick="setCourts(+1)" class="w-7 h-7 rounded-lg bg-black/10 hover:bg-black/20 text-white/60 flex items-center justify-center text-base font-bold transition-colors">+</button>
+    </div>
+  </div>
+
+  <!-- ── Calendar Grid ── -->
+  <div class="overflow-x-auto scrollbar-hide rounded-2xl border border-white/8 bg-black/10">
+    <div id="calendar" class="min-w-[640px]"></div>
+  </div>
+
+</main>
+
+<!-- ── Book Modal ── -->
+<dialog id="modal-book">
+  <div class="w-full max-w-sm mx-auto mt-16 px-4">
+    <div class="bg-[#0d2e10] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <h2 class="font-headline font-bold text-base text-white">Platz buchen</h2>
+        <button onclick="document.getElementById('modal-book').close()" class="text-white/40 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Datum</label>
+            <input type="date" id="book-date" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+          </div>
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Platz</label>
+            <select id="book-court" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Von</label>
+            <select id="book-start" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Bis</label>
+            <select id="book-end" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"></select>
+          </div>
+        </div>
+        <div class="relative">
+          <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Mitglied</label>
+          <input type="text" id="book-member" autocomplete="off" placeholder="Name…"
+            class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+          <ul id="suggest-list" class="hidden mt-1"></ul>
+        </div>
+        <div>
+          <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Notiz <span class="normal-case font-normal">(optional)</span></label>
+          <input type="text" id="book-note" placeholder="z.B. Training, Mannschaft…"
+            class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
+        <div id="book-conflict" class="hidden px-3 py-2 rounded-xl bg-red-900/30 border border-red-500/25 text-red-300 text-xs font-body"></div>
+        <button onclick="confirmBook()" class="w-full py-3 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-base">event_available</span>Buchen
+        </button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- ── Detail Modal ── -->
+<dialog id="modal-detail">
+  <div class="w-full max-w-sm mx-auto mt-16 px-4">
+    <div class="bg-[#0d2e10] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <h2 class="font-headline font-bold text-base text-white">Buchung</h2>
+        <button onclick="document.getElementById('modal-detail').close()" class="text-white/40 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-secondary-fixed">person</span>
+          <span id="detail-member" class="font-headline font-bold text-white text-lg"></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-white/40">sports_tennis</span>
+          <span id="detail-court" class="text-white/70 font-body text-sm"></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-white/40">schedule</span>
+          <span id="detail-time" class="text-white/70 font-body text-sm"></span>
+        </div>
+        <div id="detail-note-row" class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-white/40">notes</span>
+          <span id="detail-note" class="text-white/50 font-body text-sm italic"></span>
+        </div>
+        <button onclick="deleteBooking()" class="w-full py-2.5 rounded-xl font-headline font-bold text-sm bg-red-900/30 border border-red-500/25 text-red-300 hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2 mt-2">
+          <span class="material-symbols-outlined text-base">delete</span>Buchung löschen
+        </button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- ── Toast ── -->
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 opacity-0 translate-y-2 transition-all duration-300 bg-secondary-fixed text-on-secondary-fixed px-5 py-2.5 rounded-full text-sm font-headline font-bold shadow-xl z-50 pointer-events-none whitespace-nowrap"></div>
+
+<script>
+// ── Data ──────────────────────────────────────────
+function getSettings() {
+  try { return JSON.parse(localStorage.getItem('tc_settings') || '{}') } catch(e) { return {} }
+}
+function saveSettings(s) { localStorage.setItem('tc_settings', JSON.stringify(s)) }
+
+function getNumCourts() { return Math.max(1, Math.min(12, getSettings().numCourts || 6)) }
+function setNumCourts(n) { const s = getSettings(); s.numCourts = Math.max(1, Math.min(12, n)); saveSettings(s); render() }
+
+function getBookings() {
+  try { return JSON.parse(localStorage.getItem('tc_bookings') || '[]') } catch(e) { return [] }
+}
+function saveBookings(b) { localStorage.setItem('tc_bookings', JSON.stringify(b)) }
+
+function getMembers() {
+  try { return JSON.parse(localStorage.getItem('tc_members') || '[]') } catch(e) { return [] }
+}
+
+// ── Helpers ───────────────────────────────────────
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+function toMinutes(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number)
+  return h * 60 + m
+}
+function fromMinutes(min) {
+  return String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0')
+}
+
+function formatDate(iso) {
+  const d = new Date(iso + 'T00:00:00')
+  return d.toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short' })
+}
+
+function isoDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
+}
+
+function getMondayOf(d) {
+  const copy = new Date(d)
+  const day = copy.getDay() || 7
+  copy.setDate(copy.getDate() - day + 1)
+  copy.setHours(0,0,0,0)
+  return copy
+}
+
+const TIME_START = 8 * 60   // 08:00
+const TIME_END   = 22 * 60  // 22:00
+const SLOT_MIN   = 30       // 30-minute slots
+
+const COURT_COLORS = [
+  'court-color-1','court-color-2','court-color-3','court-color-4',
+  'court-color-5','court-color-6','court-color-7','court-color-8'
+]
+
+// ── Week state ────────────────────────────────────
+let _weekStart = getMondayOf(new Date())
+
+function prevWeek() { _weekStart.setDate(_weekStart.getDate() - 7); render() }
+function nextWeek() { _weekStart.setDate(_weekStart.getDate() + 7); render() }
+function goToday()  { _weekStart = getMondayOf(new Date()); render() }
+
+function setCourts(delta) { setNumCourts(getNumCourts() + delta) }
+
+// ── Render ────────────────────────────────────────
+function render() {
+  const numCourts = getNumCourts()
+  document.getElementById('courts-count').textContent = numCourts
+
+  // Week label
+  const weekEnd = new Date(_weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 6)
+  const fmtOpts = { day:'numeric', month:'short' }
+  document.getElementById('week-label').textContent =
+    _weekStart.toLocaleDateString('de-DE', fmtOpts) + ' – ' + weekEnd.toLocaleDateString('de-DE', fmtOpts)
+
+  // Build week days
+  const days = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(_weekStart)
+    d.setDate(d.getDate() + i)
+    days.push(d)
+  }
+
+  const bookings = getBookings()
+  const todayIso = isoDate(new Date())
+
+  // Time slots
+  const slots = []
+  for (let m = TIME_START; m < TIME_END; m += SLOT_MIN) slots.push(m)
+
+  // Build grid HTML
+  // Structure: left column = times, then 7 day columns, each column = numCourts rows per slot
+  // Layout: top row = day headers, then one row per time slot (split into court cells)
+
+  const COL_COUNT = 7  // days
+  const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+
+  let html = `<table class="w-full border-collapse text-xs" style="table-layout:fixed">`
+
+  // Header row: time col + 7 day cols
+  html += `<thead><tr>`
+  html += `<th class="w-14 py-2 px-1 text-center font-body text-white/30 border-b border-white/8 border-r border-white/8 sticky left-0 bg-black/10 z-10"></th>`
+  days.forEach((d, i) => {
+    const iso = isoDate(d)
+    const isToday = iso === todayIso
+    const label = d.toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' })
+    html += `<th colspan="${numCourts}" class="py-2 px-1 font-headline font-bold ${isToday ? 'text-secondary-fixed' : 'text-white/60'} border-b border-white/8 ${i < 6 ? 'border-r border-white/5' : ''}">${label}</th>`
+  })
+  html += `</tr>`
+
+  // Court sub-header
+  html += `<tr>`
+  html += `<th class="py-1 border-b border-white/8 border-r border-white/8 sticky left-0 bg-black/10 z-10"></th>`
+  days.forEach((d, di) => {
+    for (let c = 1; c <= numCourts; c++) {
+      html += `<th class="py-1 font-body text-white/25 border-b border-white/8 ${c === numCourts && di < 6 ? 'border-r border-white/5' : c < numCourts ? 'border-r border-white/3' : ''}">${c}</th>`
+    }
+  })
+  html += `</tr></thead>`
+
+  // Body: one row per time slot
+  html += `<tbody>`
+  slots.forEach((slotMin, si) => {
+    const isHour = slotMin % 60 === 0
+    html += `<tr>`
+    // Time label
+    html += `<td class="py-0 px-1 text-center font-body text-white/30 border-r border-white/8 sticky left-0 bg-black/10 z-10 ${isHour ? 'border-t border-white/8' : ''}" style="height:28px;vertical-align:top;padding-top:2px;">${isHour ? fromMinutes(slotMin) : ''}</td>`
+
+    days.forEach((d, di) => {
+      const iso = isoDate(d)
+      const slotEnd = slotMin + SLOT_MIN
+
+      for (let c = 1; c <= numCourts; c++) {
+        // Check if a booking covers this slot
+        const booking = bookings.find(b =>
+          b.date === iso && b.court === c &&
+          toMinutes(b.timeStart) <= slotMin && toMinutes(b.timeEnd) > slotMin
+        )
+
+        const isSlotStart = booking && toMinutes(booking.timeStart) === slotMin
+        const colBorder = c === numCourts && di < 6 ? 'border-r border-white/5' : c < numCourts ? 'border-r border-white/3' : ''
+        const topBorder = isHour ? 'border-t border-white/8' : ''
+
+        if (booking && !isSlotStart) {
+          // Continuation of a booking — empty cell (booking spans upward)
+          html += `<td class="${colBorder} ${topBorder}" style="height:28px;"></td>`
+        } else if (booking && isSlotStart) {
+          // Calculate rowspan
+          const durationSlots = Math.round((toMinutes(booking.timeEnd) - toMinutes(booking.timeStart)) / SLOT_MIN)
+          const colorClass = COURT_COLORS[(c - 1) % COURT_COLORS.length]
+          html += `<td rowspan="${durationSlots}" class="${colorClass} ${colBorder} rounded cursor-pointer" style="height:${durationSlots * 28}px;padding:2px 3px;vertical-align:top;" onclick="showDetail('${booking.id}')">`
+          html += `<div class="text-white font-headline font-bold leading-tight truncate" style="font-size:10px;">${esc(booking.memberName)}</div>`
+          if (durationSlots > 1) html += `<div class="text-white/60 leading-none" style="font-size:9px;">${booking.timeStart}–${booking.timeEnd}</div>`
+          html += `</td>`
+        } else {
+          // Empty bookable slot
+          html += `<td class="slot-cell ${colBorder} ${topBorder}" style="height:28px;" onclick="openBook('${iso}',${c},'${fromMinutes(slotMin)}')"></td>`
+        }
+      }
+    })
+
+    html += `</tr>`
+  })
+
+  html += `</tbody></table>`
+  document.getElementById('calendar').innerHTML = html
+}
+
+// ── Time select helpers ───────────────────────────
+function buildTimeOptions(selectEl, selectedVal) {
+  selectEl.innerHTML = ''
+  for (let m = TIME_START; m <= TIME_END; m += SLOT_MIN) {
+    const opt = document.createElement('option')
+    opt.value = fromMinutes(m)
+    opt.textContent = fromMinutes(m)
+    if (fromMinutes(m) === selectedVal) opt.selected = true
+    selectEl.appendChild(opt)
+  }
+}
+
+function buildCourtOptions(selectEl, selectedCourt) {
+  selectEl.innerHTML = ''
+  for (let c = 1; c <= getNumCourts(); c++) {
+    const opt = document.createElement('option')
+    opt.value = c
+    opt.textContent = 'Platz ' + c
+    if (c === selectedCourt) opt.selected = true
+    selectEl.appendChild(opt)
+  }
+}
+
+// ── Book modal ────────────────────────────────────
+function openBook(date, court, timeStart) {
+  document.getElementById('book-date').value = date
+  buildCourtOptions(document.getElementById('book-court'), court)
+  buildTimeOptions(document.getElementById('book-start'), timeStart)
+
+  // Default end = start + 1h
+  const endMin = Math.min(toMinutes(timeStart) + 60, TIME_END)
+  buildTimeOptions(document.getElementById('book-end'), fromMinutes(endMin))
+
+  document.getElementById('book-member').value = ''
+  document.getElementById('book-note').value = ''
+  document.getElementById('book-conflict').classList.add('hidden')
+  document.getElementById('suggest-list').classList.add('hidden')
+  document.getElementById('modal-book').showModal()
+  setTimeout(() => document.getElementById('book-member').focus(), 50)
+
+  // Update end options when start changes
+  document.getElementById('book-start').onchange = () => {
+    const startMin = toMinutes(document.getElementById('book-start').value)
+    const curEnd = toMinutes(document.getElementById('book-end').value)
+    buildTimeOptions(document.getElementById('book-end'), fromMinutes(Math.max(curEnd, startMin + SLOT_MIN)))
+  }
+}
+
+function confirmBook() {
+  const date   = document.getElementById('book-date').value
+  const court  = parseInt(document.getElementById('book-court').value)
+  const start  = document.getElementById('book-start').value
+  const end    = document.getElementById('book-end').value
+  const member = document.getElementById('book-member').value.trim()
+  const note   = document.getElementById('book-note').value.trim()
+  const conflict = document.getElementById('book-conflict')
+
+  if (!member) { conflict.textContent = 'Bitte einen Namen eingeben.'; conflict.classList.remove('hidden'); return }
+  if (toMinutes(end) <= toMinutes(start)) { conflict.textContent = 'Endzeit muss nach Startzeit liegen.'; conflict.classList.remove('hidden'); return }
+
+  // Check overlap
+  const bookings = getBookings()
+  const overlap = bookings.find(b =>
+    b.date === date && b.court === court &&
+    toMinutes(b.timeStart) < toMinutes(end) && toMinutes(b.timeEnd) > toMinutes(start)
+  )
+  if (overlap) {
+    conflict.textContent = `Platz ${court} ist von ${overlap.timeStart}–${overlap.timeEnd} bereits durch ${overlap.memberName} belegt.`
+    conflict.classList.remove('hidden')
+    return
+  }
+
+  bookings.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    date, court, timeStart: start, timeEnd: end,
+    memberName: member, note, createdAt: new Date().toISOString()
+  })
+  saveBookings(bookings)
+  document.getElementById('modal-book').close()
+  toast('Buchung gespeichert')
+  render()
+}
+
+// ── Detail modal ──────────────────────────────────
+let _detailId = null
+function showDetail(id) {
+  const b = getBookings().find(x => x.id === id)
+  if (!b) return
+  _detailId = id
+  document.getElementById('detail-member').textContent = b.memberName
+  document.getElementById('detail-court').textContent = 'Platz ' + b.court
+  document.getElementById('detail-time').textContent =
+    b.date.split('-').reverse().join('.') + ' · ' + b.timeStart + '–' + b.timeEnd +
+    ' (' + Math.round((toMinutes(b.timeEnd) - toMinutes(b.timeStart)) / 60 * 10) / 10 + ' h)'
+  const noteRow = document.getElementById('detail-note-row')
+  if (b.note) {
+    document.getElementById('detail-note').textContent = b.note
+    noteRow.classList.remove('hidden')
+  } else {
+    noteRow.classList.add('hidden')
+  }
+  document.getElementById('modal-detail').showModal()
+}
+
+function deleteBooking() {
+  if (!_detailId) return
+  const bookings = getBookings().filter(b => b.id !== _detailId)
+  saveBookings(bookings)
+  document.getElementById('modal-detail').close()
+  toast('Buchung gelöscht')
+  render()
+}
+
+// ── Autocomplete ──────────────────────────────────
+const memberInput = document.getElementById('book-member')
+const suggestList = document.getElementById('suggest-list')
+
+memberInput.addEventListener('input', () => {
+  const q = memberInput.value.trim().toLowerCase()
+  if (!q) { suggestList.classList.add('hidden'); return }
+  const matches = getMembers().filter(m => m.name.toLowerCase().includes(q)).slice(0, 8)
+  if (!matches.length) { suggestList.classList.add('hidden'); return }
+  suggestList.innerHTML = matches.map(m =>
+    `<li onclick="selectMember('${m.name.replace(/'/g,"\\'")}')"> ${esc(m.name)}</li>`
+  ).join('')
+  suggestList.classList.remove('hidden')
+})
+
+document.addEventListener('click', e => {
+  if (!suggestList.contains(e.target) && e.target !== memberInput) suggestList.classList.add('hidden')
+})
+
+function selectMember(name) {
+  memberInput.value = name
+  suggestList.classList.add('hidden')
+}
+
+// ── Toast ─────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.style.opacity = '1'
+  el.style.transform = 'translateY(0) translateX(-50%)'
+  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px) translateX(-50%)' }, 2500)
+}
+
+// ── Init ──────────────────────────────────────────
+render()
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'))
+}
+</script>
+</body>
+</html>
