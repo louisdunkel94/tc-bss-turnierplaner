@@ -78,7 +78,7 @@ html:not(.dark) .bg-\[\#1a3320\]     { background-color: var(--input-bg) !import
 html:not(.dark) .bg-\[\#115217\]\/80 { background-color: var(--header-bg) !important; }
 
 /* Secondary / accent */
-html:not(.dark) .bg-secondary-fixed            { background-color: #5a6400 !important; }
+html:not(.dark) .bg-secondary-fixed            { background-color: #d9ea4d !important; }
 html:not(.dark) .bg-secondary-fixed\/10        { background-color: rgba(90,100,0,.08) !important; }
 html:not(.dark) .bg-secondary-fixed\/20        { background-color: rgba(90,100,0,.14) !important; }
 html:not(.dark) .border-secondary-fixed\/20    { border-color: rgba(90,100,0,.2) !important; }
