@@ -1,11 +1,11 @@
 /* ── Light mode (default) ──────────────────────────── */
 :root {
-  --page-bg:   #f2f4ef;
-  --page-bg2:  #ecefea;
-  --header-bg: rgba(242,244,239,0.88);
-  --card-bg:   rgba(17,82,23,0.05);
-  --card-bg2:  rgba(17,82,23,0.09);
-  --input-bg:  #e7e9e4;
+  --page-bg:   #f8faf5;
+  --page-bg2:  #f2f4ef;
+  --header-bg: rgba(248,250,245,0.88);
+  --card-bg:   #ffffff;
+  --card-bg2:  #f2f4ef;
+  --input-bg:  #ecefea;
   --text:      #191c1a;
   --text-80:   rgba(25,28,26,0.8);
   --text-60:   rgba(25,28,26,0.6);
@@ -105,9 +105,16 @@ html:not(.dark) select option { background-color: var(--page-bg2); color: var(--
 
 /* ── Hero gradient (login + anleitung pages) ─────────── */
 html:not(.dark) .bg-hero {
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(90,100,0,.08) 0%, transparent 60%),
-              linear-gradient(180deg, #f2f4ef 0%, #ecefea 50%, #f2f4ef 100%) !important;
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(90,100,0,.07) 0%, transparent 60%),
+              linear-gradient(180deg, #f8faf5 0%, #f2f4ef 50%, #f8faf5 100%) !important;
 }
+
+/* ── Mobile bottom nav / modals ─────────────────────── */
+html:not(.dark) .bg-emerald-950\/95 { background-color: var(--header-bg) !important; border-color: var(--border) !important; }
+html:not(.dark) .bg-emerald-950     { background-color: var(--page-bg2) !important; }
+html:not(.dark) .bg-\[\#0d2e10\]   { background-color: var(--card-bg) !important; }
+html:not(.dark) .bg-\[\#1a3320\]   { background-color: var(--input-bg) !important; }
+html:not(.dark) .shadow-\[0_-10px_30px_rgba\(0\2c 34\2c 3\2c \.3\)\] { box-shadow: 0 -4px 20px rgba(17,82,23,0.08) !important; }
 
 /* ── Toggle button ───────────────────────────────────── */
 .theme-toggle-btn {
