@@ -236,14 +236,263 @@ function collectStats(playerName, yearFilter, monthFilter) {
   return { total, partners, opponents }
 }
 
+// All matches chronologically (no date filter) — for streak + form
+function collectAllMatchResults(playerName) {
+  const sorted = [...allTourneys].sort((a, b) => {
+    const da = new Date(a.start_at || a.date || 0)
+    const db = new Date(b.start_at || b.date || 0)
+    return da - db
+  })
+  const results = []
+  for (const t of sorted) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [
+      ...(S.schedule || []),
+      ...(S.loserSchedule || []),
+      ...(S.groups || []).flatMap(g => g.schedule || []),
+      ...(S.koPhase || []),
+    ]
+    for (const r of rounds) {
+      for (const m of (r.matches || [])) {
+        if (!m || !m.result) continue
+        let outcome = null
+        if (m.herr1 !== undefined) {
+          const t1 = m.herr1 === playerName || m.dame1 === playerName
+          const t2 = m.herr2 === playerName || m.dame2 === playerName
+          if (!t1 && !t2) continue
+          outcome = m.result === 'draw' ? 'D' : ((t1 && m.result === 'team1') || (t2 && m.result === 'team2')) ? 'W' : 'L'
+        } else if (m.player1 !== undefined) {
+          const p1 = m.player1 === playerName
+          const p2 = m.player2 === playerName
+          if (!p1 && !p2) continue
+          outcome = m.result === 'draw' ? 'D' : ((p1 && m.result === 'p1') || (p2 && m.result === 'p2')) ? 'W' : 'L'
+        }
+        if (outcome) results.push(outcome)
+      }
+    }
+  }
+  return results
+}
+
+function calcStreak(results) {
+  // current streak from end
+  let current = 0
+  let currentType = null
+  if (results.length) {
+    currentType = results[results.length - 1]
+    for (let i = results.length - 1; i >= 0; i--) {
+      if (results[i] === currentType) current++
+      else break
+    }
+  }
+  // longest win streak
+  let longest = 0, run = 0
+  for (const r of results) {
+    if (r === 'W') { run++; longest = Math.max(longest, run) }
+    else run = 0
+  }
+  return { current, currentType, longest }
+}
+
+function streakHtml(streak) {
+  if (!streak.current) return ''
+  const isWin = streak.currentType === 'W'
+  const isDraw = streak.currentType === 'D'
+  const icon = isWin ? (streak.current >= 5 ? '🔥' : '✅') : isDraw ? '🤝' : '❌'
+  const label = isWin ? 'Siege in Folge' : isDraw ? 'Unentschieden in Folge' : 'Niederlagen in Folge'
+  const hotBorder = isWin && streak.current >= 5 ? 'border-secondary-fixed/30 bg-secondary-fixed/5' : 'bg-black/20 border-white/5'
+  return `<div class="flex gap-3 mb-6">
+    <div class="rounded-2xl ${hotBorder} border px-5 py-4 flex-1 flex items-center gap-3">
+      <span class="text-2xl leading-none">${icon}</span>
+      <div>
+        <div class="font-headline font-black text-white text-xl">${streak.current}</div>
+        <div class="text-xs text-white/40 font-body">Aktuelle Serie · ${label}</div>
+      </div>
+    </div>
+    <div class="rounded-2xl bg-black/20 border border-white/5 px-5 py-4 flex-1 flex items-center gap-3">
+      <span class="material-symbols-outlined text-secondary-fixed" style="font-variation-settings:'FILL' 1">military_tech</span>
+      <div>
+        <div class="font-headline font-black text-white text-xl">${streak.longest || '–'}</div>
+        <div class="text-xs text-white/40 font-body">Längste Siegesserie</div>
+      </div>
+    </div>
+  </div>`
+}
+
+function formHtml(results) {
+  const last10 = results.slice(-10)
+  if (!last10.length) return ''
+  const dots = last10.map(r => {
+    const cls = r === 'W' ? 'bg-secondary-fixed' : r === 'L' ? 'bg-red-400' : 'bg-white/20'
+    const title = r === 'W' ? 'Sieg' : r === 'L' ? 'Niederlage' : 'Unentschieden'
+    return `<div class="w-5 h-5 rounded-full ${cls} flex-shrink-0" title="${title}"></div>`
+  }).join('')
+  const half = Math.floor(last10.length / 2)
+  const firstWins  = last10.slice(0, half).filter(r => r === 'W').length / (half || 1)
+  const secondWins = last10.slice(half).filter(r => r === 'W').length / ((last10.length - half) || 1)
+  let trendIcon = 'trending_flat', trendColor = 'text-white/30'
+  if (secondWins > firstWins + 0.1)  { trendIcon = 'trending_up';   trendColor = 'text-secondary-fixed' }
+  if (secondWins < firstWins - 0.1)  { trendIcon = 'trending_down'; trendColor = 'text-red-400' }
+  return `<div class="rounded-2xl bg-black/20 border border-white/5 px-5 py-4 mb-6">
+    <div class="text-[10px] font-headline uppercase tracking-widest text-white/40 mb-3">Formkurve · letzte ${last10.length} Spiele</div>
+    <div class="flex gap-1.5 items-center">${dots}</div>
+    <div class="text-xs text-white/30 font-body mt-2.5 flex items-center gap-1">
+      Trend <span class="material-symbols-outlined text-sm ${trendColor}">${trendIcon}</span>
+    </div>
+  </div>`
+}
+
+function nemesisPartnerHtml(partners, opponents) {
+  const qualOpp = Object.entries(opponents).filter(([, e]) => e.games >= 3)
+  const qualPar = Object.entries(partners).filter(([, e]) => e.games >= 3)
+  if (!qualOpp.length && !qualPar.length) return ''
+
+  let nemesisHtml = ''
+  if (qualOpp.length) {
+    const [name, e] = qualOpp.sort((a, b) => (a[1].wins / a[1].games) - (b[1].wins / b[1].games))[0]
+    const profileEmail = resolveProfileEmail(name)
+    const nameEl = profileEmail
+      ? `<a href="profile.html?email=${encodeURIComponent(profileEmail)}" class="font-headline font-bold text-red-400 text-base truncate hover:text-red-300 no-underline">${esc(name)}</a>`
+      : `<div class="font-headline font-bold text-red-400 text-base truncate">${esc(name)}</div>`
+    nemesisHtml = `<div class="rounded-2xl bg-black/20 border border-red-500/10 p-4">
+      <div class="text-[10px] font-headline uppercase tracking-widest text-white/30 mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-xs">skull</span>Nemesis</div>
+      ${nameEl}
+      <div class="text-xs text-white/40 font-body mt-0.5">${e.wins}S · ${e.losses}N (${e.games} Duelle)</div>
+    </div>`
+  }
+
+  let partnerHtml = ''
+  if (qualPar.length) {
+    const [name, e] = qualPar.sort((a, b) => b[1].wins - a[1].wins)[0]
+    const profileEmail = resolveProfileEmail(name)
+    const nameEl = profileEmail
+      ? `<a href="profile.html?email=${encodeURIComponent(profileEmail)}" class="font-headline font-bold text-secondary-fixed text-base truncate hover:text-secondary-fixed-dim no-underline">${esc(name)}</a>`
+      : `<div class="font-headline font-bold text-secondary-fixed text-base truncate">${esc(name)}</div>`
+    partnerHtml = `<div class="rounded-2xl bg-black/20 border border-secondary-fixed/15 p-4">
+      <div class="text-[10px] font-headline uppercase tracking-widest text-white/30 mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-xs">favorite</span>Lieblingspartner</div>
+      ${nameEl}
+      <div class="text-xs text-white/40 font-body mt-0.5">${e.wins} gemeinsame Siege (${e.games} Spiele)</div>
+    </div>`
+  }
+
+  if (!nemesisHtml && !partnerHtml) return ''
+  return `<div class="grid grid-cols-2 gap-3 mb-6">${nemesisHtml}${partnerHtml}</div>`
+}
+
+function countTourneys(playerName) {
+  let count = 0, firstDate = null, lastDate = null
+  for (const t of allTourneys) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [...(S.schedule||[]),...(S.loserSchedule||[]),...(S.groups||[]).flatMap(g=>g.schedule||[]),...(S.koPhase||[])]
+    const played = rounds.some(r => (r.matches||[]).some(m => m && (
+      m.herr1===playerName||m.dame1===playerName||m.herr2===playerName||m.dame2===playerName||
+      m.player1===playerName||m.player2===playerName
+    )))
+    if (played) {
+      count++
+      const d = t.start_at || t.date
+      if (d) {
+        if (!firstDate || d < firstDate) firstDate = d
+        if (!lastDate  || d > lastDate)  lastDate  = d
+      }
+    }
+  }
+  return { count, firstDate, lastDate }
+}
+
+function countPartners(playerName) {
+  const partners = new Set()
+  for (const t of allTourneys) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [...(S.schedule||[]),...(S.loserSchedule||[]),...(S.groups||[]).flatMap(g=>g.schedule||[]),...(S.koPhase||[])]
+    for (const r of rounds) {
+      for (const m of (r.matches||[])) {
+        if (!m || m.herr1===undefined) continue
+        if (m.herr1===playerName) partners.add(m.dame1)
+        else if (m.dame1===playerName) partners.add(m.herr1)
+        else if (m.herr2===playerName) partners.add(m.dame2)
+        else if (m.dame2===playerName) partners.add(m.herr2)
+      }
+    }
+  }
+  return partners.size
+}
+
+function careerHtml(career) {
+  if (!career.count) return ''
+  const fmt = s => s ? new Date(s).toLocaleDateString('de-DE',{day:'numeric',month:'short',year:'numeric'}) : '–'
+  return `<div class="rounded-2xl bg-black/20 border border-white/5 px-6 py-5 mb-6">
+    <div class="text-[10px] font-headline uppercase tracking-widest text-white/40 mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-xs">account_circle</span>Karriere-Übersicht
+    </div>
+    <div class="grid grid-cols-3 gap-4 text-center">
+      <div>
+        <div class="font-headline font-black text-white text-2xl">${career.count}</div>
+        <div class="text-xs text-white/40 font-body mt-0.5">Turniere</div>
+      </div>
+      <div>
+        <div class="font-headline font-bold text-white text-xs leading-snug">${fmt(career.firstDate)}</div>
+        <div class="text-xs text-white/40 font-body mt-0.5">Erstes Turnier</div>
+      </div>
+      <div>
+        <div class="font-headline font-bold text-white text-xs leading-snug">${fmt(career.lastDate)}</div>
+        <div class="text-xs text-white/40 font-body mt-0.5">Letztes Turnier</div>
+      </div>
+    </div>
+  </div>`
+}
+
+const BADGE_DEFS = [
+  { id:'first_step',   icon:'sports_tennis',        label:'Erster Schritt',   desc:'Erstes Spiel gespielt',              check:({games})=>games>=1 },
+  { id:'first_win',    icon:'emoji_events',          label:'Erster Sieg',      desc:'Erstes Match gewonnen',              check:({wins})=>wins>=1 },
+  { id:'on_track',     icon:'local_fire_department', label:'Auf Kurs',         desc:'5 Siege in Folge',                   check:({longest})=>longest>=5 },
+  { id:'unstoppable',  icon:'whatshot',              label:'Unaufhaltbar',     desc:'10 Siege in Folge',                  check:({longest})=>longest>=10 },
+  { id:'teamplayer',   icon:'diversity_3',           label:'Teamplayer',       desc:'Mit 10 versch. Partnern gespielt',   check:({partnerCount})=>partnerCount>=10 },
+  { id:'traveler',     icon:'calendar_month',        label:'Vielreisender',    desc:'An 5 Turnieren teilgenommen',        check:({tourneyCount})=>tourneyCount>=5 },
+  { id:'veteran',      icon:'military_tech',         label:'Veteran',          desc:'50 Spiele gespielt',                 check:({games})=>games>=50 },
+  { id:'legend',       icon:'workspace_premium',     label:'Legende',          desc:'100 Spiele gespielt',                check:({games})=>games>=100 },
+]
+
+function badgesHtml(games, wins, longest, partnerCount, tourneyCount) {
+  const ctx = { games, wins, longest, partnerCount, tourneyCount }
+  const html = BADGE_DEFS.map(b => {
+    const earned = b.check(ctx)
+    return `<div class="flex flex-col items-center gap-1.5 p-3 rounded-xl border ${earned?'border-secondary-fixed/20 bg-secondary-fixed/5':'border-white/5 bg-black/10 opacity-30'}" title="${esc(b.desc)}">
+      <span class="material-symbols-outlined text-xl ${earned?'text-secondary-fixed':'text-white/30'}" style="font-variation-settings:'FILL' 1">${b.icon}</span>
+      <div class="text-[10px] font-headline font-bold text-center leading-tight ${earned?'text-white/70':'text-white/30'}">${esc(b.label)}</div>
+    </div>`
+  }).join('')
+  return `<section class="mt-8">
+    <h2 class="text-base font-headline font-bold text-white mb-3 flex items-center gap-2">
+      <span class="material-symbols-outlined text-base text-white/40">verified</span>Achievements
+    </h2>
+    <div class="grid grid-cols-4 gap-2">${html}</div>
+    <p class="text-xs text-white/20 font-body mt-3 text-center">Ausgegraut = noch nicht freigeschaltet</p>
+  </section>`
+}
+
+function resolveProfileEmail(displayName) {
+  try {
+    const profiles = JSON.parse(localStorage.getItem('tc_profiles') || '{}')
+    return Object.entries(profiles).find(([, p]) => p.display_name === displayName)?.[0] || null
+  } catch { return null }
+}
+
 function tableRows(map) {
   return Object.entries(map)
     .sort((a, b) => b[1].games - a[1].games)
     .map(([name, e]) => {
       const pct = e.games ? Math.round((e.wins / e.games) * 100) : 0
+      const profileEmail = resolveProfileEmail(name)
+      const nameHtml = profileEmail
+        ? `<a href="profile.html?email=${encodeURIComponent(profileEmail)}" class="font-body font-semibold text-white text-sm truncate hover:text-secondary-fixed transition-colors no-underline">${esc(name)}</a>`
+        : `<div class="font-body font-semibold text-white text-sm truncate">${esc(name)}</div>`
       return `<div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0">
         <div class="flex-1 min-w-0">
-          <div class="font-body font-semibold text-white text-sm truncate">${esc(name)}</div>
+          ${nameHtml}
           <div class="text-xs font-body text-white/40 mt-0.5">${e.games} Spiel${e.games !== 1 ? 'e' : ''} &middot; <span class="text-secondary-fixed/80">${e.wins}S</span> <span class="text-white/30">${e.draws}U</span> <span class="text-red-400/70">${e.losses}N</span></div>
         </div>
         <div class="flex items-center gap-2 w-28 flex-shrink-0">
@@ -271,8 +520,12 @@ function update() {
   }
 
   const { total, partners, opponents } = collectStats(playerName, yearFilter, monthFilter)
+  const allResults = collectAllMatchResults(playerName)
+  const streak = calcStreak(allResults)
+  const career = countTourneys(playerName)
+  const partnerCount = countPartners(playerName)
 
-  if (total.games === 0) {
+  if (total.games === 0 && allResults.length === 0) {
     const note = (yearFilter || monthFilter) ? ' im ausgewählten Zeitraum' : ''
     content.innerHTML = `<div class="text-center py-20 text-white/30 font-body">
       <span class="material-symbols-outlined text-4xl block mb-3">sports_tennis</span>
@@ -281,12 +534,17 @@ function update() {
     return
   }
 
-  const winRate = Math.round((total.wins / total.games) * 100)
+  const winRate = total.games ? Math.round((total.wins / total.games) * 100) : 0
   const hasPartners  = Object.keys(partners).length > 0
   const hasOpponents = Object.keys(opponents).length > 0
 
+  const allWins = allResults.filter(r => r === 'W').length
+
   content.innerHTML = `
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+    ${careerHtml(career)}
+    ${streakHtml(streak)}
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
       <div class="rounded-2xl bg-black/20 border border-white/5 px-4 py-4 text-center">
         <div class="text-3xl font-headline font-black text-white">${total.games}</div>
         <div class="text-xs text-white/40 font-body mt-1">Spiele gesamt</div>
@@ -304,7 +562,10 @@ function update() {
         <div class="text-xs text-white/40 font-body mt-1">Gewinnquote</div>
       </div>
     </div>
-    ${total.draws > 0 ? `<p class="text-xs text-white/30 font-body -mt-5 mb-8 text-center">${total.draws} Unentschieden nicht in Gewinnquote gewertet</p>` : ''}
+    ${total.draws > 0 ? `<p class="text-xs text-white/30 font-body -mt-3 mb-6 text-center">${total.draws} Unentschieden nicht in Gewinnquote gewertet</p>` : ''}
+
+    ${formHtml(allResults)}
+    ${nemesisPartnerHtml(partners, opponents)}
 
     ${hasPartners ? `<section class="mb-6">
       <h2 class="text-base font-headline font-bold text-white mb-3 flex items-center gap-2">
@@ -325,6 +586,8 @@ function update() {
         ${tableRows(opponents)}
       </div>
     </section>` : ''}
+
+    ${badgesHtml(allResults.length, allWins, streak.longest, partnerCount, career.count)}
   `
 }
 

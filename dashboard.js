@@ -13,12 +13,16 @@ async function boot() {
   const authEmail = sessionStorage.getItem('tc_auth')
   if (!authEmail) { window.location.replace('index.html'); return }
 
-  const isAdmin = authEmail === 'admin@tennisclub-bss.de'
-  currentUser   = { id: authEmail }
+  currentUser = { id: authEmail }
+  const saved = getProfile(authEmail)
   currentProfile = {
     id: authEmail,
-    display_name: isAdmin ? 'TC BSS Admin' : 'Testmitglied',
-    role: isAdmin ? 'admin' : 'mitglied',
+    display_name: saved.display_name,
+    role: saved.role,
+    lk: saved.lk,
+    avatar: saved.avatar,
+    privacy: saved.privacy,
+    notifications: saved.notifications,
   }
 
   if (DEMO_MODE) {
@@ -31,9 +35,17 @@ async function boot() {
 
   const chip = document.getElementById('user-chip')
   chip.classList.remove('hidden'); chip.classList.add('flex')
-  document.getElementById('user-avatar').textContent = isAdmin ? 'A' : 'T'
+
+  const avatarEl = document.getElementById('user-avatar')
+  if (currentProfile.avatar) {
+    avatarEl.innerHTML = `<img src="${currentProfile.avatar}" class="w-full h-full rounded-full object-cover" alt=""/>`
+    avatarEl.textContent = ''
+  } else {
+    avatarEl.textContent = (currentProfile.display_name || '?')[0].toUpperCase()
+  }
+
   document.getElementById('user-name').textContent = currentProfile.display_name
-  document.getElementById('user-role-badge').textContent = isAdmin ? 'Administrator' : 'Mitglied'
+  document.getElementById('user-role-badge').textContent = currentProfile.role === 'admin' ? 'Administrator' : 'Mitglied'
 
   render()
 }
@@ -56,6 +68,21 @@ const DS = {
   set tourneys(v) { localStorage.setItem('tc_tourneys', JSON.stringify(v)) },
   get regs()      { try { return JSON.parse(localStorage.getItem('tc_regs')||'[]') } catch{ return [] } },
   set regs(v)     { localStorage.setItem('tc_regs', JSON.stringify(v)) },
+}
+
+function getProfiles() { try { return JSON.parse(localStorage.getItem('tc_profiles')||'{}') } catch { return {} } }
+
+function getProfile(email) {
+  const saved = getProfiles()[email] || {}
+  const isAdmin = email === 'admin@tennisclub-bss.de'
+  return {
+    display_name: saved.display_name || (isAdmin ? 'TC BSS Admin' : 'Testmitglied'),
+    role: saved.role || (isAdmin ? 'admin' : 'mitglied'),
+    lk: saved.lk || '',
+    avatar: saved.avatar || null,
+    notifications: { tournament_invite: true, match_results: true, ...(saved.notifications || {}) },
+    privacy: { show_lk: true, show_matches: true, show_email: false, ...(saved.privacy || {}) },
+  }
 }
 
 const _cache = { tourneys: [] }
@@ -720,9 +747,13 @@ async function refreshParticipants() {
     const removeBtn = _participantsIsOrganizer
       ? `<button onclick="removeParticipant('${p.id}')" class="text-white/20 hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-sm">person_remove</span></button>`
       : ''
+    const hasProfile = p.id && p.id.includes('@')
+    const nameEl = hasProfile
+      ? `<a href="profile.html?email=${encodeURIComponent(p.id)}" class="flex-1 text-sm font-body font-medium text-white/70 hover:text-white transition-colors no-underline">${esc(p.display_name)}</a>`
+      : `<span class="flex-1 text-sm font-body font-medium text-white/70">${esc(p.display_name)}</span>`
     return `<div class="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 border border-white/5">
       <span class="material-symbols-outlined text-base ${ic}">person</span>
-      <span class="flex-1 text-sm font-body font-medium text-white/70">${esc(p.display_name)}</span>
+      ${nameEl}
       ${p.checked_in ? `<span class="text-xs font-headline font-bold text-secondary-fixed">Da</span>` : ''}
       ${removeBtn}
     </div>`

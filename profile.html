@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script>try{if((localStorage.getItem('tc-theme')||'dark')==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.classList.add('dark')}</script>
+<link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#115217">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TC BSS">
+<link rel="apple-touch-icon" href="icon-hd.jpg">
+<title>Profil – TC Bad Soden-Salmünster</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+<script src="config.js"></script>
+<script src="theme.js"></script>
+<script>
+tailwind.config = {
+  darkMode:"class",
+  theme:{extend:{
+    colors:{
+      "primary":"#115217","primary-container":"#2d6b2d",
+      "on-primary-container":"#a5e99c","primary-fixed":"#aff4a6","primary-fixed-dim":"#94d78c",
+      "on-primary":"#ffffff","on-primary-fixed":"#002203","on-primary-fixed-variant":"#115217",
+      "secondary":"#5a6400","secondary-container":"#d9ea4d",
+      "secondary-fixed":"#dbed50","secondary-fixed-dim":"#c0d034",
+      "on-secondary":"#ffffff","on-secondary-container":"#5e6800",
+      "on-secondary-fixed":"#1a1e00","on-secondary-fixed-variant":"#434b00",
+      "on-surface":"#191c1a","on-surface-variant":"#41493e",
+      "outline":"#717a6d","outline-variant":"#c0c9bb",
+      "inverse-primary":"#94d78c","inverse-on-surface":"#eff1ec","inverse-surface":"#2e312e",
+      "error":"#ba1a1a","error-container":"#ffdad6","on-error":"#ffffff","on-error-container":"#93000a",
+      "tertiary":"#39475c","tertiary-container":"#515f74",
+      "on-tertiary":"#ffffff","tertiary-fixed":"#d5e3fd","tertiary-fixed-dim":"#b9c7e0",
+      "on-tertiary-fixed":"#0d1c2f","on-tertiary-fixed-variant":"#3a485c","on-tertiary-container":"#cbd9f2",
+    },
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Inter","sans-serif"]},
+    borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
+  }}
+}
+</script>
+<style>
+  body{font-family:'Inter',sans-serif;background-color:var(--page-bg,#115217);color:var(--text,#fff);}
+  .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
+  .field-label{display:block;font-family:'Lexend',sans-serif;font-weight:700;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:.375rem;}
+  .field-input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:.5rem;padding:.625rem .875rem;font-size:.875rem;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s;}
+  .field-input:focus{border-color:rgba(219,237,80,.5);}
+  .field-input:disabled{opacity:.4;cursor:not-allowed;}
+  .field-input option{background:#1a3320;}
+  /* toggle switch */
+  .toggle-wrap{display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+  .toggle{position:relative;display:inline-flex;align-items:center;cursor:pointer;}
+  .toggle input{position:absolute;opacity:0;width:0;height:0;}
+  .toggle-track{width:2.5rem;height:1.375rem;background:rgba(255,255,255,.12);border-radius:9999px;transition:background .2s;flex-shrink:0;}
+  .toggle input:checked~.toggle-track{background:#dbed50;}
+  .toggle-thumb{position:absolute;left:.1875rem;top:.1875rem;width:1rem;height:1rem;background:#fff;border-radius:9999px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .toggle input:checked~.toggle-track .toggle-thumb{transform:translateX(1.125rem);}
+  /* toast */
+  #toast{position:fixed;top:5rem;right:1rem;opacity:0;transform:translateX(1rem);transition:all .3s;background:#dbed50;color:#1a1e00;padding:.625rem 1.25rem;border-radius:9999px;font-family:'Lexend',sans-serif;font-weight:700;font-size:.875rem;box-shadow:0 4px 24px rgba(0,0,0,.3);z-index:100;pointer-events:none;white-space:nowrap;}
+  #toast.show{opacity:1;transform:none;}
+</style>
+</head>
+<body class="min-h-screen pb-16">
+
+<header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
+  <a href="dashboard.html" class="flex items-center gap-3 no-underline">
+    <img src="icon-hd.jpg" alt="TC Bad Soden-Salmünster" class="w-9 h-9 object-cover flex-shrink-0 rounded-xl"/>
+    <div>
+      <div class="text-base font-black text-white tracking-tight font-headline leading-none">TC Bad Soden-Salmünster</div>
+      <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">Turniere</div>
+    </div>
+  </a>
+  <div class="flex items-center gap-2">
+    <button onclick="tcToggleTheme()" class="theme-toggle-btn" title="Design wechseln">
+      <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
+    </button>
+    <a href="dashboard.html" class="flex items-center gap-1.5 text-white/40 hover:text-white/80 text-sm font-headline font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors no-underline">
+      <span class="material-symbols-outlined text-base">arrow_back</span>
+      <span class="hidden md:inline">Dashboard</span>
+    </a>
+  </div>
+</header>
+
+<div id="toast"></div>
+
+<main class="max-w-2xl mx-auto px-4 py-8">
+  <div id="app">
+    <div class="flex items-center justify-center py-20 text-white/30">
+      <span class="material-symbols-outlined text-3xl animate-spin mr-3">progress_activity</span>
+      <span class="font-body">Lade…</span>
+    </div>
+  </div>
+</main>
+
+<script>
+const POCKETBASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.POCKETBASE_URL : null) || 'YOUR_POCKETBASE_URL'
+const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
+
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+function getProfiles() { try { return JSON.parse(localStorage.getItem('tc_profiles')||'{}') } catch { return {} } }
+function saveProfiles(p) { localStorage.setItem('tc_profiles', JSON.stringify(p)) }
+
+function getProfile(email) {
+  const saved = getProfiles()[email] || {}
+  const isAdmin = email === 'admin@tennisclub-bss.de'
+  return {
+    display_name: saved.display_name || (isAdmin ? 'TC BSS Admin' : 'Testmitglied'),
+    role: saved.role || (isAdmin ? 'admin' : 'mitglied'),
+    lk: saved.lk || '',
+    avatar: saved.avatar || null,
+    notifications: { tournament_invite: true, match_results: true, ...(saved.notifications || {}) },
+    privacy: { show_lk: true, show_matches: true, show_email: false, ...(saved.privacy || {}) },
+  }
+}
+
+function avatarHtml(profile, cls = 'w-20 h-20 text-2xl') {
+  if (profile.avatar) {
+    return `<img src="${esc(profile.avatar)}" class="${cls} rounded-full object-cover border-2 border-white/10" alt=""/>`
+  }
+  const initial = (profile.display_name || '?')[0].toUpperCase()
+  return `<div class="${cls} rounded-full bg-secondary-fixed/20 flex items-center justify-center font-headline font-black text-secondary-fixed flex-shrink-0">${esc(initial)}</div>`
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('show')
+  clearTimeout(el._t)
+  el._t = setTimeout(() => el.classList.remove('show'), 2800)
+}
+
+function getLkLabel(lk) {
+  if (!lk) return null
+  return 'LK ' + lk
+}
+
+function roleLabel(role) {
+  return role === 'admin' ? 'Administrator' : role === 'veranstalter' ? 'Veranstalter' : 'Mitglied'
+}
+
+// All match outcomes chronologically — for streak + form
+function collectAllMatchResults(displayName) {
+  let tourneys = []
+  try { tourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]') } catch {}
+  const sorted = [...tourneys].sort((a, b) => new Date(a.start_at || 0) - new Date(b.start_at || 0))
+  const results = []
+  for (const t of sorted) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [
+      ...(S.schedule || []),
+      ...(S.loserSchedule || []),
+      ...(S.groups || []).flatMap(g => g.schedule || []),
+      ...(S.koPhase || []),
+    ]
+    for (const r of rounds) {
+      for (const m of (r.matches || [])) {
+        if (!m || !m.result) continue
+        let outcome = null
+        if (m.herr1 !== undefined) {
+          const t1 = m.herr1 === displayName || m.dame1 === displayName
+          const t2 = m.herr2 === displayName || m.dame2 === displayName
+          if (!t1 && !t2) continue
+          outcome = m.result === 'draw' ? 'D' : ((t1 && m.result === 'team1') || (t2 && m.result === 'team2')) ? 'W' : 'L'
+        } else if (m.player1 !== undefined) {
+          const p1 = m.player1 === displayName
+          const p2 = m.player2 === displayName
+          if (!p1 && !p2) continue
+          outcome = m.result === 'draw' ? 'D' : ((p1 && m.result === 'p1') || (p2 && m.result === 'p2')) ? 'W' : 'L'
+        }
+        if (outcome) results.push(outcome)
+      }
+    }
+  }
+  return results
+}
+
+function calcStreak(results) {
+  let current = 0, currentType = null
+  if (results.length) {
+    currentType = results[results.length - 1]
+    for (let i = results.length - 1; i >= 0; i--) {
+      if (results[i] === currentType) current++
+      else break
+    }
+  }
+  let longest = 0, run = 0
+  for (const r of results) {
+    if (r === 'W') { run++; longest = Math.max(longest, run) }
+    else run = 0
+  }
+  return { current, currentType, longest }
+}
+
+function formDotsHtml(results) {
+  const last10 = results.slice(-10)
+  if (!last10.length) return ''
+  const dots = last10.map(r => {
+    const cls = r === 'W' ? 'bg-secondary-fixed' : r === 'L' ? 'bg-red-400' : 'bg-white/20'
+    const title = r === 'W' ? 'Sieg' : r === 'L' ? 'Niederlage' : 'Unentschieden'
+    return `<div class="w-4 h-4 rounded-full ${cls}" title="${title}"></div>`
+  }).join('')
+  const half = Math.floor(last10.length / 2)
+  const fw = last10.slice(0, half).filter(r => r === 'W').length / (half || 1)
+  const sw = last10.slice(half).filter(r => r === 'W').length / ((last10.length - half) || 1)
+  let trendIcon = 'trending_flat', trendColor = 'text-white/30'
+  if (sw > fw + 0.1)  { trendIcon = 'trending_up';   trendColor = 'text-secondary-fixed' }
+  if (sw < fw - 0.1)  { trendIcon = 'trending_down'; trendColor = 'text-red-400' }
+  return `<div class="rounded-2xl bg-black/20 border border-white/5 px-5 py-4 mb-4">
+    <div class="text-[10px] font-headline uppercase tracking-widest text-white/40 mb-3">Formkurve · letzte ${last10.length} Spiele</div>
+    <div class="flex gap-1.5 items-center">${dots}</div>
+    <div class="text-xs text-white/30 font-body mt-2 flex items-center gap-1">
+      Trend <span class="material-symbols-outlined text-sm ${trendColor}">${trendIcon}</span>
+    </div>
+  </div>`
+}
+
+function profileStreakHtml(streak) {
+  if (!streak.current) return ''
+  const isWin = streak.currentType === 'W'
+  const icon = isWin ? (streak.current >= 5 ? '🔥' : '✅') : streak.currentType === 'D' ? '🤝' : '❌'
+  const label = isWin ? 'Siege in Folge' : streak.currentType === 'D' ? 'Unentschieden' : 'Niederlagen'
+  const hot = isWin && streak.current >= 5
+  return `<div class="rounded-2xl ${hot ? 'bg-secondary-fixed/5 border-secondary-fixed/20' : 'bg-black/20 border-white/5'} border px-5 py-3 mb-4 flex items-center gap-4">
+    <div class="flex items-center gap-2.5 flex-1">
+      <span class="text-xl leading-none">${icon}</span>
+      <div>
+        <span class="font-headline font-black text-white text-lg">${streak.current}</span>
+        <span class="text-xs text-white/40 font-body ml-1.5">${label}</span>
+      </div>
+    </div>
+    ${streak.longest > streak.current ? `<div class="text-right">
+      <div class="text-xs text-white/25 font-body">Bestleistung</div>
+      <div class="font-headline font-bold text-white/50 text-sm">${streak.longest} Siege</div>
+    </div>` : ''}
+  </div>`
+}
+
+// Collect recent matches for a player name across all tournaments
+function collectRecentMatches(displayName, limit = 10) {
+  let tourneys = []
+  try { tourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]') } catch {}
+  const matches = []
+
+  for (const t of tourneys) {
+    const S = t.state
+    if (!S) continue
+    const allMatches = [
+      ...(S.schedule || []).flatMap(r => (r.matches || []).map(m => ({ ...m, round: r.round }))),
+      ...(S.loserSchedule || []).flatMap(r => (r.matches || []).map(m => ({ ...m, round: r.round }))),
+      ...(S.groups || []).flatMap(g => (g.schedule || []).flatMap(r => (r.matches || []).map(m => ({ ...m, round: r.round })))),
+      ...(S.koPhase || []).flatMap(r => (r.matches || []).map(m => ({ ...m, round: r.round }))),
+    ].filter(m => m && m.result)
+
+    for (const m of allMatches) {
+      let entry = null
+      if (m.herr1 !== undefined) {
+        const onTeam1 = m.herr1 === displayName || m.dame1 === displayName
+        const onTeam2 = m.herr2 === displayName || m.dame2 === displayName
+        if (!onTeam1 && !onTeam2) continue
+        const won = (onTeam1 && m.result === 'team1') || (onTeam2 && m.result === 'team2')
+        const drew = m.result === 'draw'
+        const partner = onTeam1
+          ? (m.herr1 === displayName ? m.dame1 : m.herr1)
+          : (m.herr2 === displayName ? m.dame2 : m.herr2)
+        const opp1 = onTeam1 ? m.herr2 : m.herr1
+        const opp2 = onTeam1 ? m.dame2 : m.dame1
+        entry = { tourney: t.name, round: m.round, partner, opponents: [opp1, opp2].filter(Boolean), won, drew, mixed: true }
+      } else if (m.player1 !== undefined) {
+        const asP1 = m.player1 === displayName
+        const asP2 = m.player2 === displayName
+        if (!asP1 && !asP2) continue
+        const won = (asP1 && m.result === 'p1') || (asP2 && m.result === 'p2')
+        const drew = m.result === 'draw'
+        entry = { tourney: t.name, round: m.round, opponents: [asP1 ? m.player2 : m.player1], won, drew, mixed: false }
+      }
+      if (entry) matches.push(entry)
+    }
+  }
+
+  return matches.slice(-limit).reverse()
+}
+
+function countTourneysP(displayName) {
+  let count = 0
+  let tourneys = []
+  try { tourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]') } catch {}
+  for (const t of tourneys) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [...(S.schedule||[]),...(S.loserSchedule||[]),...(S.groups||[]).flatMap(g=>g.schedule||[]),...(S.koPhase||[])]
+    if (rounds.some(r=>(r.matches||[]).some(m=>m&&(
+      m.herr1===displayName||m.dame1===displayName||m.herr2===displayName||m.dame2===displayName||
+      m.player1===displayName||m.player2===displayName
+    )))) count++
+  }
+  return count
+}
+
+function countPartnersP(displayName) {
+  const partners = new Set()
+  let tourneys = []
+  try { tourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]') } catch {}
+  for (const t of tourneys) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [...(S.schedule||[]),...(S.loserSchedule||[]),...(S.groups||[]).flatMap(g=>g.schedule||[]),...(S.koPhase||[])]
+    for (const r of rounds) for (const m of (r.matches||[])) {
+      if (!m||m.herr1===undefined) continue
+      if (m.herr1===displayName) partners.add(m.dame1)
+      else if (m.dame1===displayName) partners.add(m.herr1)
+      else if (m.herr2===displayName) partners.add(m.dame2)
+      else if (m.dame2===displayName) partners.add(m.herr2)
+    }
+  }
+  return partners.size
+}
+
+const PROFILE_BADGE_DEFS = [
+  { icon:'sports_tennis',        label:'Erster Schritt',   desc:'Erstes Spiel gespielt',              check:({games})=>games>=1 },
+  { icon:'emoji_events',          label:'Erster Sieg',      desc:'Erstes Match gewonnen',              check:({wins})=>wins>=1 },
+  { icon:'local_fire_department', label:'Auf Kurs',         desc:'5 Siege in Folge',                   check:({longest})=>longest>=5 },
+  { icon:'whatshot',              label:'Unaufhaltbar',     desc:'10 Siege in Folge',                  check:({longest})=>longest>=10 },
+  { icon:'diversity_3',           label:'Teamplayer',       desc:'Mit 10 versch. Partnern',            check:({partnerCount})=>partnerCount>=10 },
+  { icon:'calendar_month',        label:'Vielreisender',    desc:'An 5 Turnieren teilgenommen',        check:({tourneyCount})=>tourneyCount>=5 },
+  { icon:'military_tech',         label:'Veteran',          desc:'50 Spiele gespielt',                 check:({games})=>games>=50 },
+  { icon:'workspace_premium',     label:'Legende',          desc:'100 Spiele gespielt',                check:({games})=>games>=100 },
+]
+
+function renderBadges(displayName) {
+  const results = collectAllMatchResults(displayName)
+  const streak  = calcStreak(results)
+  const games   = results.length
+  const wins    = results.filter(r=>r==='W').length
+  const longest = streak.longest
+  const partnerCount = countPartnersP(displayName)
+  const tourneyCount = countTourneysP(displayName)
+  const ctx = { games, wins, longest, partnerCount, tourneyCount }
+  const earned = PROFILE_BADGE_DEFS.filter(b => b.check(ctx))
+  if (!earned.length) return ''
+  return `<div class="rounded-2xl bg-black/20 border border-white/5 p-5 mb-4">
+    <div class="text-[10px] font-headline uppercase tracking-widest text-white/40 mb-3 flex items-center gap-2">
+      <span class="material-symbols-outlined text-xs">verified</span>Achievements (${earned.length}/${PROFILE_BADGE_DEFS.length})
+    </div>
+    <div class="flex flex-wrap gap-2">
+      ${PROFILE_BADGE_DEFS.map(b => {
+        const on = b.check(ctx)
+        return `<div class="flex flex-col items-center gap-1 p-2.5 rounded-xl border ${on?'border-secondary-fixed/20 bg-secondary-fixed/5':'border-white/5 opacity-25'}" title="${esc(b.desc)}">
+          <span class="material-symbols-outlined text-lg ${on?'text-secondary-fixed':'text-white/30'}" style="font-variation-settings:'FILL' 1">${b.icon}</span>
+          <div class="text-[9px] font-headline font-bold ${on?'text-white/70':'text-white/30'} text-center w-14 leading-tight">${esc(b.label)}</div>
+        </div>`
+      }).join('')}
+    </div>
+  </div>`
+}
+
+// ── Own profile (edit mode) ───────────────────────────────────
+function renderOwnProfile(email, profile) {
+  const app = document.getElementById('app')
+  const lkNums = Array.from({ length: 25 }, (_, i) => i + 1)
+
+  app.innerHTML = `
+    <h1 class="text-3xl font-headline font-bold text-white tracking-tight mb-6">Mein Profil</h1>
+
+    <!-- Avatar -->
+    <div class="rounded-2xl bg-black/20 border border-white/5 p-6 mb-4">
+      <div class="flex items-center gap-5">
+        <div id="avatar-preview" class="relative flex-shrink-0">
+          ${avatarHtml(profile, 'w-20 h-20 text-3xl')}
+        </div>
+        <div>
+          <div class="font-headline font-bold text-white text-lg leading-tight">${esc(profile.display_name)}</div>
+          <div class="text-xs text-white/40 font-headline uppercase tracking-widest mt-1">${roleLabel(profile.role)}${profile.lk ? ' · LK ' + esc(profile.lk) : ''}</div>
+          <label class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/8 text-white/50 hover:bg-white/12 hover:text-white/80 transition-colors cursor-pointer text-sm font-headline font-semibold">
+            <span class="material-symbols-outlined text-base">photo_camera</span>
+            Foto ändern
+            <input type="file" accept="image/*" class="sr-only" onchange="handleAvatarUpload(this)"/>
+          </label>
+          ${profile.avatar ? `<button onclick="removeAvatar()" class="ml-2 text-xs text-white/30 hover:text-red-400 transition-colors font-body">Entfernen</button>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Stammdaten -->
+    <div class="rounded-2xl bg-black/20 border border-white/5 p-6 mb-4 space-y-4">
+      <h2 class="text-sm font-headline font-bold text-white/50 uppercase tracking-widest flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">person</span>Persönliche Daten
+      </h2>
+      <div>
+        <label class="field-label" for="p-name">Anzeigename</label>
+        <input type="text" id="p-name" maxlength="60" value="${esc(profile.display_name)}" class="field-input"/>
+      </div>
+      <div>
+        <label class="field-label">E-Mail</label>
+        <input type="email" value="${esc(email)}" disabled class="field-input"/>
+      </div>
+      <div>
+        <label class="field-label" for="p-lk">Leistungsklasse (LK)</label>
+        <select id="p-lk" class="field-input">
+          <option value="">– keine Angabe –</option>
+          ${lkNums.map(n => `<option value="${n}" ${profile.lk === String(n) ? 'selected' : ''}>LK ${n}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <!-- Benachrichtigungen -->
+    <div class="rounded-2xl bg-black/20 border border-white/5 p-6 mb-4 space-y-4">
+      <h2 class="text-sm font-headline font-bold text-white/50 uppercase tracking-widest flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">notifications</span>Benachrichtigungen
+      </h2>
+      <div class="space-y-3">
+        ${toggleRow('n-invite', 'Turniereinladungen', 'Wenn ich zu einem neuen Turnier eingeladen werde', profile.notifications.tournament_invite)}
+        ${toggleRow('n-results', 'Ergebnisse', 'Nach Abschluss eines Turniers', profile.notifications.match_results)}
+      </div>
+      <p class="text-xs text-white/25 font-body">Benachrichtigungen werden aktiv, sobald ein PocketBase-Backend verbunden ist.</p>
+    </div>
+
+    <!-- Privatsphäre -->
+    <div class="rounded-2xl bg-black/20 border border-white/5 p-6 mb-6 space-y-4">
+      <h2 class="text-sm font-headline font-bold text-white/50 uppercase tracking-widest flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">shield_person</span>Privatsphäre
+      </h2>
+      <p class="text-xs text-white/35 font-body -mt-1">Was andere eingeloggte Mitglieder auf deinem Profil sehen können:</p>
+      <div class="space-y-3">
+        ${toggleRow('priv-lk', 'Leistungsklasse anzeigen', 'Deine LK ist für andere Mitglieder sichtbar', profile.privacy.show_lk)}
+        ${toggleRow('priv-matches', 'Begegnungen anzeigen', 'Deine letzten Matches auf deinem Profil', profile.privacy.show_matches)}
+        ${toggleRow('priv-email', 'E-Mail anzeigen', 'Deine E-Mailadresse für andere sichtbar', profile.privacy.show_email)}
+      </div>
+    </div>
+
+    <button onclick="saveProfile('${esc(email)}')"
+      class="w-full py-3.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2">
+      <span class="material-symbols-outlined text-base">save</span>Änderungen speichern
+    </button>
+
+    <div class="mt-6">${renderBadges(profile.display_name)}</div>
+  `
+}
+
+function toggleRow(id, label, desc, checked) {
+  return `<div class="toggle-wrap">
+    <div>
+      <div class="text-sm font-body font-semibold text-white/80">${esc(label)}</div>
+      <div class="text-xs text-white/35 font-body mt-0.5">${esc(desc)}</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="${id}" ${checked ? 'checked' : ''}/>
+      <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    </label>
+  </div>`
+}
+
+function handleAvatarUpload(input) {
+  const file = input.files[0]
+  if (!file) return
+  if (file.size > 2 * 1024 * 1024) { toast('Bild zu groß (max. 2 MB)'); return }
+  const reader = new FileReader()
+  reader.onload = e => {
+    const base64 = e.target.result
+    const preview = document.getElementById('avatar-preview')
+    preview.innerHTML = `<img src="${base64}" class="w-20 h-20 rounded-full object-cover border-2 border-white/10" alt=""/>`
+    preview.dataset.avatar = base64
+  }
+  reader.readAsDataURL(file)
+}
+
+function removeAvatar() {
+  const authEmail = sessionStorage.getItem('tc_auth')
+  const profile = getProfile(authEmail)
+  profile.avatar = null
+  const preview = document.getElementById('avatar-preview')
+  preview.innerHTML = avatarHtml(profile, 'w-20 h-20 text-3xl')
+  preview.dataset.avatar = ''
+}
+
+function saveProfile(email) {
+  const profiles = getProfiles()
+  const current = profiles[email] || {}
+  const preview = document.getElementById('avatar-preview')
+
+  const newAvatar = preview.dataset.avatar !== undefined
+    ? (preview.dataset.avatar || null)
+    : (current.avatar || null)
+
+  profiles[email] = {
+    ...current,
+    display_name: document.getElementById('p-name').value.trim() || current.display_name,
+    lk: document.getElementById('p-lk').value,
+    avatar: newAvatar,
+    notifications: {
+      tournament_invite: document.getElementById('n-invite').checked,
+      match_results: document.getElementById('n-results').checked,
+    },
+    privacy: {
+      show_lk: document.getElementById('priv-lk').checked,
+      show_matches: document.getElementById('priv-matches').checked,
+      show_email: document.getElementById('priv-email').checked,
+    },
+  }
+
+  saveProfiles(profiles)
+  toast('Profil gespeichert!')
+
+  // re-render to reflect name/avatar changes
+  const updated = getProfile(email)
+  const preview2 = document.getElementById('avatar-preview')
+  if (preview2) preview2.innerHTML = avatarHtml(updated, 'w-20 h-20 text-3xl')
+}
+
+// ── Public profile (view mode) ────────────────────────────────
+function renderPublicProfile(targetEmail, profile, viewerEmail) {
+  const app = document.getElementById('app')
+
+  const allResults = profile.privacy.show_matches ? collectAllMatchResults(profile.display_name) : []
+  const matches = profile.privacy.show_matches ? collectRecentMatches(profile.display_name) : []
+  const streak = calcStreak(allResults)
+
+  const lkBadge = profile.privacy.show_lk && profile.lk
+    ? `<span class="text-xs font-headline font-bold bg-secondary-fixed/15 text-secondary-fixed px-2.5 py-1 rounded-full">LK ${esc(profile.lk)}</span>`
+    : (profile.lk && !profile.privacy.show_lk
+      ? `<span class="text-xs font-body text-white/25 px-2.5 py-1 rounded-full border border-white/8">LK nicht öffentlich</span>`
+      : '')
+
+  const emailRow = profile.privacy.show_email
+    ? `<div class="flex items-center gap-2 text-sm text-white/50 font-body"><span class="material-symbols-outlined text-base text-white/25">mail</span>${esc(targetEmail)}</div>`
+    : ''
+
+  app.innerHTML = `
+    <div class="flex items-start gap-5 mb-8">
+      ${avatarHtml(profile, 'w-20 h-20 text-3xl flex-shrink-0')}
+      <div class="pt-1">
+        <h1 class="text-2xl font-headline font-bold text-white tracking-tight leading-tight">${esc(profile.display_name)}</h1>
+        <div class="text-xs font-headline uppercase tracking-widest text-white/40 mt-1">${roleLabel(profile.role)}</div>
+        <div class="flex flex-wrap items-center gap-2 mt-2">
+          ${lkBadge}
+          ${emailRow}
+        </div>
+      </div>
+    </div>
+
+    ${renderBadges(profile.display_name)}
+
+    ${profile.privacy.show_matches ? `
+    ${profileStreakHtml(streak)}
+    ${formDotsHtml(allResults)}
+    <div class="rounded-2xl bg-black/20 border border-white/5 overflow-hidden mb-4">
+      <div class="px-5 py-4 border-b border-white/5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-base text-secondary-fixed">sports_tennis</span>
+        <span class="font-headline font-bold text-white/80 text-sm uppercase tracking-widest">Letzte Begegnungen</span>
+      </div>
+      ${matches.length
+        ? `<div class="divide-y divide-white/5">${matches.map(matchRow).join('')}</div>`
+        : `<div class="px-5 py-8 text-center text-white/30 font-body text-sm">Noch keine Spiele gefunden</div>`}
+    </div>` : `
+    <div class="rounded-2xl bg-black/20 border border-white/5 px-5 py-6 text-center text-white/30 font-body text-sm mb-4">
+      <span class="material-symbols-outlined text-2xl block mb-2">lock</span>
+      Begegnungen nicht öffentlich
+    </div>`}
+  `
+}
+
+function matchRow(m) {
+  const resultClass = m.drew ? 'text-white/50' : m.won ? 'text-secondary-fixed' : 'text-red-400'
+  const resultLabel = m.drew ? 'Unentschieden' : m.won ? 'Sieg' : 'Niederlage'
+  const resultIcon  = m.drew ? 'remove' : m.won ? 'arrow_upward' : 'arrow_downward'
+
+  const opponents = m.opponents.filter(Boolean).join(' & ')
+  const desc = m.mixed && m.partner
+    ? `Partner: ${esc(m.partner)} · Gegner: ${esc(opponents)}`
+    : `Gegner: ${esc(opponents)}`
+
+  return `<div class="flex items-center gap-3 px-5 py-3">
+    <span class="material-symbols-outlined text-base ${resultClass}" style="font-variation-settings:'FILL' 1">${resultIcon}</span>
+    <div class="flex-1 min-w-0">
+      <div class="text-sm font-body font-semibold text-white/75 truncate">${esc(m.tourney)}${m.round ? ' · Runde ' + m.round : ''}</div>
+      <div class="text-xs text-white/35 font-body truncate">${desc}</div>
+    </div>
+    <span class="text-xs font-headline font-bold ${resultClass} flex-shrink-0">${resultLabel}</span>
+  </div>`
+}
+
+// ── Boot ─────────────────────────────────────────────────────
+async function boot() {
+  const authEmail = sessionStorage.getItem('tc_auth')
+  if (!authEmail) { window.location.replace('index.html'); return }
+
+  const params = new URLSearchParams(location.search)
+  const targetEmail = params.get('email') || authEmail
+  const isOwn = targetEmail === authEmail
+
+  const profile = getProfile(targetEmail)
+
+  if (isOwn) {
+    renderOwnProfile(authEmail, profile)
+  } else {
+    renderPublicProfile(targetEmail, profile, authEmail)
+  }
+}
+
+boot()
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'))
+}
+</script>
+</body>
+</html>
