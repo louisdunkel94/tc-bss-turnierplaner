@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" style="scroll-behavior:smooth">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TC BSS">
 <link rel="apple-touch-icon" href="icon-hd.jpg">
-<title>TC Bad Soden-Salmünster – Turniere</title>
+<title>TC Bad Soden-Salmünster – Turnierplaner</title>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
@@ -44,75 +44,242 @@ tailwind.config = {
 }
 </script>
 <style>
-  body{font-family:'Inter',sans-serif;background-color:var(--page-bg,#0a1f0b);color:var(--text,#fff);min-height:100vh;}
+  body{font-family:'Inter',sans-serif;background-color:var(--page-bg,#0a1f0b);color:var(--text,#fff);}
   .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
   .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
   .bg-hero{background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(219,237,80,.12) 0%, transparent 60%), linear-gradient(180deg, #0a1f0b 0%, #115217 50%, #0a1f0b 100%);}
   input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px #fff inset!important;-webkit-text-fill-color:#111!important;}
+  .section-divider{border:none;border-top:1px solid rgba(255,255,255,.07);margin:0;}
 </style>
 </head>
-<body class="bg-hero">
+<body class="bg-hero min-h-screen">
 
 <!-- ── Noise overlay ─── -->
 <div class="fixed inset-0 opacity-[0.03] pointer-events-none" style="background-image:url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');background-size:200px;"></div>
 
-<div class="relative min-h-screen flex flex-col items-center justify-center px-4 py-12">
-
-  <!-- ── Logo ── -->
-  <div class="flex flex-col items-center mb-10 select-none">
-    <div class="mb-3 drop-shadow-[0_0_24px_rgba(219,237,80,.25)]">
-      <img src="icon-hd.jpg" alt="TC Bad Soden-Salmünster" class="w-28 h-28 object-cover rounded-3xl shadow-xl"/>
+<!-- ══════════════════════════════════════════════
+     STICKY HEADER
+════════════════════════════════════════════════ -->
+<header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#0a1f0b]/80 backdrop-blur-xl border-b border-white/5">
+  <div class="flex items-center gap-3">
+    <img src="icon-hd.jpg" alt="TC Bad Soden-Salmünster" class="w-9 h-9 object-cover flex-shrink-0 rounded-xl"/>
+    <div>
+      <div class="text-sm font-black text-white tracking-tight font-headline leading-none">TC BSS</div>
+      <div class="text-[10px] text-secondary-fixed font-headline uppercase tracking-widest mt-0.5 opacity-70">Turnierplaner</div>
     </div>
-    <div class="text-2xl font-black tracking-tight font-headline text-white leading-tight text-center">TC Bad Soden-<br>Salmünster</div>
-    <div class="text-xs text-secondary-fixed font-headline uppercase tracking-[.25em] mt-1.5 opacity-80">Turnierplaner</div>
   </div>
-
-  <!-- ── Card ── -->
-  <div class="w-full max-w-sm">
-    <!-- Message banner -->
-    <div id="msg" class="hidden mb-4 px-4 py-3 rounded-xl text-sm font-body flex items-center gap-2"></div>
-
-    <!-- Login form (demo mode) -->
-    <form id="form-pw" class="space-y-3" onsubmit="handleLogin(event)">
-      <div>
-        <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">E-Mail</label>
-        <input type="email" id="email-input" required placeholder="name@tennisclub-bss.de" autofocus autocomplete="username"
-          class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors"/>
-      </div>
-      <div>
-        <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">Passwort</label>
-        <div class="relative">
-          <input type="password" id="pw-input" required placeholder="••••••••" autocomplete="current-password"
-            class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors pr-11"/>
-          <button type="button" onclick="togglePw('pw-input',this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-            <span class="material-symbols-outlined text-base">visibility</span>
-          </button>
-        </div>
-      </div>
-      <button type="submit" id="btn-pw"
-        class="w-full py-3 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2 mt-1">
-        <span class="material-symbols-outlined text-base">login</span>Einloggen
-      </button>
-    </form>
-
-    <!-- PocketBase login/register forms (unused in demo mode) -->
-    <form id="form-login" class="hidden"></form>
-    <form id="form-register" class="hidden"></form>
+  <div class="flex items-center gap-2">
+    <button onclick="tcToggleTheme()" class="theme-toggle-btn" title="Design wechseln">
+      <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
+    </button>
+    <a href="#login" class="flex items-center gap-1.5 px-4 py-2 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+      <span class="material-symbols-outlined text-base">login</span>Einloggen
+    </a>
   </div>
+</header>
 
-  <!-- ── Footer ── -->
-  <p class="text-white/20 text-xs font-body mt-10 text-center">
-    Mit der Registrierung stimmst du der Nutzung deiner Daten für den Turnierbetrieb beim TC Bad Soden-Salmünster zu.
+<!-- ══════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════ -->
+<section class="relative max-w-3xl mx-auto px-6 pt-20 pb-24 text-center">
+  <div class="mb-8 flex justify-center">
+    <div class="drop-shadow-[0_0_40px_rgba(219,237,80,.2)]">
+      <img src="icon-hd.jpg" alt="TC Bad Soden-Salmünster" class="w-28 h-28 object-cover rounded-3xl shadow-2xl"/>
+    </div>
+  </div>
+  <div class="inline-block bg-secondary-fixed/15 border border-secondary-fixed/30 text-secondary-fixed text-xs font-headline font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-5">
+    TC Bad Soden-Salmünster
+  </div>
+  <h1 class="text-5xl md:text-6xl font-black font-headline text-white leading-tight tracking-tight mb-5">
+    Turniere.<br>Einfach.<br class="md:hidden"> Organisiert.
+  </h1>
+  <p class="text-lg text-white/50 font-body max-w-xl mx-auto mb-10 leading-relaxed">
+    Der digitale Turnierplaner für euren Verein. Paarungen losen, Ergebnisse eintragen, Tabelle live verfolgen — alles im Browser, ohne Installation.
   </p>
-  <button onclick="tcToggleTheme()" class="theme-toggle-btn fixed top-4 right-4 z-50" title="Design wechseln">
-    <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
-  </button>
-  <div class="flex items-center gap-4 mt-4">
-    <a href="impressum.html" class="text-white/50 hover:text-white text-xs font-body transition-colors underline underline-offset-2">Impressum</a>
-    <span class="text-white/30 text-xs">·</span>
-    <a href="datenschutz.html" class="text-white/50 hover:text-white text-xs font-body transition-colors underline underline-offset-2">Datenschutz</a>
+  <div class="flex flex-col sm:flex-row gap-3 justify-center">
+    <a href="#login" class="flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl font-headline font-bold text-base bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors shadow-lg">
+      <span class="material-symbols-outlined text-base">login</span>Einloggen
+    </a>
+    <a href="#anleitung" class="flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl font-headline font-bold text-base bg-white/8 border border-white/12 text-white hover:bg-white/15 transition-colors">
+      <span class="material-symbols-outlined text-base">menu_book</span>Anleitung lesen
+    </a>
   </div>
-</div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ══════════════════════════════════════════════
+     FEATURES
+════════════════════════════════════════════════ -->
+<section class="max-w-4xl mx-auto px-6 py-20">
+  <h2 class="text-2xl font-black font-headline text-white text-center mb-2">Was das Tool kann</h2>
+  <p class="text-white/35 font-body text-center mb-12 text-sm">Alles was ihr für einen reibungslosen Turniertag braucht.</p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">tune</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">7 Spielmodi</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Balanced Draw, Americano, Jeder gegen jeden, Schweizer System, Einfaches KO, Doppeltes KO und Gruppenphase.</div>
+      </div>
+    </div>
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">display_settings</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Live-Anzeigetafel</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">QR-Code scannen, und alle sehen die aktuellen Paarungen und Ergebnisse live auf ihrem Handy.</div>
+      </div>
+    </div>
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">bar_chart</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Statistiken & Karriere</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Persönliche Auswertungen: Siege-Serien, Formkurve, Nemesis, häufigste Partner und mehr.</div>
+      </div>
+    </div>
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">cloud_off</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Keine Installation</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Läuft komplett im Browser. Kein App-Store, kein Server nötig — einfach den Link öffnen und loslegen.</div>
+      </div>
+    </div>
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">emoji_events</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Siegerehrung</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Animierte Platzierungsverkündung am Ende — Platz 3, Platz 2, Platz 1 mit Konfetti-Effekt.</div>
+      </div>
+    </div>
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">group</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Mitgliederdatenbank</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Namen einmal anlegen, dann beim nächsten Turnier per Autocomplete oder Schnell-Chip eintragen.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ══════════════════════════════════════════════
+     SPIELMODI
+════════════════════════════════════════════════ -->
+<section class="max-w-3xl mx-auto px-6 py-20 text-center">
+  <h2 class="text-2xl font-black font-headline text-white mb-2">Spielmodi</h2>
+  <p class="text-white/35 font-body text-sm mb-10">Für jede Gruppe und jeden Anlass der passende Modus.</p>
+  <div class="flex flex-wrap gap-2.5 justify-center">
+    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🎾 Balanced Draw</span>
+    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🔄 Americano</span>
+    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🏆 Jeder gegen jeden</span>
+    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🇨🇭 Schweizer System</span>
+    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">⚡ Einfaches KO</span>
+    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🔀 Doppeltes KO</span>
+    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🗂 Gruppenphase + KO</span>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ══════════════════════════════════════════════
+     KURZANLEITUNG
+════════════════════════════════════════════════ -->
+<section id="anleitung" class="max-w-3xl mx-auto px-6 py-20">
+  <h2 class="text-2xl font-black font-headline text-white text-center mb-2">In 3 Schritten zum Turnier</h2>
+  <p class="text-white/35 font-body text-center text-sm mb-12">So läuft ein typischer Turniertag ab.</p>
+
+  <div class="space-y-4">
+
+    <div class="flex gap-5 bg-black/20 border border-white/8 rounded-2xl p-6">
+      <div class="w-10 h-10 rounded-xl bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-lg flex-shrink-0">1</div>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Turnier erstellen</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Im Dashboard auf „Neues Turnier" klicken. Name, Datum, Spielmodus und Anzahl der Plätze festlegen. Optional eine Vorlage aus einem früheren Turnier laden.</div>
+      </div>
+    </div>
+
+    <div class="flex gap-5 bg-black/20 border border-white/8 rounded-2xl p-6">
+      <div class="w-10 h-10 rounded-xl bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-lg flex-shrink-0">2</div>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Spieler eintragen & losen</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Spielernamen eingeben oder aus der Vereins-Mitgliederliste per Chip hinzufügen. Dann „Turnier starten" — die erste Runde wird automatisch ausgelost.</div>
+      </div>
+    </div>
+
+    <div class="flex gap-5 bg-black/20 border border-white/8 rounded-2xl p-6">
+      <div class="w-10 h-10 rounded-xl bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-lg flex-shrink-0">3</div>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Ergebnisse eintragen</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Nach jeder Runde Ergebnis antippen — Tabelle und Statistiken aktualisieren sich sofort. Runde für Runde bis zum Finale, dann die animierte Siegerehrung starten.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="text-center mt-8">
+    <a href="anleitung.html" class="inline-flex items-center gap-1.5 text-sm font-headline font-bold text-secondary-fixed hover:underline">
+      <span class="material-symbols-outlined text-base">open_in_new</span>Vollständige Anleitung →
+    </a>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ══════════════════════════════════════════════
+     LOGIN
+════════════════════════════════════════════════ -->
+<section id="login" class="max-w-sm mx-auto px-6 py-20">
+  <div class="text-center mb-8">
+    <span class="material-symbols-outlined text-4xl text-secondary-fixed block mb-3" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">sports_tennis</span>
+    <h2 class="text-2xl font-black font-headline text-white mb-1">Zum Turnier</h2>
+    <p class="text-white/35 font-body text-sm">Mit deinen Vereinszugangsdaten einloggen.</p>
+  </div>
+
+  <!-- Message banner -->
+  <div id="msg" class="hidden mb-4 px-4 py-3 rounded-xl text-sm font-body flex items-center gap-2"></div>
+
+  <form id="form-pw" class="space-y-3" onsubmit="handleLogin(event)">
+    <div>
+      <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">E-Mail</label>
+      <input type="email" id="email-input" required placeholder="name@tennisclub-bss.de" autocomplete="username"
+        class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors"/>
+    </div>
+    <div>
+      <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">Passwort</label>
+      <div class="relative">
+        <input type="password" id="pw-input" required placeholder="••••••••" autocomplete="current-password"
+          class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors pr-11"/>
+        <button type="button" onclick="togglePw('pw-input',this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+          <span class="material-symbols-outlined text-base">visibility</span>
+        </button>
+      </div>
+    </div>
+    <button type="submit" id="btn-pw"
+      class="w-full py-3 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2 mt-1">
+      <span class="material-symbols-outlined text-base">login</span>Einloggen
+    </button>
+  </form>
+
+  <form id="form-login" class="hidden"></form>
+  <form id="form-register" class="hidden"></form>
+</section>
+
+<!-- ── Footer ── -->
+<footer class="text-center pb-12 px-6">
+  <p class="text-white/15 text-xs font-body mb-3">Mit der Nutzung stimmst du der Verarbeitung deiner Daten für den Turnierbetrieb beim TC Bad Soden-Salmünster zu.</p>
+  <div class="flex items-center gap-4 justify-center">
+    <a href="impressum.html" class="text-white/30 hover:text-white text-xs font-body transition-colors underline underline-offset-2">Impressum</a>
+    <span class="text-white/20 text-xs">·</span>
+    <a href="datenschutz.html" class="text-white/30 hover:text-white text-xs font-body transition-colors underline underline-offset-2">Datenschutz</a>
+  </div>
+</footer>
 
 <script>
 const POCKETBASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.POCKETBASE_URL : null) || 'YOUR_POCKETBASE_URL'
