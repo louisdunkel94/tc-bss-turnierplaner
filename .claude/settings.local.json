@@ -35,7 +35,9 @@
       "Bash(curl -s -I https://www.tennisclub-bss.de/)",
       "Bash(curl -s https://www.tennisclub-bss.de/)",
       "Bash(grep -oE '#[0-9a-fA-F]{3,6}')",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(git merge *)"
     ]
   }
 }
