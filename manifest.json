@@ -1,7 +1,7 @@
 {
-  "name": "TC Bad Soden-Salmünster – Turniere",
+  "name": "TC BSS App",
   "short_name": "TC BSS",
-  "description": "Turnierverwaltung TC Bad Soden-Salmünster",
+  "description": "Turniere & Platzbuchungen – TC Bad Soden-Salmünster",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
