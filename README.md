@@ -401,6 +401,292 @@ Zuerst Barzahlung-Tracking, dann optional Online-Zahlung via Stripe.
 
 ---
 
+### Phase 5 – Gamification
+
+Langfristige Motivation über einzelne Turniere hinaus: individuelle Karriereprofile, vereinsweites Ranking und soziale Features.
+
+Abhängigkeit: Phase 1 (echte Benutzeraccounts) muss abgeschlossen sein, damit Spielerdaten persistent einem Account zugeordnet werden können. Die meisten Features der Gruppe A lassen sich bereits im Demo-Modus aus den vorhandenen `tc_tourneys`-Daten berechnen.
+
+---
+
+#### Gruppe A – Sofort umsetzbar (nur Datenauswertung, kein Backend nötig)
+
+Diese Features erweitern die bestehende `stats.html` und brauchen keine neue Infrastruktur. Alle nötigen Daten liegen bereits in `tc_tourneys`.
+
+**A1 – Karriere-Übersicht**
+
+Eine Zusammenfassungs-Card ganz oben in `stats.html`, die auf einen Blick zeigt wer der Spieler ist:
+
+| Kennzahl | Berechnung |
+|---|---|
+| Turniere gespielt | Anzahl Turniere mit min. 1 Eintrag in `schedule` |
+| Turniertitel | Turniere wo Spieler auf Platz 1 der Abschlusstabelle steht |
+| Beste Platzierung | Niedrigstes `rank` über alle abgeschlossenen Turniere |
+| Erstes Turnier | Frühestes `start_at` Datum aus `tc_tourneys` |
+| Letztes Turnier | Aktuellstes Datum |
+| Gesamt-Spiele | Bereits in stats.html vorhanden |
+
+Umsetzung: Erweiterung von `collectStats()` um Turnier-Ebene + neues `<div>` am Seitenanfang.
+
+---
+
+**A2 – Siegesserie (Streak)**
+
+Zeigt die aktuelle und längste Siegesserie des gewählten Spielers.
+
+Berechnung: Alle Matches des Spielers chronologisch sortieren (nach `t.start_at` und `round`-Index), dann von hinten durchlaufen und konsekutive Siege zählen.
+
+```
+Aktuelle Serie:  🔥 5 Siege in Folge
+Längste Serie:   ⭐ 9 Siege (Juli 2025)
+```
+
+Anzeige als Highlight-Badge in `stats.html`. Falls aktuelle Serie ≥ 5: grüne Hervorhebung.
+
+Randfall: Matchreihenfolge innerhalb eines Turniertags ist über `round`-Index bestimmbar. Turnier-übergreifend gilt das `start_at`-Datum des Turniers als Zeitstempel.
+
+---
+
+**A3 – Nemesis & Lieblingspartner**
+
+Zwei Highlight-Cards in `stats.html` mit den markantesten Beziehungen:
+
+| Card | Definition | Mindestspiele |
+|---|---|---|
+| **Nemesis** | Gegner mit der schlechtesten persönlichen Win-Rate | mind. 3 Begegnungen |
+| **Angstgegner vermieden** | Gegner mit der besten Win-Rate | mind. 3 Begegnungen |
+| **Lieblingspartner** | Partner (Mixed) mit den meisten gemeinsamen Siegen | mind. 3 Partien |
+| **Bestes Duo** | Partner + eigene Win-Rate zusammen | mind. 3 Partien |
+
+Werden bereits aus den `partners`- und `opponents`-Maps in `collectStats()` berechnet – nur noch als Card rendern.
+
+---
+
+**A4 – Formkurve**
+
+Die letzten 10 gespielten Matches als visueller Mini-Graph direkt unter den Summary-Kacheln in `stats.html`.
+
+```
+◉ ◉ ○ ◉ ◉ ◉ ○ ○ ◉ ◉
+W  W  L  W  W  W  L  L  W  W    → Trend: ↑
+```
+
+Umsetzung: SVG-Pfad oder einfache farbige Punkte (grün/rot/grau für Sieg/Niederlage/Unentschieden). Trend-Pfeil aus Vergleich der ersten vs. zweiten Hälfte der letzten 10 Spiele.
+
+---
+
+#### Gruppe B – Mittlerer Aufwand (braucht PocketBase)
+
+**B1 – ELO-Rating**
+
+Vereinsweites, kontinuierliches Spieler-Ranking über alle Turniere hinweg. Das ELO-System stammt aus dem Schach und ist ideal für paarweise Matches.
+
+**Grundprinzip:**
+- Jeder Spieler startet mit Rating **1000**
+- Nach jedem Match: Sieger gewinnt Punkte, Verlierer verliert Punkte
+- Gewinn hängt von der Ratingdifferenz ab: Sieg gegen stärkeren Gegner = mehr Punkte
+- K-Faktor: `32` für < 30 Spiele, `16` für ≥ 30 Spiele (Stabilität für erfahrene Spieler)
+
+**Formel:**
+```
+Erwarteter Sieg (E) = 1 / (1 + 10^((Rating_Gegner - Rating_Spieler) / 400))
+Neues Rating = Altes Rating + K × (Ergebnis - E)
+Ergebnis: Sieg = 1.0, Unentschieden = 0.5, Niederlage = 0.0
+```
+
+**Mixed-Modus:** Team-ELO = Durchschnitt beider Spieler-Ratings. Beide Teammitglieder gewinnen/verlieren gleichviel.
+
+**Datenmodell:**
+```
+Collection: player_ratings
+  user_id       Text (→ users)
+  rating        Number (default 1000)
+  games_played  Number
+  updated_at    DateTime
+```
+
+**Berechnung:** PocketBase JS-Hook `onRecordAfterUpdateRequest` auf `tournaments`-Collection: wenn `status` auf `closed` wechselt → alle Matches der Endrunde durchlaufen und Ratings aktualisieren. Alternativ: einmalige Batch-Berechnung über alle historischen Matches beim ersten Start.
+
+**UI:** Neue Seite `leaderboard.html` oder eigener Tab im Dashboard mit Rangliste (Name, Rating, Trend ↑↓, letzte 5 Spiele als Mini-Streak). Link aus Header-Leiste.
+
+---
+
+**B2 – Saisonrangliste**
+
+Ergänzend zum ELO (das kontinuierlich ist): eine jährliche Wertung, bei der Turnier-Platzierungen Punkte bringen. Motiviert zur Teilnahme an möglichst vielen Turnieren.
+
+**Punkteschema (konfigurierbar durch Admin):**
+
+| Platzierung | Punkte |
+|---|---|
+| 1. Platz | 100 |
+| 2. Platz | 70 |
+| 3. Platz | 50 |
+| 4. Platz | 35 |
+| 5.–8. Platz | 20 |
+| Teilnahme | 10 |
+
+**Datenmodell:**
+```
+Collection: season_points
+  user_id        Text
+  tournament_id  Text
+  season_year    Number (z.B. 2025)
+  placement      Number
+  points         Number
+
+Collection: season_config
+  year           Number
+  points_1st     Number
+  points_2nd     Number
+  ... (ein Datensatz pro Saison, editierbar durch Admin)
+```
+
+**Berechnung:** Wenn ein Turnier auf `closed` gesetzt wird, liest ein PocketBase-Hook die Abschlusstabelle aus `t.state`, ermittelt die Platzierungen und schreibt Punkte in `season_points`.
+
+**UI:** Tab „Saison 2025" auf `leaderboard.html` – sortierte Tabelle mit kumulierten Punkten, Anzahl Turniere, letzter Platzierung. Saison-Dropdown für Vorjahre.
+
+---
+
+**B3 – Achievements / Badges**
+
+Freigeschaltete Abzeichen erscheinen auf der Profilseite des Spielers und als kleines Icon-Grid in `stats.html`.
+
+**Definierte Achievements:**
+
+| Badge | Icon | Bedingung |
+|---|---|---|
+| **Erster Schritt** | `sports_tennis` | Erstes Spiel gespielt |
+| **Erster Sieg** | `emoji_events` | Erstes Match gewonnen |
+| **Auf Kurs** | `local_fire_department` | 5 Siege in Folge |
+| **Unaufhaltbar** | `whatshot` | 10 Siege in Folge |
+| **Veteran** | `military_tech` | 50 Spiele gespielt |
+| **Legende** | `workspace_premium` | 100 Spiele gespielt |
+| **Teamplayer** | `diversity_3` | Mit 10 verschiedenen Partnern gespielt |
+| **Vielreisender** | `calendar_month` | An 5 Turnieren teilgenommen |
+| **Donatocup-Sieger** | `trophy` | Turnier gewonnen (1. Platz) |
+| **Wiederholungstäter** | `repeat` | 3 Turniersiege |
+| **Revanche** | `swords` | Gegen jemanden gewonnen, gegen den man zuvor verloren hatte |
+| **Unbesiegbar** | `shield` | Ein Turnier ohne eine einzige Niederlage abgeschlossen |
+| **Frühaufsteher** | `wb_sunny` | Am ersten Turnier des Vereins teilgenommen |
+
+Alle Bedingungen lassen sich aus den bestehenden `tc_tourneys`-Daten + `player_ratings` berechnen, ohne eigene Collection. Einzige Ausnahme: persistente Speicherung des Unlock-Datums (wann wurde ein Badge erstmals freigeschaltet).
+
+**Datenmodell (optional, für Unlock-Datum):**
+```
+Collection: user_badges
+  user_id      Text
+  badge_id     Text
+  unlocked_at  DateTime
+```
+
+**UI:** Badge-Grid in `stats.html` unter den Tabellen. Gesperrte Badges ausgegraut mit Tooltip zur Bedingung. Neu freigeschaltete Badges erscheinen als Toast-Benachrichtigung nach dem Turnierende.
+
+---
+
+#### Gruppe C – Aufwändig (Echtzeit + Spieler-Interaktion)
+
+**C1 – Herausforderungssystem**
+
+Mitglieder können sich gegenseitig zu informellen Matches außerhalb von Turnieren herausfordern. Ergebnisse fließen in die ELO-Wertung ein.
+
+**Ablauf:**
+1. Spieler A öffnet Profil von Spieler B → „Herausfordern"-Button
+2. Spieler B erhält Benachrichtigung (PocketBase Realtime oder E-Mail)
+3. B akzeptiert / lehnt ab
+4. Match wird gespielt, beide tragen das Ergebnis ein (Gegenseitige Bestätigung nötig)
+5. ELO wird aktualisiert, Ergebnis erscheint in `stats.html`
+
+**Datenmodell:**
+```
+Collection: challenges
+  challenger_id    Text (→ users)
+  challenged_id    Text (→ users)
+  status           Text (pending / accepted / declined / played / disputed)
+  proposed_date    DateTime
+  result_winner    Text (→ users, nach dem Spiel)
+  confirmed_by_a   Bool
+  confirmed_by_b   Bool
+  created_at       DateTime
+```
+
+**UI:** Neue Seite `challenges.html` mit offenen Herausforderungen (eingehend / ausgehend), Verlauf abgeschlossener Matches. Button auf Spielerprofilen / in `stats.html` für anderen Spieler.
+
+**Technische Besonderheit:** Doppelte Bestätigung verhindert Manipulation. Wenn beide Seiten unterschiedliche Ergebnisse eintragen, wechselt Status auf `disputed` und ein Admin entscheidet.
+
+---
+
+**C2 – Anzeigetafel-Highlights**
+
+`display.html` zeigt während eines laufenden Turniers automatisch generierte Fun-Facts und Live-Highlights als Laufband oder Wechselanzeige.
+
+**Mögliche Highlights:**
+```
+🔥 Max Müller hat heute 4 Siege in Folge – Siegesserie läuft!
+👑 Anna Schmidt & Felix Wagner: 3 gemeinsame Siege heute
+📊 Spannstes Spiel: Tobias Klein vs. Jonas Becker – 3 Mal gegeneinander
+🏆 Neuer Tabellenführer: Stefan Braun überholt Laura Fischer
+```
+
+**Berechnung:** Rein clientseitig aus dem aktuellen Tournament-State. Kein Backend nötig.
+- Streak-Highlights: Spieler mit ≥ 3 Siegen in Folge in diesem Turnier
+- Duo-Highlights: Partnerpaar mit 100% Gewinnquote und mind. 3 Partien
+- Rivalitäts-Highlights: Paarung die heute zum 3. Mal gegeneinander spielt
+- Tabellenwechsel: wird beim Laden erkannt und 30 Sekunden hervorgehoben
+
+**UI:** Unterhalb der aktuellen Runde in `display.html` als dezentes Laufband oder als Wechsel-Card mit Fade-Animation.
+
+---
+
+**C3 – Wochenchallenge**
+
+Vorstand oder Admin setzt wöchentliche Aufgaben für alle Mitglieder. Wer die Challenge schafft, bekommt einen temporären Badge und ggf. einen kleinen Saisonpunkt-Bonus.
+
+**Beispiel-Challenges:**
+- „Gewinne diese Woche 3 Spiele"
+- „Spiele mit mindestens 4 verschiedenen Partnern"
+- „Gewinne ein Match gegen einen Spieler mit höherem ELO"
+- „Nimm an einem Turnier teil"
+
+**Datenmodell:**
+```
+Collection: weekly_challenges
+  title          Text
+  description    Text
+  criteria_type  Text (wins_count / partners_count / elo_upset / tournament_attendance)
+  criteria_value Number (z.B. 3 für „3 Siege")
+  week_start     DateTime
+  week_end       DateTime
+  bonus_points   Number (Saisonpunkte bei Erfolg)
+  created_by     Text (→ users, nur vorstand/admin)
+```
+
+**Fortschritts-Tracking:** Wird clientseitig aus den Turnierdaten der laufenden Woche berechnet. Kein eigener Tracker nötig.
+
+**UI:** Card im Dashboard (unter Turnieren) mit aktiver Challenge, Fortschrittsbalken und Ablaufdatum. Vorstand-Bereich: Formular zum Erstellen neuer Challenges.
+
+---
+
+### Abhängigkeitsgraph Gamification
+
+```
+stats.html (vorhanden)
+  └── A1 Karriere-Übersicht       (nur JS, sofort)
+  └── A2 Siegesserie              (nur JS, sofort)
+  └── A3 Nemesis & Partner        (nur JS, sofort)
+  └── A4 Formkurve                (nur JS, sofort)
+
+PocketBase + echte Accounts (Phase 1)
+  └── B1 ELO-Rating               → player_ratings Collection
+  │     └── C1 Herausforderungen  → challenges Collection, Realtime
+  └── B2 Saisonrangliste          → season_points + season_config
+  │     └── C3 Wochenchallenge    → weekly_challenges Collection
+  └── B3 Achievements / Badges   → user_badges Collection (optional)
+        └── C2 Display-Highlights → clientseitig aus Tournament-State
+```
+
+---
+
 ### Bereits umgesetzt
 
 | Feature | Status |
@@ -419,6 +705,9 @@ Zuerst Barzahlung-Tracking, dann optional Online-Zahlung via Stripe.
 | Echtes User-Management | ⏳ Server fehlt (Issues #7–#13) |
 | Platzbuchungssystem | ⏳ Geplant (Issues #18–#20, #25–#26) |
 | Online-Zahlung (Stripe) | ⏳ Geplant (Issues #21–#23) |
+| Gamification Gruppe A (stats.html Erweiterungen) | ⏳ Geplant (Phase 5A) |
+| ELO-Rating + Saisonrangliste | ⏳ Geplant (Phase 5B, nach Phase 1) |
+| Achievements / Herausforderungen / Highlights | ⏳ Geplant (Phase 5B–C, nach Phase 1) |
 
 ---
 
