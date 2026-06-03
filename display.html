@@ -75,7 +75,7 @@ tailwind.config = {
   </div>
 </header>
 
-<main class="max-w-screen-xl mx-auto px-4 py-6">
+<main class="max-w-screen-xl mx-auto px-4 py-6 pb-20">
   <div id="error-msg" class="hidden text-center py-20">
     <span class="material-symbols-outlined text-5xl text-white/20 block mb-3">sports_tennis</span>
     <p class="text-white/40 font-body text-lg">Turnier nicht gefunden.</p>
@@ -380,6 +380,7 @@ async function render() {
 
   document.getElementById('matches-panel').innerHTML = renderMatchesPanel()
   document.getElementById('standings-panel').innerHTML = renderStandingsPanel()
+  updateHighlights()
 }
 
 function toggleFullscreen() {
@@ -396,9 +397,100 @@ document.addEventListener('fullscreenchange', () => {
   document.getElementById('fs-icon').textContent = document.fullscreenElement ? 'fullscreen_exit' : 'fullscreen'
 })
 
+// ── Display Highlights ────────────────────────────────────────
+function generateHighlights() {
+  if (!S) return []
+  const h = []
+  const rounds = [
+    ...(S.schedule||[]),...(S.loserSchedule||[]),
+    ...(S.groups||[]).flatMap(g=>g.schedule||[]),...(S.koPhase||[])
+  ]
+  const allMatches = rounds.flatMap(r=>r.matches||[]).filter(m=>m&&m.result)
+
+  // per-player results in this tournament
+  const pRes = {}
+  const addR = (name, won) => {
+    if (!name) return
+    if (!pRes[name]) pRes[name] = []
+    pRes[name].push(won ? 'W' : 'L')
+  }
+  for (const m of allMatches) {
+    if (m.herr1!==undefined) {
+      [m.herr1,m.dame1].forEach(n=>addR(n, m.result==='team1'))
+      ;[m.herr2,m.dame2].forEach(n=>addR(n, m.result==='team2'))
+    } else if (m.player1!==undefined) {
+      addR(m.player1, m.result==='p1'); addR(m.player2, m.result==='p2')
+    }
+  }
+
+  // streak highlights
+  for (const [name, res] of Object.entries(pRes)) {
+    let s=0; for(let i=res.length-1;i>=0;i--){if(res[i]==='W')s++;else break}
+    if (s>=3) h.push(`🔥 ${name}: ${s} Siege in Folge!`)
+  }
+
+  // unbeaten players (≥2 games, no loss)
+  const unbeaten = Object.entries(pRes).filter(([,r])=>r.length>=2&&!r.includes('L')).map(([n])=>n)
+  if (unbeaten.length && unbeaten.length<=4) h.push(`⭐ Noch ungeschlagen: ${unbeaten.join(', ')}`)
+
+  // leader
+  const leaders = Object.entries(pRes)
+    .map(([name,r])=>({name,wins:r.filter(x=>x==='W').length,games:r.length}))
+    .sort((a,b)=>b.wins-a.wins)
+  if (leaders.length && leaders[0].wins>=2)
+    h.push(`👑 Tabellenführer: ${leaders[0].name} (${leaders[0].wins} Siege aus ${leaders[0].games} Spielen)`)
+
+  // repeated matchups
+  const pairCount = {}
+  for (const m of allMatches) {
+    const key = m.herr1!==undefined
+      ? [m.herr1,m.dame1,m.herr2,m.dame2].sort().join('|')
+      : [m.player1,m.player2].sort().join('|')
+    pairCount[key] = (pairCount[key]||0)+1
+  }
+  for (const [pair,cnt] of Object.entries(pairCount)) {
+    if (cnt>=3) {
+      const parts = pair.split('|')
+      const desc = parts.length===4
+        ? `${parts[0]} & ${parts[1]} vs. ${parts[2]} & ${parts[3]}`
+        : `${parts[0]} vs. ${parts[1]}`
+      h.push(`📊 ${desc}: heute zum ${cnt}. Mal gegeneinander`)
+    }
+  }
+
+  // total matches played
+  if (allMatches.length>0) h.push(`🎾 ${allMatches.length} Matches gespielt · ${allPlayers().length} Spieler im Turnier`)
+
+  return h
+}
+
+let _hlIdx = 0
+function updateHighlights() {
+  const bar = document.getElementById('highlights-bar')
+  const textEl = document.getElementById('highlight-text')
+  if (!bar || !textEl) return
+  const list = generateHighlights()
+  if (!list.length) { bar.style.display='none'; return }
+  bar.style.display=''
+  textEl.style.opacity='0'
+  setTimeout(() => {
+    _hlIdx = _hlIdx % list.length
+    textEl.textContent = list[_hlIdx]
+    textEl.style.opacity='1'
+    _hlIdx = (_hlIdx+1) % list.length
+  }, 300)
+}
+
 render()
 setInterval(render, 30000)
+setInterval(updateHighlights, 6000)
 </script>
+<!-- ── Highlights Bar ── -->
+<div id="highlights-bar" style="display:none" class="fixed bottom-0 left-0 right-0 z-40 bg-[#0a1f0b]/90 backdrop-blur-xl border-t border-white/8 px-5 py-3 flex items-center gap-3">
+  <span class="material-symbols-outlined text-secondary-fixed text-base flex-shrink-0" style="font-variation-settings:'FILL' 1">auto_awesome</span>
+  <span id="highlight-text" class="text-sm font-headline font-semibold text-white/80 truncate transition-opacity duration-300"></span>
+</div>
+
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'))

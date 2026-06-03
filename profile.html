@@ -287,6 +287,79 @@ function collectRecentMatches(displayName, limit = 10) {
   return matches.slice(-limit).reverse()
 }
 
+function countTourneysP(displayName) {
+  let count = 0
+  let tourneys = []
+  try { tourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]') } catch {}
+  for (const t of tourneys) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [...(S.schedule||[]),...(S.loserSchedule||[]),...(S.groups||[]).flatMap(g=>g.schedule||[]),...(S.koPhase||[])]
+    if (rounds.some(r=>(r.matches||[]).some(m=>m&&(
+      m.herr1===displayName||m.dame1===displayName||m.herr2===displayName||m.dame2===displayName||
+      m.player1===displayName||m.player2===displayName
+    )))) count++
+  }
+  return count
+}
+
+function countPartnersP(displayName) {
+  const partners = new Set()
+  let tourneys = []
+  try { tourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]') } catch {}
+  for (const t of tourneys) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [...(S.schedule||[]),...(S.loserSchedule||[]),...(S.groups||[]).flatMap(g=>g.schedule||[]),...(S.koPhase||[])]
+    for (const r of rounds) for (const m of (r.matches||[])) {
+      if (!m||m.herr1===undefined) continue
+      if (m.herr1===displayName) partners.add(m.dame1)
+      else if (m.dame1===displayName) partners.add(m.herr1)
+      else if (m.herr2===displayName) partners.add(m.dame2)
+      else if (m.dame2===displayName) partners.add(m.herr2)
+    }
+  }
+  return partners.size
+}
+
+const PROFILE_BADGE_DEFS = [
+  { icon:'sports_tennis',        label:'Erster Schritt',   desc:'Erstes Spiel gespielt',              check:({games})=>games>=1 },
+  { icon:'emoji_events',          label:'Erster Sieg',      desc:'Erstes Match gewonnen',              check:({wins})=>wins>=1 },
+  { icon:'local_fire_department', label:'Auf Kurs',         desc:'5 Siege in Folge',                   check:({longest})=>longest>=5 },
+  { icon:'whatshot',              label:'Unaufhaltbar',     desc:'10 Siege in Folge',                  check:({longest})=>longest>=10 },
+  { icon:'diversity_3',           label:'Teamplayer',       desc:'Mit 10 versch. Partnern',            check:({partnerCount})=>partnerCount>=10 },
+  { icon:'calendar_month',        label:'Vielreisender',    desc:'An 5 Turnieren teilgenommen',        check:({tourneyCount})=>tourneyCount>=5 },
+  { icon:'military_tech',         label:'Veteran',          desc:'50 Spiele gespielt',                 check:({games})=>games>=50 },
+  { icon:'workspace_premium',     label:'Legende',          desc:'100 Spiele gespielt',                check:({games})=>games>=100 },
+]
+
+function renderBadges(displayName) {
+  const results = collectAllMatchResults(displayName)
+  const streak  = calcStreak(results)
+  const games   = results.length
+  const wins    = results.filter(r=>r==='W').length
+  const longest = streak.longest
+  const partnerCount = countPartnersP(displayName)
+  const tourneyCount = countTourneysP(displayName)
+  const ctx = { games, wins, longest, partnerCount, tourneyCount }
+  const earned = PROFILE_BADGE_DEFS.filter(b => b.check(ctx))
+  if (!earned.length) return ''
+  return `<div class="rounded-2xl bg-black/20 border border-white/5 p-5 mb-4">
+    <div class="text-[10px] font-headline uppercase tracking-widest text-white/40 mb-3 flex items-center gap-2">
+      <span class="material-symbols-outlined text-xs">verified</span>Achievements (${earned.length}/${PROFILE_BADGE_DEFS.length})
+    </div>
+    <div class="flex flex-wrap gap-2">
+      ${PROFILE_BADGE_DEFS.map(b => {
+        const on = b.check(ctx)
+        return `<div class="flex flex-col items-center gap-1 p-2.5 rounded-xl border ${on?'border-secondary-fixed/20 bg-secondary-fixed/5':'border-white/5 opacity-25'}" title="${esc(b.desc)}">
+          <span class="material-symbols-outlined text-lg ${on?'text-secondary-fixed':'text-white/30'}" style="font-variation-settings:'FILL' 1">${b.icon}</span>
+          <div class="text-[9px] font-headline font-bold ${on?'text-white/70':'text-white/30'} text-center w-14 leading-tight">${esc(b.label)}</div>
+        </div>`
+      }).join('')}
+    </div>
+  </div>`
+}
+
 // ── Own profile (edit mode) ───────────────────────────────────
 function renderOwnProfile(email, profile) {
   const app = document.getElementById('app')
@@ -365,6 +438,8 @@ function renderOwnProfile(email, profile) {
       class="w-full py-3.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2">
       <span class="material-symbols-outlined text-base">save</span>Änderungen speichern
     </button>
+
+    <div class="mt-6">${renderBadges(profile.display_name)}</div>
   `
 }
 
@@ -468,6 +543,8 @@ function renderPublicProfile(targetEmail, profile, viewerEmail) {
         </div>
       </div>
     </div>
+
+    ${renderBadges(profile.display_name)}
 
     ${profile.privacy.show_matches ? `
     ${profileStreakHtml(streak)}
