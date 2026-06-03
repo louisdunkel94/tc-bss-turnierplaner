@@ -93,6 +93,75 @@ function getTodayBookings() {
   return getBookings().filter(b => b.date === iso).sort((a,b) => a.timeStart.localeCompare(b.timeStart))
 }
 
+function isoToday() {
+  const d = new Date()
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
+}
+
+function getMyBookings() {
+  const uid  = currentUser?.id
+  const name = currentProfile?.display_name
+  return getBookings().filter(b => (uid && b.userId === uid) || (name && b.memberName === name))
+}
+
+function getNextMyBooking() {
+  const now = new Date()
+  const todayIso = isoToday()
+  const nowHHMM  = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0')
+  return getMyBookings()
+    .filter(b => b.date > todayIso || (b.date === todayIso && b.timeEnd >= nowHHMM))
+    .sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.timeStart.localeCompare(b.timeStart))[0] || null
+}
+
+function getMyTourneys(regs, tourneys) {
+  const myIds = new Set(regs.map(r => r.tournament_id))
+  return (tourneys || []).filter(t => myIds.has(t.id) && (t.status === 'open' || t.status === 'running'))
+}
+
+function lkInRange(profileLk, skillReq) {
+  if (!skillReq || !profileLk) return true
+  const m = skillReq.match(/(\d+)\s*[–\-]\s*(\d+)/)
+  if (!m) return true
+  const n = parseInt(profileLk)
+  return n >= parseInt(m[1]) && n <= parseInt(m[2])
+}
+
+function getSuggestedTourneys(regs, tourneys, profile) {
+  const myIds = new Set(regs.map(r => r.tournament_id))
+  return (tourneys || []).filter(t => {
+    if (t.status !== 'open') return false
+    if (myIds.has(t.id)) return false
+    const gr = t.gender_requirement
+    const gOk = gr === 'offen' || gr === 'mixed' || !profile?.gender ||
+                (gr === 'herren' && profile.gender === 'herr') ||
+                (gr === 'damen'  && profile.gender === 'dame')
+    if (!gOk) return false
+    return lkInRange(profile?.lk, t.skill_requirement)
+  }).sort((a, b) => new Date(a.start_at||0) - new Date(b.start_at||0)).slice(0, 3)
+}
+
+function renderUtilizationBar(todayBookings, numCourts) {
+  const START = 8 * 60, RANGE = (22 - 8) * 60
+  const colors = ['bg-emerald-500','bg-lime-500','bg-blue-400','bg-purple-400','bg-orange-400','bg-pink-400','bg-cyan-400','bg-teal-400']
+  let html = ''
+  for (let c = 1; c <= numCourts; c++) {
+    const blocks = todayBookings.filter(b => b.court === c).map(b => {
+      const [sh, sm] = b.timeStart.split(':').map(Number)
+      const [eh, em] = b.timeEnd.split(':').map(Number)
+      const s = sh * 60 + sm
+      const e = eh * 60 + em
+      const left  = ((s - START) / RANGE * 100).toFixed(1)
+      const width = ((e - s) / RANGE * 100).toFixed(1)
+      return `<div class="${colors[(c-1)%colors.length]} absolute top-0 bottom-0 rounded-sm opacity-80" style="left:${left}%;width:${width}%" title="${esc(b.memberName)} · ${b.timeStart}–${b.timeEnd}"></div>`
+    }).join('')
+    html += `<div class="flex items-center gap-2">
+      <span class="text-xs text-white/40 font-body w-14 flex-shrink-0 text-right">Platz ${c}</span>
+      <div class="flex-1 h-4 rounded bg-white/5 relative overflow-hidden">${blocks}</div>
+    </div>`
+  }
+  return html || '<p class="text-white/30 font-body text-sm">Keine Plätze konfiguriert.</p>'
+}
+
 function getProfile(email) {
   const saved = getProfiles()[email] || {}
   const isAdmin = email === 'admin@tennisclub-bss.de'
@@ -100,6 +169,7 @@ function getProfile(email) {
     display_name: saved.display_name || (isAdmin ? 'TC BSS Admin' : 'Testmitglied'),
     role: saved.role || (isAdmin ? 'admin' : 'mitglied'),
     lk: saved.lk || '',
+    gender: saved.gender || null,
     avatar: saved.avatar || null,
     notifications: { tournament_invite: true, match_results: true, ...(saved.notifications || {}) },
     privacy: { show_lk: true, show_matches: true, show_email: false, ...(saved.privacy || {}) },
@@ -281,26 +351,129 @@ async function dbMyRegs() {
 
 // ── Mitglied ─────────────────────────────────────────────────
 async function renderMitglied(app) {
-  const tourneys = await dbTourneys(['open','running'])
-  const myRegs   = await dbMyRegs()
-  const myIds    = new Set(myRegs.map(r => r.tournament_id))
+  const [tourneys, myRegs] = await Promise.all([dbTourneys(['open','running']), dbMyRegs()])
+
+  const todayBookings = getTodayBookings()
+  const numCourts = Math.max(1, Math.min(12, (JSON.parse(localStorage.getItem('tc_settings')||'{}').numCourts) || 6))
+  const nextBooking   = getNextMyBooking()
+  const myTourneys    = getMyTourneys(myRegs, tourneys)
+  const suggested     = getSuggestedTourneys(myRegs, tourneys, currentProfile)
+
+  const statusConf = {
+    open:    { label: 'Offen',  color: 'bg-secondary-fixed/15 text-secondary-fixed' },
+    running: { label: 'Läuft', color: 'bg-green-500/15 text-green-400' },
+  }
+  const modeLabels = Object.fromEntries(Object.entries(MODES).map(([k,v]) => [k, v.label]))
+
+  const nextBookingHtml = nextBooking ? (() => {
+    const d = new Date(nextBooking.date + 'T00:00:00')
+    const dayLabel  = d.toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short' })
+    const typeLabel = nextBooking.type === 'doubles' ? 'Doppel' : 'Einzel'
+    return `<div class="space-y-2.5">
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-secondary-fixed">calendar_month</span>
+        <span class="font-headline font-bold text-white">${dayLabel}</span>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-white/40">schedule</span>
+        <span class="text-white/70 font-body text-sm">${nextBooking.timeStart}–${nextBooking.timeEnd}</span>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-white/40">sports_tennis</span>
+        <span class="text-white/70 font-body text-sm">Platz ${nextBooking.court} · ${typeLabel}</span>
+      </div>
+    </div>`
+  })() : `<div class="flex flex-col items-center justify-center h-full py-2 gap-3">
+    <p class="text-white/40 font-body text-sm text-center">Keine Buchung geplant.</p>
+    <a href="booking.html" class="inline-flex items-center gap-1 text-xs font-headline font-bold text-secondary-fixed hover:underline">
+      Jetzt buchen <span class="material-symbols-outlined text-sm">arrow_forward</span>
+    </a>
+  </div>`
+
+  const miniTourneyCard = t => {
+    const sc = statusConf[t.status] || statusConf.open
+    const dateStr = t.start_at
+      ? new Date(t.start_at).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })
+      : '–'
+    return `<div class="rounded-2xl bg-white/6 border border-white/10 p-4 flex flex-col gap-1">
+      <div class="flex items-start justify-between gap-2">
+        <span class="font-headline font-bold text-white text-sm leading-tight">${esc(t.name)}</span>
+        <span class="text-[10px] font-headline font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${sc.color}">${sc.label}</span>
+      </div>
+      <div class="text-xs text-white/40 font-body">${dateStr}</div>
+      <div class="text-xs text-white/30 font-body">${esc(modeLabels[t.game_mode] || t.game_mode || '')}</div>
+    </div>`
+  }
 
   app.innerHTML = `
-    <div class="flex items-start justify-between mb-8 gap-4">
+    <div class="flex items-start justify-between mb-6 gap-4">
       <div>
         <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Willkommen${currentProfile?.display_name ? ', ' + esc(currentProfile.display_name.split(' ')[0]) : ''}</h1>
-        <p class="text-white/40 font-body mt-1">Hier sind die aktuellen Turniere.</p>
+        <p class="text-white/40 font-body mt-1">Dein Überblick.</p>
       </div>
       <a href="stats.html" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors no-underline flex-shrink-0">
         <span class="material-symbols-outlined text-base">bar_chart</span><span class="hidden md:inline">Statistiken</span>
       </a>
     </div>
-    ${!tourneys?.length
-      ? `<div class="text-center py-20 text-white/30 font-body">
-           <span class="material-symbols-outlined text-4xl block mb-3">event_busy</span>
-           Keine offenen Turniere gerade
-         </div>`
-      : `<div class="grid gap-4 md:grid-cols-2">${tourneys.map(t => tournamentCard(t, myIds.has(t.id), false)).join('')}</div>`}
+
+    <!-- Platzauslastung + Nächste Buchung -->
+    <div class="grid md:grid-cols-3 gap-4 mb-6">
+      <div class="md:col-span-2 rounded-2xl bg-white/6 border border-white/10 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-headline font-bold text-white text-sm flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm text-secondary-fixed">sports_tennis</span>
+            Platzauslastung heute
+          </h2>
+          <a href="booking.html" class="text-xs font-headline font-bold text-secondary-fixed hover:underline flex items-center gap-0.5">
+            Alle<span class="material-symbols-outlined text-sm">chevron_right</span>
+          </a>
+        </div>
+        <div class="space-y-2">${renderUtilizationBar(todayBookings, numCourts)}</div>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-xs text-white/30 font-body">${todayBookings.length} Buchung${todayBookings.length !== 1 ? 'en' : ''} heute</span>
+          <a href="booking.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
+            Platz buchen
+          </a>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-white/6 border border-white/10 p-5 flex flex-col">
+        <h2 class="font-headline font-bold text-white text-sm flex items-center gap-1.5 mb-4">
+          <span class="material-symbols-outlined text-sm text-secondary-fixed">event_upcoming</span>
+          Meine nächste Buchung
+        </h2>
+        <div class="flex-1">${nextBookingHtml}</div>
+      </div>
+    </div>
+
+    <!-- Meine Turniere -->
+    <section class="mb-6">
+      <h2 class="font-headline font-bold text-white text-base mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-base text-white/40">emoji_events</span>
+        Meine Turniere
+      </h2>
+      ${myTourneys.length
+        ? `<div class="grid gap-3 md:grid-cols-2">${myTourneys.map(miniTourneyCard).join('')}</div>`
+        : `<div class="rounded-2xl bg-white/5 border border-white/8 px-5 py-6 text-center text-white/30 font-body text-sm">
+            <span class="material-symbols-outlined text-2xl block mb-2">event_busy</span>
+            Du bist bei keinem aktiven Turnier angemeldet.
+           </div>`}
+    </section>
+
+    <!-- Vorgeschlagene Turniere -->
+    <section>
+      <h2 class="font-headline font-bold text-white text-base mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-base text-white/40">recommend</span>
+        Turniervorschläge
+        ${!currentProfile?.gender && !currentProfile?.lk ? `<span class="text-xs font-body font-normal text-white/30 ml-1">(<a href="profile.html" class="text-secondary-fixed hover:underline">Profil vervollständigen</a> für bessere Matches)</span>` : ''}
+      </h2>
+      ${suggested.length
+        ? `<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">${suggested.map(t => tournamentCard(t, false, false)).join('')}</div>`
+        : `<div class="rounded-2xl bg-white/5 border border-white/8 px-5 py-6 text-center text-white/30 font-body text-sm">
+            <span class="material-symbols-outlined text-2xl block mb-2">search_off</span>
+            Keine passenden offenen Turniere gefunden.
+           </div>`}
+    </section>
   `
 }
 

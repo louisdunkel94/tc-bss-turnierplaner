@@ -120,6 +120,9 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- ── Booking Rules Editor (admin/veranstalter only) ── -->
+  <div id="rules-editor" class="mb-5"></div>
+
   <!-- ── Calendar Grid ── -->
   <div class="overflow-x-auto scrollbar-hide rounded-2xl border border-white/8 bg-black/10">
     <div id="calendar" class="min-w-[640px]"></div>
@@ -163,6 +166,19 @@ tailwind.config = {
           <input type="text" id="book-member" autocomplete="off" placeholder="Name…"
             class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
           <ul id="suggest-list" class="hidden mt-1"></ul>
+        </div>
+        <div>
+          <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-2">Spielart</label>
+          <div class="flex gap-5">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="book-type" value="singles" checked class="accent-secondary-fixed"/>
+              <span class="text-sm text-white font-body">Einzel</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="book-type" value="doubles" class="accent-secondary-fixed"/>
+              <span class="text-sm text-white font-body">Doppel</span>
+            </label>
+          </div>
         </div>
         <div>
           <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Notiz <span class="normal-case font-normal">(optional)</span></label>
@@ -217,6 +233,20 @@ tailwind.config = {
 <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 opacity-0 translate-y-2 transition-all duration-300 bg-secondary-fixed text-on-secondary-fixed px-5 py-2.5 rounded-full text-sm font-headline font-bold shadow-xl z-50 pointer-events-none whitespace-nowrap"></div>
 
 <script>
+// ── Current user ──────────────────────────────────
+let currentUserId = null
+let currentRole = 'mitglied'
+;(function() {
+  currentUserId = sessionStorage.getItem('tc_auth')
+  if (currentUserId) {
+    try {
+      const p = JSON.parse(localStorage.getItem('tc_profiles') || '{}')[currentUserId]
+      if (p?.role) currentRole = p.role
+      else if (currentUserId === 'admin@tennisclub-bss.de') currentRole = 'admin'
+    } catch(e) {}
+  }
+})()
+
 // ── Data ──────────────────────────────────────────
 function getSettings() {
   try { return JSON.parse(localStorage.getItem('tc_settings') || '{}') } catch(e) { return {} }
@@ -233,6 +263,55 @@ function saveBookings(b) { localStorage.setItem('tc_bookings', JSON.stringify(b)
 
 function getMembers() {
   try { return JSON.parse(localStorage.getItem('tc_members') || '[]') } catch(e) { return [] }
+}
+
+function getBookingRules() {
+  const def = {
+    mitglied:     { singles: { maxDurationMins: 90,  maxPerPeriod: 2,  periodDays: 7 }, doubles: { maxDurationMins: 120, maxPerPeriod: 3,  periodDays: 7 } },
+    veranstalter: { singles: { maxDurationMins: 180, maxPerPeriod: 10, periodDays: 7 }, doubles: { maxDurationMins: 180, maxPerPeriod: 10, periodDays: 7 } }
+  }
+  const saved = getSettings().bookingRules || {}
+  return {
+    mitglied:     { singles: { ...def.mitglied.singles,     ...(saved.mitglied?.singles     || {}) }, doubles: { ...def.mitglied.doubles,     ...(saved.mitglied?.doubles     || {}) } },
+    veranstalter: { singles: { ...def.veranstalter.singles, ...(saved.veranstalter?.singles || {}) }, doubles: { ...def.veranstalter.doubles, ...(saved.veranstalter?.doubles || {}) } }
+  }
+}
+
+function validateBookingRules(type, timeStart, timeEnd) {
+  if (currentRole === 'admin') return null
+  const roleKey = currentRole === 'veranstalter' ? 'veranstalter' : 'mitglied'
+  const rule = getBookingRules()[roleKey]?.[type]
+  if (!rule) return null
+  const durationMins = toMinutes(timeEnd) - toMinutes(timeStart)
+  const roleLabel = roleKey === 'veranstalter' ? 'Veranstalter' : 'Mitglieder'
+  const typeLabel = type === 'singles' ? 'Einzel' : 'Doppel'
+  if (durationMins > rule.maxDurationMins) {
+    return `Maximale Buchungsdauer für ${roleLabel} (${typeLabel}): ${rule.maxDurationMins} Min.`
+  }
+  if (currentUserId) {
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - rule.periodDays)
+    const cutoffIso = isoDate(cutoff)
+    const count = getBookings().filter(b => b.userId === currentUserId && b.type === type && b.date >= cutoffIso).length
+    if (count >= rule.maxPerPeriod) {
+      return `Limit erreicht: max. ${rule.maxPerPeriod} ${typeLabel}-Buchungen pro ${rule.periodDays} Tagen.`
+    }
+  }
+  return null
+}
+
+function saveBookingRules() {
+  const n = id => parseInt(document.getElementById(id)?.value) || 0
+  const rules = {
+    mitglied:     { singles: { maxDurationMins: n('rule-m-s-dur') || 90,  maxPerPeriod: n('rule-m-s-cnt') || 2,  periodDays: n('rule-m-s-days') || 7 },
+                    doubles: { maxDurationMins: n('rule-m-d-dur') || 120, maxPerPeriod: n('rule-m-d-cnt') || 3,  periodDays: n('rule-m-d-days') || 7 } },
+    veranstalter: { singles: { maxDurationMins: n('rule-v-s-dur') || 180, maxPerPeriod: n('rule-v-s-cnt') || 10, periodDays: n('rule-v-s-days') || 7 },
+                    doubles: { maxDurationMins: n('rule-v-d-dur') || 180, maxPerPeriod: n('rule-v-d-cnt') || 10, periodDays: n('rule-v-d-days') || 7 } }
+  }
+  const s = getSettings()
+  s.bookingRules = rules
+  saveSettings(s)
+  toast('Buchungsregeln gespeichert')
 }
 
 // ── Helpers ───────────────────────────────────────
@@ -285,6 +364,46 @@ function setCourts(delta) { setNumCourts(getNumCourts() + delta) }
 function render() {
   const numCourts = getNumCourts()
   document.getElementById('courts-count').textContent = numCourts
+
+  // Rules editor — admin/veranstalter only
+  const rulesEl = document.getElementById('rules-editor')
+  if (rulesEl && (currentRole === 'admin' || currentRole === 'veranstalter')) {
+    const r = getBookingRules()
+    const inp = (id, val, min, max) =>
+      `<input type="number" id="${id}" value="${val}" min="${min}" max="${max}" class="w-16 bg-white/10 border border-white/15 text-white rounded-lg px-2 py-1 text-sm font-body text-center focus:outline-none focus:border-secondary-fixed"/>`
+    const row = (label, prefix, rules) =>
+      `<tr><td class="py-1.5 pr-4 text-white/60 whitespace-nowrap">${label}</td>
+       <td class="py-1.5 px-2 text-center">${inp(prefix+'-dur', rules.maxDurationMins, 30, 480)}</td>
+       <td class="py-1.5 px-2 text-center">${inp(prefix+'-cnt', rules.maxPerPeriod, 1, 99)}</td>
+       <td class="py-1.5 px-2 text-center">${inp(prefix+'-days', rules.periodDays, 1, 365)}</td></tr>`
+    rulesEl.innerHTML = `
+      <div class="rounded-2xl border border-white/8 bg-black/10 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-headline font-bold text-white text-sm flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm text-secondary-fixed">rule</span>Buchungsregeln
+          </h2>
+          <button onclick="saveBookingRules()" class="px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">Speichern</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="text-xs font-body w-full">
+            <thead><tr class="text-white/30 uppercase tracking-wide text-left">
+              <th class="pb-2 pr-4">Gruppe</th>
+              <th class="pb-2 px-2 text-center">Max. Dauer (min)</th>
+              <th class="pb-2 px-2 text-center">Max. Buchungen</th>
+              <th class="pb-2 px-2 text-center">pro … Tage</th>
+            </tr></thead>
+            <tbody class="divide-y divide-white/5">
+              ${row('Mitglied · Einzel',      'rule-m-s', r.mitglied.singles)}
+              ${row('Mitglied · Doppel',      'rule-m-d', r.mitglied.doubles)}
+              ${row('Veranstalter · Einzel',  'rule-v-s', r.veranstalter.singles)}
+              ${row('Veranstalter · Doppel',  'rule-v-d', r.veranstalter.doubles)}
+            </tbody>
+          </table>
+        </div>
+      </div>`
+  } else if (rulesEl) {
+    rulesEl.innerHTML = ''
+  }
 
   // Week label
   const weekEnd = new Date(_weekStart)
@@ -441,10 +560,14 @@ function confirmBook() {
   const end    = document.getElementById('book-end').value
   const member = document.getElementById('book-member').value.trim()
   const note   = document.getElementById('book-note').value.trim()
+  const type   = document.querySelector('input[name="book-type"]:checked')?.value || 'singles'
   const conflict = document.getElementById('book-conflict')
 
   if (!member) { conflict.textContent = 'Bitte einen Namen eingeben.'; conflict.classList.remove('hidden'); return }
   if (toMinutes(end) <= toMinutes(start)) { conflict.textContent = 'Endzeit muss nach Startzeit liegen.'; conflict.classList.remove('hidden'); return }
+
+  const ruleErr = validateBookingRules(type, start, end)
+  if (ruleErr) { conflict.textContent = ruleErr; conflict.classList.remove('hidden'); return }
 
   // Check overlap
   const bookings = getBookings()
@@ -461,7 +584,8 @@ function confirmBook() {
   bookings.push({
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     date, court, timeStart: start, timeEnd: end,
-    memberName: member, note, createdAt: new Date().toISOString()
+    memberName: member, note, type, userId: currentUserId,
+    createdAt: new Date().toISOString()
   })
   saveBookings(bookings)
   document.getElementById('modal-book').close()
@@ -476,7 +600,8 @@ function showDetail(id) {
   if (!b) return
   _detailId = id
   document.getElementById('detail-member').textContent = b.memberName
-  document.getElementById('detail-court').textContent = 'Platz ' + b.court
+  document.getElementById('detail-court').textContent =
+    'Platz ' + b.court + (b.type ? ' · ' + (b.type === 'doubles' ? 'Doppel' : 'Einzel') : '')
   document.getElementById('detail-time').textContent =
     b.date.split('-').reverse().join('.') + ' · ' + b.timeStart + '–' + b.timeEnd +
     ' (' + Math.round((toMinutes(b.timeEnd) - toMinutes(b.timeStart)) / 60 * 10) / 10 + ' h)'
