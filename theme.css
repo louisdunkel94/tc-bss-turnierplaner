@@ -1,0 +1,124 @@
+/* ── Light mode (default) ──────────────────────────── */
+:root {
+  --page-bg:   #f2f4ef;
+  --page-bg2:  #ecefea;
+  --header-bg: rgba(242,244,239,0.88);
+  --card-bg:   rgba(17,82,23,0.05);
+  --card-bg2:  rgba(17,82,23,0.09);
+  --input-bg:  #e7e9e4;
+  --text:      #191c1a;
+  --text-80:   rgba(25,28,26,0.8);
+  --text-60:   rgba(25,28,26,0.6);
+  --text-40:   rgba(25,28,26,0.4);
+  --text-30:   rgba(25,28,26,0.3);
+  --text-20:   rgba(25,28,26,0.2);
+  --border:        rgba(17,82,23,0.12);
+  --border-strong: rgba(17,82,23,0.20);
+}
+
+/* ── Dark mode ─────────────────────────────────────── */
+.dark {
+  --page-bg:   #115217;
+  --page-bg2:  #0a1f0b;
+  --header-bg: rgba(17,82,23,0.8);
+  --card-bg:   rgba(0,0,0,0.2);
+  --card-bg2:  rgba(0,0,0,0.3);
+  --input-bg:  #1a3320;
+  --text:      #ffffff;
+  --text-80:   rgba(255,255,255,0.8);
+  --text-60:   rgba(255,255,255,0.6);
+  --text-40:   rgba(255,255,255,0.4);
+  --text-30:   rgba(255,255,255,0.3);
+  --text-20:   rgba(255,255,255,0.2);
+  --border:        rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.15);
+}
+
+body { background-color: var(--page-bg); color: var(--text); }
+
+/* ── Header ─────────────────────────────────────────── */
+html:not(.dark) header {
+  background-color: var(--header-bg) !important;
+  border-color: rgba(17,82,23,0.1) !important;
+}
+
+/* ── Text ────────────────────────────────────────────── */
+html:not(.dark) .text-white           { color: #191c1a !important; }
+html:not(.dark) .text-white\/80       { color: rgba(25,28,26,.8) !important; }
+html:not(.dark) .text-white\/70       { color: rgba(25,28,26,.7) !important; }
+html:not(.dark) .text-white\/60       { color: rgba(25,28,26,.6) !important; }
+html:not(.dark) .text-white\/50       { color: rgba(25,28,26,.5) !important; }
+html:not(.dark) .text-white\/40       { color: rgba(25,28,26,.4) !important; }
+html:not(.dark) .text-white\/30       { color: rgba(25,28,26,.3) !important; }
+html:not(.dark) .text-white\/20       { color: rgba(25,28,26,.2) !important; }
+html:not(.dark) .text-white\/10       { color: rgba(25,28,26,.1) !important; }
+html:not(.dark) .text-lime-300        { color: #2d6b2d !important; }
+html:not(.dark) .text-red-400         { color: #ba1a1a !important; }
+html:not(.dark) .text-red-400\/70     { color: rgba(186,26,26,.7) !important; }
+html:not(.dark) .text-secondary-fixed           { color: #5a6400 !important; }
+html:not(.dark) .text-secondary-fixed\/80       { color: rgba(90,100,0,.8) !important; }
+html:not(.dark) .text-secondary-fixed\/70       { color: rgba(90,100,0,.7) !important; }
+
+/* ── Backgrounds ─────────────────────────────────────── */
+html:not(.dark) .bg-black\/20  { background-color: var(--card-bg) !important; }
+html:not(.dark) .bg-black\/30  { background-color: var(--card-bg2) !important; }
+html:not(.dark) .bg-black\/40  { background-color: var(--card-bg2) !important; }
+html:not(.dark) .bg-white\/8   { background-color: var(--card-bg) !important; }
+html:not(.dark) .bg-white\/10  { background-color: var(--card-bg) !important; }
+html:not(.dark) .bg-white\/12  { background-color: var(--card-bg) !important; }
+html:not(.dark) .bg-white\/15  { background-color: var(--card-bg2) !important; }
+html:not(.dark) .bg-white\/20  { background-color: var(--card-bg2) !important; }
+html:not(.dark) .hover\:bg-white\/10:hover  { background-color: var(--card-bg2) !important; }
+html:not(.dark) .hover\:bg-white\/12:hover  { background-color: var(--card-bg2) !important; }
+
+/* Hardcoded dark greens */
+html:not(.dark) .bg-\[\#115217\]     { background-color: var(--page-bg2) !important; }
+html:not(.dark) .bg-\[\#0a1f0b\]     { background-color: var(--page-bg) !important; }
+html:not(.dark) .bg-\[\#1a3320\]     { background-color: var(--input-bg) !important; }
+html:not(.dark) .bg-\[\#115217\]\/80 { background-color: var(--header-bg) !important; }
+
+/* Secondary / accent */
+html:not(.dark) .bg-secondary-fixed            { background-color: #5a6400 !important; }
+html:not(.dark) .bg-secondary-fixed\/10        { background-color: rgba(90,100,0,.08) !important; }
+html:not(.dark) .bg-secondary-fixed\/20        { background-color: rgba(90,100,0,.14) !important; }
+html:not(.dark) .border-secondary-fixed\/20    { border-color: rgba(90,100,0,.2) !important; }
+
+/* ── Borders ─────────────────────────────────────────── */
+html:not(.dark) .border-white\/5   { border-color: var(--border) !important; }
+html:not(.dark) .border-white\/8   { border-color: var(--border) !important; }
+html:not(.dark) .border-white\/10  { border-color: var(--border) !important; }
+html:not(.dark) .border-white\/20  { border-color: var(--border-strong) !important; }
+
+/* ── Inputs / Selects ───────────────────────────────── */
+html:not(.dark) select,
+html:not(.dark) input[type="text"],
+html:not(.dark) input[type="password"],
+html:not(.dark) input[type="number"],
+html:not(.dark) input[type="date"],
+html:not(.dark) input[type="email"],
+html:not(.dark) textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--text) !important;
+  border-color: var(--border-strong) !important;
+}
+html:not(.dark) select option { background-color: var(--page-bg2); color: var(--text); }
+
+/* ── Hero gradient (login + anleitung pages) ─────────── */
+html:not(.dark) .bg-hero {
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(90,100,0,.08) 0%, transparent 60%),
+              linear-gradient(180deg, #f2f4ef 0%, #ecefea 50%, #f2f4ef 100%) !important;
+}
+
+/* ── Toggle button ───────────────────────────────────── */
+.theme-toggle-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem;
+  border-radius: 0.5rem;
+  border: none; cursor: pointer;
+  background: transparent;
+  transition: background-color .15s;
+}
+html:not(.dark) .theme-toggle-btn { color: rgba(25,28,26,.45); }
+html:not(.dark) .theme-toggle-btn:hover { background-color: var(--card-bg2); color: rgba(25,28,26,.8); }
+.dark .theme-toggle-btn { color: rgba(255,255,255,.4); }
+.dark .theme-toggle-btn:hover { background-color: rgba(255,255,255,.1); color: rgba(255,255,255,.8); }
