@@ -32,6 +32,23 @@ Web-App zur Verwaltung von Vereinsturnieren. Läuft vollständig im Browser, kei
 
 ---
 
+## Spielerstatistiken
+
+Die Seite `stats.html` zeigt spielerbezogene Auswertungen über alle Turniere hinweg.
+
+**Aufruf:** Dashboard → **Statistiken**-Button (oben rechts)
+
+**Funktionen:**
+- Spieler aus Dropdown wählen (alle die je in einem Turnier eingetragen wurden)
+- Zeitfilter: Jahr und/oder Monat
+- **Zusammenfassung:** Spiele gesamt, Siege, Niederlagen, Gewinnquote
+- **Partnertabelle** (nur Mixed-Turniere): mit wem wie oft gespielt, gemeinsame Bilanz, Gewinnrate als Balken
+- **Gegnertabelle:** Head-to-Head-Bilanz gegen jeden Gegner, sortiert nach Häufigkeit
+
+Im **PocketBase-Modus** wird der eingeloggte Benutzer automatisch vorausgewählt.
+
+---
+
 ## Schnellstart
 
 ```
@@ -267,6 +284,7 @@ Im Reiter **Tabelle** stehen drei Buttons bereit:
 | `dashboard.html` / `dashboard.js` | Turnier-Übersicht und Verwaltung |
 | `tournament.html` | Spielplan, Auslosung, Ergebnisse, Tabelle |
 | `display.html` | Öffentliche Anzeigetafel (ohne Login) |
+| `stats.html` | Spielerstatistiken (Partner- und Gegnerauswertung) |
 | `checkin.html` | QR-Code Check-in für Teilnehmer |
 | `anleitung.html` | In-App Kurzanleitung |
 | `config.js` | Konfiguration (lokal, nicht im Repository) |
@@ -294,6 +312,113 @@ Im Reiter **Tabelle** stehen drei Buttons bereit:
 |---|---|
 | `main` | Produktiv – deployed via GitHub Pages |
 | `dev` | Entwicklung & Tests |
+
+---
+
+## Roadmap
+
+Die App läuft aktuell im **Demo-Modus** (alle Daten nur lokal im Browser). Die nachfolgende Roadmap beschreibt die geplante Weiterentwicklung zum vollwertigen Vereinssystem mit Backend, Benutzerverwaltung, Platzbuchung und Zahlungsabwicklung.
+
+Issues werden auf GitHub unter [louisdunkel94/tc-bss-turnierplaner](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues) verfolgt.
+
+---
+
+### Phase 0 – Server-Setup (manuell, einmalig)
+
+Voraussetzung für alle weiteren Phasen. Muss vom Administrator direkt auf dem Hetzner-Server ausgeführt werden.
+
+| # | Aufgabe | Beschreibung |
+|---|---|---|
+| [#7](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/7) | PocketBase installieren | Binary herunterladen, systemd-Service unter `/opt/pocketbase/` einrichten (Port 8090) |
+| [#8](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/8) | Nginx + SSL | Reverse-Proxy auf `turniere.tennisclub-bss.de`, Let's Encrypt HTTPS |
+| [#9](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/9) | Collections anlegen | `users`, `tournaments`, `participants` mit API-Regeln laut POCKETBASE_SETUP.md |
+| [#10](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/10) | config.js befüllen | `POCKETBASE_URL: 'https://turniere.tennisclub-bss.de'` – schaltet Demo-Modus ab |
+
+---
+
+### Phase 1 – Echtes Benutzer-Management
+
+Aktuell ist das Login nur ein einfaches Vereinspasswort (`tcbss`). Ziel: individuelle Accounts mit Rollen.
+
+| # | Aufgabe | Beschreibung |
+|---|---|---|
+| [#11](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/11) | Login & Registrierung | `index.html`: E-Mail/Passwort-Formular statt Passwort-Only. Selbst-Registrierung für Mitglieder (landen als Rolle `mitglied`) |
+| [#12](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/12) | Dashboard Auth + Routing | `dashboard.js`: echtes `boot()` via PocketBase Auth, `render()` leitet je nach Rolle (`mitglied` / `veranstalter` / `vorstand` / `admin`) weiter, `dbMembers()` ergänzen |
+| [#13](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/13) | tournament.html Auth-Check | Redirect auf `index.html` wenn nicht eingeloggt |
+| [#24](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/24) | Rolle „Vorstand" | Neue Rolle zwischen `veranstalter` und `admin`: Turniere leiten + Buchungsregeln konfigurieren |
+
+**Rollenhierarchie nach Abschluss:**
+
+| Rolle | Turniere | Platzbuchung | Buchungsregeln konfigurieren | Mitglieder verwalten |
+|---|---|---|---|---|
+| `mitglied` | sehen / anmelden | buchen | — | — |
+| `veranstalter` | erstellen / leiten | buchen | — | — |
+| `vorstand` | erstellen / leiten | buchen | ✓ | — |
+| `admin` | alles | alles | ✓ | ✓ Rollen vergeben |
+
+---
+
+### Phase 2 – E-Mail & Selbstverwaltung
+
+| # | Aufgabe | Beschreibung |
+|---|---|---|
+| [#14](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/14) | SMTP konfigurieren | PocketBase Admin-Panel: SMTP-Zugangsdaten des Vereins eintragen |
+| [#15](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/15) | E-Mail-Hook | PocketBase JS-Hook `routerAdd('/api/send-email')`: sendet Info-Mails an alle Turnierteilnehmer |
+| [#16](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/16) | Passwort vergessen | Link auf `index.html` → PocketBase Reset-Flow (`requestPasswordReset`), Nutzer bekommt E-Mail |
+| [#17](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/17) | Profil-Einstellungen | Modal im Dashboard: Name, E-Mail und Passwort selbst ändern (`pb.collection('users').update()`) |
+
+---
+
+### Phase 3 – Platzbuchungssystem
+
+Unabhängig von Turnieren. Mitglieder buchen 60-Minuten-Slots, Gäste können mitgebracht werden.
+
+| # | Aufgabe | Beschreibung |
+|---|---|---|
+| [#18](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/18) | `bookings` Collection | PocketBase Collection mit Feldern: `court`, `start_time`, `end_time`, `booked_by`, `guest_name`, `guest_fee_paid` |
+| [#19](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/19) | bookings.html | Wochenraster-Ansicht (Mo–So, Stunden-Slots), Buchungsformular, Stornierung eigener Buchungen |
+| [#20](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/20) | Dashboard-Link | „Platzbuchung"-Button im Dashboard für alle eingeloggten Benutzer |
+| [#25](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/25) | `booking_config` Collection | Einzeldatensatz mit Buchungsregeln: Öffnungszeiten, Gastgebühr, max. Buchungen/Woche, Vorausbuchungsfenster |
+| [#26](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/26) | Einstellungen für Vorstand | Zahnrad-Modal in `bookings.html` (nur für `vorstand` / `admin`): Öffnungszeiten, Gastgebühr, Wochenlimit, Buchungsfenster konfigurieren |
+
+**Buchungsregeln (konfigurierbar durch Vorstand):**
+- Öffnungszeiten: z.B. 08:00–22:00 Uhr
+- Gastgebühr: fixer Betrag pro Gast-Buchung
+- Max. Buchungen pro Woche pro Mitglied: z.B. 3
+- Vorausbuchungsfenster: z.B. max. 7 Tage im Voraus
+
+---
+
+### Phase 4 – Zahlungsabwicklung
+
+Zuerst Barzahlung-Tracking, dann optional Online-Zahlung via Stripe.
+
+| # | Aufgabe | Beschreibung |
+|---|---|---|
+| [#21](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/21) | Datenmodell Zahlungen | `guest_fee` und `fee_paid` Felder in `bookings` und `participants`; `entry_fee` in `tournaments` |
+| [#22](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/22) | Zahlungsübersicht Admin | Tabellenansicht im Admin-Bereich: wer hat bezahlt, wer nicht, manuelle Quittierung |
+| [#23](https://github.com/louisdunkel94/tc-bss-turnierplaner/issues/23) | Stripe Online-Zahlung | PocketBase-Hook erstellt Stripe Checkout Session; Webhook setzt `fee_paid = true` nach erfolgreichem Payment |
+
+---
+
+### Bereits umgesetzt
+
+| Feature | Status |
+|---|---|
+| Turnierverwaltung (alle 7 Spielmodi) | ✅ Fertig |
+| Öffentliche Anzeigetafel (`display.html`) | ✅ Fertig |
+| Spielstände (6:3 statt nur Sieg/Niederlage) | ✅ Fertig |
+| KO-Bracket Visualisierung | ✅ Fertig |
+| Balanced Draw (Wiederholungsminimierung) | ✅ Fertig |
+| Pause-Funktion für einzelne Spieler | ✅ Fertig |
+| QR-Code Check-in (`checkin.html`) | ✅ Fertig |
+| Excel- und JSON-Export / Backup | ✅ Fertig |
+| Spielerstatistiken (`stats.html`) | ✅ Fertig |
+| PocketBase Dual-Mode-Architektur | ✅ Vorbereitet (URL fehlt) |
+| E-Mail-Versand (Info-Mail an Teilnehmer) | ⏳ Hook fehlt (Issue #15) |
+| Echtes User-Management | ⏳ Server fehlt (Issues #7–#13) |
+| Platzbuchungssystem | ⏳ Geplant (Issues #18–#20, #25–#26) |
+| Online-Zahlung (Stripe) | ⏳ Geplant (Issues #21–#23) |
 
 ---
 

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Spielerstatistiken – TC Bad Soden-Salmünster</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+<script src="config.js"></script>
+<script>
+tailwind.config = {
+  darkMode:"class",
+  theme:{extend:{
+    colors:{
+      "primary":"#003908","primary-container":"#115217",
+      "on-primary-container":"#83c57c",
+      "secondary-fixed":"#dbed50","on-secondary-fixed":"#1a1e00",
+      "secondary-fixed-dim":"#bfd035",
+      "outline-variant":"#c0c9bb","error":"#ba1a1a"
+    },
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Plus Jakarta Sans","sans-serif"]},
+    borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
+  }}
+}
+</script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;background-color:#115217;color:#fff;}
+  .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
+  select option{background:#1a3320;}
+</style>
+</head>
+<body class="min-h-screen pb-10">
+
+<header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
+  <a href="dashboard.html" class="flex items-center gap-3 no-underline">
+    <img src="logo.png" alt="TC Bad Soden-Salmünster" class="w-9 h-9 object-contain flex-shrink-0"/>
+    <div>
+      <div class="text-base font-black text-white tracking-tight font-headline leading-none">TC Bad Soden-Salmünster</div>
+      <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">Turniere</div>
+    </div>
+  </a>
+  <a href="dashboard.html" class="flex items-center gap-1.5 text-white/40 hover:text-white/80 text-sm font-headline font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors no-underline">
+    <span class="material-symbols-outlined text-base">arrow_back</span>
+    <span class="hidden md:inline">Dashboard</span>
+  </a>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-8">
+  <div class="mb-6">
+    <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Spielerstatistiken</h1>
+    <p class="text-white/40 font-body mt-1">Auswertung aller Spiele über alle Turniere.</p>
+  </div>
+
+  <div class="flex flex-wrap gap-2.5 mb-8">
+    <select id="sel-player" onchange="update()" class="bg-[#1a3320] border border-white/10 text-white text-sm font-body rounded-xl px-3 py-2 focus:outline-none focus:border-secondary-fixed/50 flex-1 min-w-[180px]">
+      <option value="">— Spieler wählen —</option>
+    </select>
+    <select id="sel-year" onchange="update()" class="bg-[#1a3320] border border-white/10 text-white text-sm font-body rounded-xl px-3 py-2 focus:outline-none focus:border-secondary-fixed/50">
+      <option value="">Alle Jahre</option>
+    </select>
+    <select id="sel-month" onchange="update()" class="bg-[#1a3320] border border-white/10 text-white text-sm font-body rounded-xl px-3 py-2 focus:outline-none focus:border-secondary-fixed/50">
+      <option value="">Alle Monate</option>
+      <option value="1">Januar</option>
+      <option value="2">Februar</option>
+      <option value="3">März</option>
+      <option value="4">April</option>
+      <option value="5">Mai</option>
+      <option value="6">Juni</option>
+      <option value="7">Juli</option>
+      <option value="8">August</option>
+      <option value="9">September</option>
+      <option value="10">Oktober</option>
+      <option value="11">November</option>
+      <option value="12">Dezember</option>
+    </select>
+  </div>
+
+  <div id="stats-content">
+    <div class="text-center py-20 text-white/30 font-body">
+      <span class="material-symbols-outlined text-4xl block mb-3">person_search</span>
+      Spieler auswählen
+    </div>
+  </div>
+</main>
+
+<script>
+const POCKETBASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.POCKETBASE_URL : null) || 'YOUR_POCKETBASE_URL'
+const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
+const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
+
+let allTourneys = []
+
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+async function boot() {
+  if (sessionStorage.getItem('tc_auth') !== '1') { window.location.replace('index.html'); return }
+
+  if (DEMO_MODE) {
+    try { allTourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]') } catch { allTourneys = [] }
+  } else {
+    try { allTourneys = await pb.collection('tournaments').getFullList({ sort: '-created' }) } catch { allTourneys = [] }
+  }
+
+  populateFilters()
+
+  if (!DEMO_MODE && pb.authStore.isValid) {
+    const name = pb.authStore.model?.display_name
+    if (name) {
+      const sel = document.getElementById('sel-player')
+      for (const opt of sel.options) {
+        if (opt.value === name) { sel.value = name; break }
+      }
+    }
+  }
+
+  update()
+}
+
+function populateFilters() {
+  const players = new Set()
+  const years = new Set()
+
+  for (const t of allTourneys) {
+    const S = t.state
+    if (S) {
+      ;(S.herren || []).forEach(n => players.add(n))
+      ;(S.damen  || []).forEach(n => players.add(n))
+    }
+    const dateStr = t.start_at || t.date
+    if (dateStr) {
+      const y = new Date(dateStr).getFullYear()
+      if (!isNaN(y)) years.add(y)
+    }
+  }
+
+  const selP = document.getElementById('sel-player')
+  const currentP = selP.value
+  selP.innerHTML = '<option value="">— Spieler wählen —</option>' +
+    [...players].sort().map(n => `<option value="${esc(n)}"${n === currentP ? ' selected' : ''}>${esc(n)}</option>`).join('')
+
+  const selY = document.getElementById('sel-year')
+  const currentY = selY.value
+  selY.innerHTML = '<option value="">Alle Jahre</option>' +
+    [...years].sort((a, b) => b - a).map(y => `<option value="${y}"${String(y) === currentY ? ' selected' : ''}>${y}</option>`).join('')
+}
+
+function addTo(map, name, won, drew) {
+  if (!name) return
+  if (!map[name]) map[name] = { games: 0, wins: 0, draws: 0, losses: 0 }
+  map[name].games++
+  if (won) map[name].wins++
+  else if (drew) map[name].draws++
+  else map[name].losses++
+}
+
+function collectStats(playerName, yearFilter, monthFilter) {
+  const partners = {}
+  const opponents = {}
+  const total = { games: 0, wins: 0, draws: 0, losses: 0 }
+
+  for (const t of allTourneys) {
+    const S = t.state
+    if (!S) continue
+
+    const dateStr = t.start_at || t.date
+    if (dateStr) {
+      const d = new Date(dateStr)
+      if (yearFilter && d.getFullYear() !== yearFilter) continue
+      if (monthFilter && d.getMonth() + 1 !== monthFilter) continue
+    } else if (yearFilter || monthFilter) {
+      continue
+    }
+
+    const allMatches = [
+      ...(S.schedule || []).flatMap(r => r.matches || []),
+      ...(S.loserSchedule || []).flatMap(r => r.matches || []),
+      ...(S.groups || []).flatMap(g => (g.schedule || []).flatMap(r => r.matches || [])),
+      ...(S.koPhase || []).flatMap(r => r.matches || []),
+    ].filter(m => m && m.result)
+
+    for (const m of allMatches) {
+      if (m.herr1 !== undefined) {
+        const onTeam1 = m.herr1 === playerName || m.dame1 === playerName
+        const onTeam2 = m.herr2 === playerName || m.dame2 === playerName
+        if (!onTeam1 && !onTeam2) continue
+        const won = (onTeam1 && m.result === 'team1') || (onTeam2 && m.result === 'team2')
+        const drew = m.result === 'draw'
+        total.games++
+        if (won) total.wins++; else if (drew) total.draws++; else total.losses++
+        const partner = onTeam1
+          ? (m.herr1 === playerName ? m.dame1 : m.herr1)
+          : (m.herr2 === playerName ? m.dame2 : m.herr2)
+        addTo(partners, partner, won, drew)
+        for (const opp of (onTeam1 ? [m.herr2, m.dame2] : [m.herr1, m.dame1])) {
+          addTo(opponents, opp, won, drew)
+        }
+      } else if (m.player1 !== undefined) {
+        const asP1 = m.player1 === playerName
+        const asP2 = m.player2 === playerName
+        if (!asP1 && !asP2) continue
+        const won = (asP1 && m.result === 'p1') || (asP2 && m.result === 'p2')
+        const drew = m.result === 'draw'
+        total.games++
+        if (won) total.wins++; else if (drew) total.draws++; else total.losses++
+        addTo(opponents, asP1 ? m.player2 : m.player1, won, drew)
+      }
+    }
+  }
+
+  return { total, partners, opponents }
+}
+
+function tableRows(map) {
+  return Object.entries(map)
+    .sort((a, b) => b[1].games - a[1].games)
+    .map(([name, e]) => {
+      const pct = e.games ? Math.round((e.wins / e.games) * 100) : 0
+      return `<div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0">
+        <div class="flex-1 min-w-0">
+          <div class="font-body font-semibold text-white text-sm truncate">${esc(name)}</div>
+          <div class="text-xs font-body text-white/40 mt-0.5">${e.games} Spiel${e.games !== 1 ? 'e' : ''} &middot; <span class="text-secondary-fixed/80">${e.wins}S</span> <span class="text-white/30">${e.draws}U</span> <span class="text-red-400/70">${e.losses}N</span></div>
+        </div>
+        <div class="flex items-center gap-2 w-28 flex-shrink-0">
+          <div class="h-1.5 rounded-full bg-white/10 flex-1 overflow-hidden">
+            <div class="bg-secondary-fixed h-full rounded-full" style="width:${pct}%"></div>
+          </div>
+          <span class="text-xs font-headline font-bold text-white/50 w-7 text-right flex-shrink-0">${pct}%</span>
+        </div>
+      </div>`
+    }).join('')
+}
+
+function update() {
+  const playerName = document.getElementById('sel-player').value
+  const yearFilter  = parseInt(document.getElementById('sel-year').value)  || null
+  const monthFilter = parseInt(document.getElementById('sel-month').value) || null
+  const content = document.getElementById('stats-content')
+
+  if (!playerName) {
+    content.innerHTML = `<div class="text-center py-20 text-white/30 font-body">
+      <span class="material-symbols-outlined text-4xl block mb-3">person_search</span>
+      Spieler auswählen
+    </div>`
+    return
+  }
+
+  const { total, partners, opponents } = collectStats(playerName, yearFilter, monthFilter)
+
+  if (total.games === 0) {
+    const note = (yearFilter || monthFilter) ? ' im ausgewählten Zeitraum' : ''
+    content.innerHTML = `<div class="text-center py-20 text-white/30 font-body">
+      <span class="material-symbols-outlined text-4xl block mb-3">sports_tennis</span>
+      Keine Spiele${note} für ${esc(playerName)} gefunden
+    </div>`
+    return
+  }
+
+  const winRate = Math.round((total.wins / total.games) * 100)
+  const hasPartners  = Object.keys(partners).length > 0
+  const hasOpponents = Object.keys(opponents).length > 0
+
+  content.innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <div class="rounded-2xl bg-black/20 border border-white/5 px-4 py-4 text-center">
+        <div class="text-3xl font-headline font-black text-white">${total.games}</div>
+        <div class="text-xs text-white/40 font-body mt-1">Spiele gesamt</div>
+      </div>
+      <div class="rounded-2xl bg-black/20 border border-white/5 px-4 py-4 text-center">
+        <div class="text-3xl font-headline font-black text-secondary-fixed">${total.wins}</div>
+        <div class="text-xs text-white/40 font-body mt-1">Siege</div>
+      </div>
+      <div class="rounded-2xl bg-black/20 border border-white/5 px-4 py-4 text-center">
+        <div class="text-3xl font-headline font-black text-red-400">${total.losses}</div>
+        <div class="text-xs text-white/40 font-body mt-1">Niederlagen</div>
+      </div>
+      <div class="rounded-2xl bg-secondary-fixed/10 border border-secondary-fixed/20 px-4 py-4 text-center">
+        <div class="text-3xl font-headline font-black text-secondary-fixed">${winRate}%</div>
+        <div class="text-xs text-white/40 font-body mt-1">Gewinnquote</div>
+      </div>
+    </div>
+    ${total.draws > 0 ? `<p class="text-xs text-white/30 font-body -mt-5 mb-8 text-center">${total.draws} Unentschieden nicht in Gewinnquote gewertet</p>` : ''}
+
+    ${hasPartners ? `<section class="mb-6">
+      <h2 class="text-base font-headline font-bold text-white mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-base text-white/40">diversity_3</span>
+        Partner (Mixed-Turniere)
+      </h2>
+      <div class="rounded-2xl bg-black/20 border border-white/5 overflow-hidden">
+        ${tableRows(partners)}
+      </div>
+    </section>` : ''}
+
+    ${hasOpponents ? `<section>
+      <h2 class="text-base font-headline font-bold text-white mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-base text-white/40">swords</span>
+        Gegner (Head-to-Head)
+      </h2>
+      <div class="rounded-2xl bg-black/20 border border-white/5 overflow-hidden">
+        ${tableRows(opponents)}
+      </div>
+    </section>` : ''}
+  `
+}
+
+boot()
+</script>
+</body>
+</html>
