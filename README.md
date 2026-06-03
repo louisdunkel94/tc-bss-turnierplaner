@@ -2,8 +2,14 @@
 
 Web-App zur Verwaltung von Vereinsturnieren. Läuft vollständig im Browser, kein Server oder Installation nötig.
 
-**Live:** `https://louisdunkel94.github.io/tc-bss-turnierplaner/`  
-**Passwort:** `tcbss`
+**Live:** `https://louisdunkel94.github.io/tc-bss-turnierplaner/`
+
+## Demo-Zugänge
+
+| Rolle | E-Mail | Passwort |
+|---|---|---|
+| Administrator | `admin@tennisclub-bss.de` | `Admin_BSS#2026` |
+| Testmitglied | `test@tennisclub-bss.de` | `Test_BSS#2026` |
 
 > **Hinweis:** Daten werden lokal im Browser gespeichert. Regelmäßige Backups empfohlen.
 
@@ -63,7 +69,8 @@ index.html öffnen → Passwort eingeben → Dashboard → Turnier erstellen →
 
 Die Seite `index.html` fragt nach dem Vereinspasswort. Nach erfolgreichem Login wird der Zugang für die aktuelle Browser-Sitzung gespeichert (kein erneutes Einloggen bei Seitenwechsel).
 
-- Passwort: **tcbss**
+- E-Mail: `admin@tennisclub-bss.de` / Passwort: `Admin_BSS#2026` (Admin)
+- E-Mail: `test@tennisclub-bss.de` / Passwort: `Test_BSS#2026` (Mitglied)
 - Beim Schließen des Browsers muss erneut eingeloggt werden
 
 ---
@@ -338,7 +345,7 @@ Voraussetzung für alle weiteren Phasen. Muss vom Administrator direkt auf dem H
 
 ### Phase 1 – Echtes Benutzer-Management
 
-Aktuell ist das Login nur ein einfaches Vereinspasswort (`tcbss`). Ziel: individuelle Accounts mit Rollen.
+Implementiert als Demo-Accounts mit E-Mail/Passwort (admin + Testmitglied). Nächster Schritt: echte PocketBase-Accounts mit Selbst-Registrierung.
 
 | # | Aufgabe | Beschreibung |
 |---|---|---|

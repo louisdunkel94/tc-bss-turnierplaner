@@ -72,12 +72,17 @@ tailwind.config = {
     <!-- Message banner -->
     <div id="msg" class="hidden mb-4 px-4 py-3 rounded-xl text-sm font-body flex items-center gap-2"></div>
 
-    <!-- Password form (demo mode) -->
-    <form id="form-pw" class="space-y-3" onsubmit="handlePassword(event)">
+    <!-- Login form (demo mode) -->
+    <form id="form-pw" class="space-y-3" onsubmit="handleLogin(event)">
+      <div>
+        <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">E-Mail</label>
+        <input type="email" id="email-input" required placeholder="name@tennisclub-bss.de" autofocus autocomplete="username"
+          class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors"/>
+      </div>
       <div>
         <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1.5">Passwort</label>
         <div class="relative">
-          <input type="password" id="pw-input" required placeholder="••••••••" autofocus
+          <input type="password" id="pw-input" required placeholder="••••••••" autocomplete="current-password"
             class="w-full bg-white/90 border border-white/20 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-secondary-fixed focus:bg-white transition-colors pr-11"/>
           <button type="button" onclick="togglePw('pw-input',this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
             <span class="material-symbols-outlined text-base">visibility</span>
@@ -115,7 +120,7 @@ const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
 const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
 
 if (!DEMO_MODE && pb.authStore.isValid) window.location.replace('dashboard.html')
-if (DEMO_MODE && sessionStorage.getItem('tc_auth') === '1') window.location.replace('dashboard.html')
+if (DEMO_MODE && sessionStorage.getItem('tc_auth')) window.location.replace('dashboard.html')
 
 function showMsg(text, type = 'error') {
   const el = document.getElementById('msg')
@@ -132,14 +137,20 @@ function togglePw(id, btn) {
   btn.querySelector('.material-symbols-outlined').textContent = show ? 'visibility_off' : 'visibility'
 }
 
-function handlePassword(e) {
+const DEMO_USERS = {
+  'admin@tennisclub-bss.de': 'Admin_BSS#2026',
+  'test@tennisclub-bss.de':  'Test_BSS#2026',
+}
+
+function handleLogin(e) {
   e.preventDefault()
-  const pw = document.getElementById('pw-input').value
-  if (pw === 'tcbss') {
-    sessionStorage.setItem('tc_auth', '1')
+  const email = document.getElementById('email-input').value.trim().toLowerCase()
+  const pw    = document.getElementById('pw-input').value
+  if (DEMO_USERS[email] && DEMO_USERS[email] === pw) {
+    sessionStorage.setItem('tc_auth', email)
     window.location.replace('dashboard.html')
   } else {
-    showMsg('Falsches Passwort.')
+    showMsg('E-Mail oder Passwort falsch.')
     document.getElementById('pw-input').value = ''
     document.getElementById('pw-input').focus()
   }
