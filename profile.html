@@ -121,6 +121,7 @@ function getProfile(email) {
     display_name: saved.display_name || (isAdmin ? 'TC BSS Admin' : 'Testmitglied'),
     role: saved.role || (isAdmin ? 'admin' : 'mitglied'),
     lk: saved.lk || '',
+    gender: saved.gender || null,
     avatar: saved.avatar || null,
     notifications: { tournament_invite: true, match_results: true, ...(saved.notifications || {}) },
     privacy: { show_lk: true, show_matches: true, show_email: false, ...(saved.privacy || {}) },
@@ -415,6 +416,14 @@ function renderOwnProfile(email, profile) {
           ${lkNums.map(n => `<option value="${n}" ${profile.lk === String(n) ? 'selected' : ''}>LK ${n}</option>`).join('')}
         </select>
       </div>
+      <div>
+        <label class="field-label" for="p-gender">Geschlecht</label>
+        <select id="p-gender" class="field-input">
+          <option value="">– keine Angabe –</option>
+          <option value="herr" ${profile.gender === 'herr' ? 'selected' : ''}>Herr</option>
+          <option value="dame" ${profile.gender === 'dame' ? 'selected' : ''}>Dame</option>
+        </select>
+      </div>
     </div>
 
     <!-- Benachrichtigungen -->
@@ -500,6 +509,7 @@ function saveProfile(email) {
     ...current,
     display_name: document.getElementById('p-name').value.trim() || current.display_name,
     lk: document.getElementById('p-lk').value,
+    gender: document.getElementById('p-gender').value || null,
     avatar: newAvatar,
     notifications: {
       tournament_invite: document.getElementById('n-invite').checked,
