@@ -144,6 +144,104 @@ function roleLabel(role) {
   return role === 'admin' ? 'Administrator' : role === 'veranstalter' ? 'Veranstalter' : 'Mitglied'
 }
 
+// All match outcomes chronologically — for streak + form
+function collectAllMatchResults(displayName) {
+  let tourneys = []
+  try { tourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]') } catch {}
+  const sorted = [...tourneys].sort((a, b) => new Date(a.start_at || 0) - new Date(b.start_at || 0))
+  const results = []
+  for (const t of sorted) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [
+      ...(S.schedule || []),
+      ...(S.loserSchedule || []),
+      ...(S.groups || []).flatMap(g => g.schedule || []),
+      ...(S.koPhase || []),
+    ]
+    for (const r of rounds) {
+      for (const m of (r.matches || [])) {
+        if (!m || !m.result) continue
+        let outcome = null
+        if (m.herr1 !== undefined) {
+          const t1 = m.herr1 === displayName || m.dame1 === displayName
+          const t2 = m.herr2 === displayName || m.dame2 === displayName
+          if (!t1 && !t2) continue
+          outcome = m.result === 'draw' ? 'D' : ((t1 && m.result === 'team1') || (t2 && m.result === 'team2')) ? 'W' : 'L'
+        } else if (m.player1 !== undefined) {
+          const p1 = m.player1 === displayName
+          const p2 = m.player2 === displayName
+          if (!p1 && !p2) continue
+          outcome = m.result === 'draw' ? 'D' : ((p1 && m.result === 'p1') || (p2 && m.result === 'p2')) ? 'W' : 'L'
+        }
+        if (outcome) results.push(outcome)
+      }
+    }
+  }
+  return results
+}
+
+function calcStreak(results) {
+  let current = 0, currentType = null
+  if (results.length) {
+    currentType = results[results.length - 1]
+    for (let i = results.length - 1; i >= 0; i--) {
+      if (results[i] === currentType) current++
+      else break
+    }
+  }
+  let longest = 0, run = 0
+  for (const r of results) {
+    if (r === 'W') { run++; longest = Math.max(longest, run) }
+    else run = 0
+  }
+  return { current, currentType, longest }
+}
+
+function formDotsHtml(results) {
+  const last10 = results.slice(-10)
+  if (!last10.length) return ''
+  const dots = last10.map(r => {
+    const cls = r === 'W' ? 'bg-secondary-fixed' : r === 'L' ? 'bg-red-400' : 'bg-white/20'
+    const title = r === 'W' ? 'Sieg' : r === 'L' ? 'Niederlage' : 'Unentschieden'
+    return `<div class="w-4 h-4 rounded-full ${cls}" title="${title}"></div>`
+  }).join('')
+  const half = Math.floor(last10.length / 2)
+  const fw = last10.slice(0, half).filter(r => r === 'W').length / (half || 1)
+  const sw = last10.slice(half).filter(r => r === 'W').length / ((last10.length - half) || 1)
+  let trendIcon = 'trending_flat', trendColor = 'text-white/30'
+  if (sw > fw + 0.1)  { trendIcon = 'trending_up';   trendColor = 'text-secondary-fixed' }
+  if (sw < fw - 0.1)  { trendIcon = 'trending_down'; trendColor = 'text-red-400' }
+  return `<div class="rounded-2xl bg-black/20 border border-white/5 px-5 py-4 mb-4">
+    <div class="text-[10px] font-headline uppercase tracking-widest text-white/40 mb-3">Formkurve · letzte ${last10.length} Spiele</div>
+    <div class="flex gap-1.5 items-center">${dots}</div>
+    <div class="text-xs text-white/30 font-body mt-2 flex items-center gap-1">
+      Trend <span class="material-symbols-outlined text-sm ${trendColor}">${trendIcon}</span>
+    </div>
+  </div>`
+}
+
+function profileStreakHtml(streak) {
+  if (!streak.current) return ''
+  const isWin = streak.currentType === 'W'
+  const icon = isWin ? (streak.current >= 5 ? '🔥' : '✅') : streak.currentType === 'D' ? '🤝' : '❌'
+  const label = isWin ? 'Siege in Folge' : streak.currentType === 'D' ? 'Unentschieden' : 'Niederlagen'
+  const hot = isWin && streak.current >= 5
+  return `<div class="rounded-2xl ${hot ? 'bg-secondary-fixed/5 border-secondary-fixed/20' : 'bg-black/20 border-white/5'} border px-5 py-3 mb-4 flex items-center gap-4">
+    <div class="flex items-center gap-2.5 flex-1">
+      <span class="text-xl leading-none">${icon}</span>
+      <div>
+        <span class="font-headline font-black text-white text-lg">${streak.current}</span>
+        <span class="text-xs text-white/40 font-body ml-1.5">${label}</span>
+      </div>
+    </div>
+    ${streak.longest > streak.current ? `<div class="text-right">
+      <div class="text-xs text-white/25 font-body">Bestleistung</div>
+      <div class="font-headline font-bold text-white/50 text-sm">${streak.longest} Siege</div>
+    </div>` : ''}
+  </div>`
+}
+
 // Collect recent matches for a player name across all tournaments
 function collectRecentMatches(displayName, limit = 10) {
   let tourneys = []
@@ -192,7 +290,7 @@ function collectRecentMatches(displayName, limit = 10) {
 // ── Own profile (edit mode) ───────────────────────────────────
 function renderOwnProfile(email, profile) {
   const app = document.getElementById('app')
-  const lkNums = Array.from({ length: 23 }, (_, i) => i + 1)
+  const lkNums = Array.from({ length: 25 }, (_, i) => i + 1)
 
   app.innerHTML = `
     <h1 class="text-3xl font-headline font-bold text-white tracking-tight mb-6">Mein Profil</h1>
@@ -344,7 +442,9 @@ function saveProfile(email) {
 function renderPublicProfile(targetEmail, profile, viewerEmail) {
   const app = document.getElementById('app')
 
+  const allResults = profile.privacy.show_matches ? collectAllMatchResults(profile.display_name) : []
   const matches = profile.privacy.show_matches ? collectRecentMatches(profile.display_name) : []
+  const streak = calcStreak(allResults)
 
   const lkBadge = profile.privacy.show_lk && profile.lk
     ? `<span class="text-xs font-headline font-bold bg-secondary-fixed/15 text-secondary-fixed px-2.5 py-1 rounded-full">LK ${esc(profile.lk)}</span>`
@@ -370,6 +470,8 @@ function renderPublicProfile(targetEmail, profile, viewerEmail) {
     </div>
 
     ${profile.privacy.show_matches ? `
+    ${profileStreakHtml(streak)}
+    ${formDotsHtml(allResults)}
     <div class="rounded-2xl bg-black/20 border border-white/5 overflow-hidden mb-4">
       <div class="px-5 py-4 border-b border-white/5 flex items-center gap-2">
         <span class="material-symbols-outlined text-base text-secondary-fixed">sports_tennis</span>

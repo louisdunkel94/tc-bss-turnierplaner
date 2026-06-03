@@ -236,6 +236,150 @@ function collectStats(playerName, yearFilter, monthFilter) {
   return { total, partners, opponents }
 }
 
+// All matches chronologically (no date filter) — for streak + form
+function collectAllMatchResults(playerName) {
+  const sorted = [...allTourneys].sort((a, b) => {
+    const da = new Date(a.start_at || a.date || 0)
+    const db = new Date(b.start_at || b.date || 0)
+    return da - db
+  })
+  const results = []
+  for (const t of sorted) {
+    const S = t.state
+    if (!S) continue
+    const rounds = [
+      ...(S.schedule || []),
+      ...(S.loserSchedule || []),
+      ...(S.groups || []).flatMap(g => g.schedule || []),
+      ...(S.koPhase || []),
+    ]
+    for (const r of rounds) {
+      for (const m of (r.matches || [])) {
+        if (!m || !m.result) continue
+        let outcome = null
+        if (m.herr1 !== undefined) {
+          const t1 = m.herr1 === playerName || m.dame1 === playerName
+          const t2 = m.herr2 === playerName || m.dame2 === playerName
+          if (!t1 && !t2) continue
+          outcome = m.result === 'draw' ? 'D' : ((t1 && m.result === 'team1') || (t2 && m.result === 'team2')) ? 'W' : 'L'
+        } else if (m.player1 !== undefined) {
+          const p1 = m.player1 === playerName
+          const p2 = m.player2 === playerName
+          if (!p1 && !p2) continue
+          outcome = m.result === 'draw' ? 'D' : ((p1 && m.result === 'p1') || (p2 && m.result === 'p2')) ? 'W' : 'L'
+        }
+        if (outcome) results.push(outcome)
+      }
+    }
+  }
+  return results
+}
+
+function calcStreak(results) {
+  // current streak from end
+  let current = 0
+  let currentType = null
+  if (results.length) {
+    currentType = results[results.length - 1]
+    for (let i = results.length - 1; i >= 0; i--) {
+      if (results[i] === currentType) current++
+      else break
+    }
+  }
+  // longest win streak
+  let longest = 0, run = 0
+  for (const r of results) {
+    if (r === 'W') { run++; longest = Math.max(longest, run) }
+    else run = 0
+  }
+  return { current, currentType, longest }
+}
+
+function streakHtml(streak) {
+  if (!streak.current) return ''
+  const isWin = streak.currentType === 'W'
+  const isDraw = streak.currentType === 'D'
+  const icon = isWin ? (streak.current >= 5 ? '🔥' : '✅') : isDraw ? '🤝' : '❌'
+  const label = isWin ? 'Siege in Folge' : isDraw ? 'Unentschieden in Folge' : 'Niederlagen in Folge'
+  const hotBorder = isWin && streak.current >= 5 ? 'border-secondary-fixed/30 bg-secondary-fixed/5' : 'bg-black/20 border-white/5'
+  return `<div class="flex gap-3 mb-6">
+    <div class="rounded-2xl ${hotBorder} border px-5 py-4 flex-1 flex items-center gap-3">
+      <span class="text-2xl leading-none">${icon}</span>
+      <div>
+        <div class="font-headline font-black text-white text-xl">${streak.current}</div>
+        <div class="text-xs text-white/40 font-body">Aktuelle Serie · ${label}</div>
+      </div>
+    </div>
+    <div class="rounded-2xl bg-black/20 border border-white/5 px-5 py-4 flex-1 flex items-center gap-3">
+      <span class="material-symbols-outlined text-secondary-fixed" style="font-variation-settings:'FILL' 1">military_tech</span>
+      <div>
+        <div class="font-headline font-black text-white text-xl">${streak.longest || '–'}</div>
+        <div class="text-xs text-white/40 font-body">Längste Siegesserie</div>
+      </div>
+    </div>
+  </div>`
+}
+
+function formHtml(results) {
+  const last10 = results.slice(-10)
+  if (!last10.length) return ''
+  const dots = last10.map(r => {
+    const cls = r === 'W' ? 'bg-secondary-fixed' : r === 'L' ? 'bg-red-400' : 'bg-white/20'
+    const title = r === 'W' ? 'Sieg' : r === 'L' ? 'Niederlage' : 'Unentschieden'
+    return `<div class="w-5 h-5 rounded-full ${cls} flex-shrink-0" title="${title}"></div>`
+  }).join('')
+  const half = Math.floor(last10.length / 2)
+  const firstWins  = last10.slice(0, half).filter(r => r === 'W').length / (half || 1)
+  const secondWins = last10.slice(half).filter(r => r === 'W').length / ((last10.length - half) || 1)
+  let trendIcon = 'trending_flat', trendColor = 'text-white/30'
+  if (secondWins > firstWins + 0.1)  { trendIcon = 'trending_up';   trendColor = 'text-secondary-fixed' }
+  if (secondWins < firstWins - 0.1)  { trendIcon = 'trending_down'; trendColor = 'text-red-400' }
+  return `<div class="rounded-2xl bg-black/20 border border-white/5 px-5 py-4 mb-6">
+    <div class="text-[10px] font-headline uppercase tracking-widest text-white/40 mb-3">Formkurve · letzte ${last10.length} Spiele</div>
+    <div class="flex gap-1.5 items-center">${dots}</div>
+    <div class="text-xs text-white/30 font-body mt-2.5 flex items-center gap-1">
+      Trend <span class="material-symbols-outlined text-sm ${trendColor}">${trendIcon}</span>
+    </div>
+  </div>`
+}
+
+function nemesisPartnerHtml(partners, opponents) {
+  const qualOpp = Object.entries(opponents).filter(([, e]) => e.games >= 3)
+  const qualPar = Object.entries(partners).filter(([, e]) => e.games >= 3)
+  if (!qualOpp.length && !qualPar.length) return ''
+
+  let nemesisHtml = ''
+  if (qualOpp.length) {
+    const [name, e] = qualOpp.sort((a, b) => (a[1].wins / a[1].games) - (b[1].wins / b[1].games))[0]
+    const profileEmail = resolveProfileEmail(name)
+    const nameEl = profileEmail
+      ? `<a href="profile.html?email=${encodeURIComponent(profileEmail)}" class="font-headline font-bold text-red-400 text-base truncate hover:text-red-300 no-underline">${esc(name)}</a>`
+      : `<div class="font-headline font-bold text-red-400 text-base truncate">${esc(name)}</div>`
+    nemesisHtml = `<div class="rounded-2xl bg-black/20 border border-red-500/10 p-4">
+      <div class="text-[10px] font-headline uppercase tracking-widest text-white/30 mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-xs">skull</span>Nemesis</div>
+      ${nameEl}
+      <div class="text-xs text-white/40 font-body mt-0.5">${e.wins}S · ${e.losses}N (${e.games} Duelle)</div>
+    </div>`
+  }
+
+  let partnerHtml = ''
+  if (qualPar.length) {
+    const [name, e] = qualPar.sort((a, b) => b[1].wins - a[1].wins)[0]
+    const profileEmail = resolveProfileEmail(name)
+    const nameEl = profileEmail
+      ? `<a href="profile.html?email=${encodeURIComponent(profileEmail)}" class="font-headline font-bold text-secondary-fixed text-base truncate hover:text-secondary-fixed-dim no-underline">${esc(name)}</a>`
+      : `<div class="font-headline font-bold text-secondary-fixed text-base truncate">${esc(name)}</div>`
+    partnerHtml = `<div class="rounded-2xl bg-black/20 border border-secondary-fixed/15 p-4">
+      <div class="text-[10px] font-headline uppercase tracking-widest text-white/30 mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-xs">favorite</span>Lieblingspartner</div>
+      ${nameEl}
+      <div class="text-xs text-white/40 font-body mt-0.5">${e.wins} gemeinsame Siege (${e.games} Spiele)</div>
+    </div>`
+  }
+
+  if (!nemesisHtml && !partnerHtml) return ''
+  return `<div class="grid grid-cols-2 gap-3 mb-6">${nemesisHtml}${partnerHtml}</div>`
+}
+
 function resolveProfileEmail(displayName) {
   try {
     const profiles = JSON.parse(localStorage.getItem('tc_profiles') || '{}')
@@ -282,8 +426,10 @@ function update() {
   }
 
   const { total, partners, opponents } = collectStats(playerName, yearFilter, monthFilter)
+  const allResults = collectAllMatchResults(playerName)
+  const streak = calcStreak(allResults)
 
-  if (total.games === 0) {
+  if (total.games === 0 && allResults.length === 0) {
     const note = (yearFilter || monthFilter) ? ' im ausgewählten Zeitraum' : ''
     content.innerHTML = `<div class="text-center py-20 text-white/30 font-body">
       <span class="material-symbols-outlined text-4xl block mb-3">sports_tennis</span>
@@ -292,12 +438,14 @@ function update() {
     return
   }
 
-  const winRate = Math.round((total.wins / total.games) * 100)
+  const winRate = total.games ? Math.round((total.wins / total.games) * 100) : 0
   const hasPartners  = Object.keys(partners).length > 0
   const hasOpponents = Object.keys(opponents).length > 0
 
   content.innerHTML = `
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+    ${streakHtml(streak)}
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
       <div class="rounded-2xl bg-black/20 border border-white/5 px-4 py-4 text-center">
         <div class="text-3xl font-headline font-black text-white">${total.games}</div>
         <div class="text-xs text-white/40 font-body mt-1">Spiele gesamt</div>
@@ -315,7 +463,10 @@ function update() {
         <div class="text-xs text-white/40 font-body mt-1">Gewinnquote</div>
       </div>
     </div>
-    ${total.draws > 0 ? `<p class="text-xs text-white/30 font-body -mt-5 mb-8 text-center">${total.draws} Unentschieden nicht in Gewinnquote gewertet</p>` : ''}
+    ${total.draws > 0 ? `<p class="text-xs text-white/30 font-body -mt-3 mb-6 text-center">${total.draws} Unentschieden nicht in Gewinnquote gewertet</p>` : ''}
+
+    ${formHtml(allResults)}
+    ${nemesisPartnerHtml(partners, opponents)}
 
     ${hasPartners ? `<section class="mb-6">
       <h2 class="text-base font-headline font-bold text-white mb-3 flex items-center gap-2">
