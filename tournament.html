@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#115217">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TC BSS">
+<link rel="apple-touch-icon" href="logo.png">
 <title>TC Bad Soden-Salmünster – Turnierplan</title>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
@@ -163,6 +169,8 @@ let S = {
   groups:       [],   // group phase groups
   koPhase:      null, // group phase KO rounds
   done:         false,
+  pausedPlayers:[],
+  useScores:    false, // track actual game scores (e.g. 6:3) instead of W/D/L only
 }
 
 const MIXED_MODES = new Set(['geloste_paarungen','americano'])
@@ -174,7 +182,7 @@ function isRR()     { return S.mode==='round_robin' }
 function allPlayers() { return [...S.herren, ...S.damen] }
 
 const MODE_LABEL = {
-  geloste_paarungen:'Geloste Paarungen', americano:'Americano',
+  geloste_paarungen:'Balanced Draw', americano:'Americano',
   round_robin:'Jeder gegen jeden', gruppenphase_ko:'Gruppenphase + KO',
   einfaches_ko:'Einfaches KO', doppeltes_ko:'Doppeltes KO', schweizer_system:'Schweizer System'
 }
@@ -207,16 +215,33 @@ function toast(msg) {
 //  DRAW: GELOSTE PAARUNGEN
 // ════════════════════════════════════════════════
 function drawGeloste(num) {
-  const n = Math.min(S.herren.length, S.damen.length)
-  // Count how often each herr-dame pair has played together to minimize repeats
+  const paused = new Set(S.pausedPlayers||[])
+  const activeHerren = S.herren.filter(h=>!paused.has(h))
+  const activeDamen  = S.damen.filter(d=>!paused.has(d))
+  const pausedPairs  = [...paused].map(p=>({name:p,gender:S.herren.includes(p)?'herr':'dame'}))
+  const n = Math.min(activeHerren.length, activeDamen.length)
+
+  // Partner history: avoid repeated partnerships
   const pairCount = {}
   S.schedule.forEach(rnd => rnd.matches.forEach(m => {
     const k1=m.herr1+'|'+m.dame1, k2=m.herr2+'|'+m.dame2
     pairCount[k1]=(pairCount[k1]||0)+1; pairCount[k2]=(pairCount[k2]||0)+1
   }))
-  // Greedy assignment: each man gets the woman he's played with least (random among ties)
-  const herren = shuffle(S.herren.slice(0,n))
-  const availDamen = [...S.damen.slice(0,n)]
+
+  // Opponent history: avoid repeated cross-team encounters
+  const oppCount = {}
+  const addOpp = (a,b) => { if(!oppCount[a]) oppCount[a]={}; oppCount[a][b]=(oppCount[a][b]||0)+1 }
+  S.schedule.forEach(rnd => rnd.matches.forEach(m => {
+    addOpp(m.herr1,m.herr2); addOpp(m.herr2,m.herr1)
+    addOpp(m.herr1,m.dame2); addOpp(m.dame2,m.herr1)
+    addOpp(m.dame1,m.herr2); addOpp(m.herr2,m.dame1)
+    addOpp(m.dame1,m.dame2); addOpp(m.dame2,m.dame1)
+  }))
+  const opp = (a,b) => (oppCount[a]&&oppCount[a][b])||0
+
+  // Step 1: Assign partners (minimize repeated partnerships)
+  const herren = shuffle(activeHerren.slice(0,n))
+  const availDamen = [...activeDamen.slice(0,n)]
   const pairs = []
   for(const herr of herren) {
     availDamen.sort((a,b)=>(pairCount[herr+'|'+a]||0)-(pairCount[herr+'|'+b]||0))
@@ -225,28 +250,51 @@ function drawGeloste(num) {
     const dame = tied[Math.floor(Math.random()*tied.length)]
     pairs.push({herr,dame}); availDamen.splice(availDamen.indexOf(dame),1)
   }
-  const sp = shuffle(pairs)
+
+  // Step 2: Split into active (on court) and bye pairs
   const courts = shuffle(Array.from({length:S.numCourts},(_,i)=>i+1))
-  const maxM = Math.min(S.numCourts, Math.floor(sp.length/2))
+  const maxM = Math.min(S.numCourts, Math.floor(pairs.length/2))
+  const sp = shuffle(pairs)
   const active = sp.slice(0,maxM*2), byePairs = sp.slice(maxM*2)
+
+  // Step 3: Match pairs as opponents (minimize repeated cross-team encounters)
+  // Score = total prior encounters between any player on team A and any player on team B
+  const matchScore = (t1,t2) =>
+    opp(t1.herr,t2.herr)+opp(t1.herr,t2.dame)+opp(t1.dame,t2.herr)+opp(t1.dame,t2.dame)
+
+  const unmatched = [...active]
   const matches = []
-  for(let i=0;i<active.length;i+=2)
-    matches.push({herr1:active[i].herr,dame1:active[i].dame,herr2:active[i+1].herr,dame2:active[i+1].dame,result:null,court:courts[i/2]})
-  return {round:num,matches,byePairs}
+  let courtIdx = 0
+  while(unmatched.length >= 2) {
+    const pick = Math.floor(Math.random()*unmatched.length)
+    const t1 = unmatched.splice(pick, 1)[0]
+    const scored = unmatched.map((t2,i)=>({i,score:matchScore(t1,t2)}))
+    scored.sort((a,b)=>a.score-b.score)
+    const minS = scored[0].score
+    const best = scored.filter(x=>x.score===minS)
+    const chosen = best[Math.floor(Math.random()*best.length)]
+    const t2 = unmatched.splice(chosen.i, 1)[0]
+    matches.push({herr1:t1.herr,dame1:t1.dame,herr2:t2.herr,dame2:t2.dame,result:null,court:courts[courtIdx++]})
+  }
+  return {round:num,matches,byePairs,pausedPairs}
 }
 
 // ════════════════════════════════════════════════
 //  DRAW: AMERICANO (minimiert Wiederholungen)
 // ════════════════════════════════════════════════
 function drawAmericano(num) {
-  const n = Math.min(S.herren.length, S.damen.length)
+  const paused = new Set(S.pausedPlayers||[])
+  const activeHerren = S.herren.filter(h=>!paused.has(h))
+  const activeDamen  = S.damen.filter(d=>!paused.has(d))
+  const pausedPairs  = [...paused].map(p=>({name:p,gender:S.herren.includes(p)?'herr':'dame'}))
+  const n = Math.min(activeHerren.length, activeDamen.length)
   const partnerCount = {}
   S.schedule.forEach(rnd => rnd.matches.forEach(m => {
     const k1=m.herr1+'|'+m.dame1, k2=m.herr2+'|'+m.dame2
     partnerCount[k1]=(partnerCount[k1]||0)+1; partnerCount[k2]=(partnerCount[k2]||0)+1
   }))
-  const herren = shuffle(S.herren.slice(0,n))
-  const availDamen = [...S.damen.slice(0,n)]
+  const herren = shuffle(activeHerren.slice(0,n))
+  const availDamen = [...activeDamen.slice(0,n)]
   const pairs = []
   for (const herr of herren) {
     availDamen.sort((a,b)=>(partnerCount[herr+'|'+a]||0)-(partnerCount[herr+'|'+b]||0))
@@ -262,7 +310,7 @@ function drawAmericano(num) {
   const matches = []
   for(let i=0;i<active.length;i+=2)
     matches.push({herr1:active[i].herr,dame1:active[i].dame,herr2:active[i+1].herr,dame2:active[i+1].dame,result:null,court:courts[Math.floor(i/2)]})
-  return {round:num,matches,byePairs}
+  return {round:num,matches,byePairs,pausedPairs}
 }
 
 // ════════════════════════════════════════════════
@@ -431,29 +479,31 @@ function generateKOFromGroups() {
 function calcMixedStandings() {
   const map={}
   ;[...S.herren.map(n=>({name:n,gender:'herr'})),...S.damen.map(n=>({name:n,gender:'dame'}))]
-    .forEach(p=>{map[p.name]={...p,pts:0,w:0,l:0,d:0,played:0}})
+    .forEach(p=>{map[p.name]={...p,pts:0,w:0,l:0,d:0,played:0,gW:0,gL:0}})
   S.schedule.forEach(rnd=>rnd.matches.forEach(m=>{
     if(!m.result) return
-    const aw=(ns,pts,w,d)=>ns.forEach(n=>{if(!map[n])return;map[n].played++;map[n].pts+=pts;if(w)map[n].w++;else if(d)map[n].d++;else map[n].l++})
-    if(m.result==='team1'){aw([m.herr1,m.dame1],2,true,false);aw([m.herr2,m.dame2],0,false,false)}
-    if(m.result==='team2'){aw([m.herr2,m.dame2],2,true,false);aw([m.herr1,m.dame1],0,false,false)}
-    if(m.result==='draw'){aw([m.herr1,m.dame1],1,false,true);aw([m.herr2,m.dame2],1,false,true)}
+    const aw=(ns,pts,w,d,gW,gL)=>ns.forEach(n=>{if(!map[n])return;map[n].played++;map[n].pts+=pts;if(w)map[n].w++;else if(d)map[n].d++;else map[n].l++;map[n].gW+=gW||0;map[n].gL+=gL||0})
+    const s1=m.score1??0, s2=m.score2??0
+    if(m.result==='team1'){aw([m.herr1,m.dame1],2,true,false,s1,s2);aw([m.herr2,m.dame2],0,false,false,s2,s1)}
+    if(m.result==='team2'){aw([m.herr2,m.dame2],2,true,false,s2,s1);aw([m.herr1,m.dame1],0,false,false,s1,s2)}
+    if(m.result==='draw'){aw([m.herr1,m.dame1],1,false,true,s1,s2);aw([m.herr2,m.dame2],1,false,true,s2,s1)}
   }))
-  return Object.values(map).sort((a,b)=>b.pts-a.pts||b.w-a.w||a.l-b.l)
+  return Object.values(map).sort((a,b)=>b.pts-a.pts||b.w-a.w||(b.gW-b.gL)-(a.gW-a.gL)||a.l-b.l)
 }
 
 function calcIndividualStandings(schedule) {
   const sc = schedule || S.schedule
   const map={}
-  allPlayers().forEach(n=>{map[n]={name:n,gender:S.herren.includes(n)?'herr':'dame',pts:0,w:0,l:0,d:0,played:0}})
+  allPlayers().forEach(n=>{map[n]={name:n,gender:S.herren.includes(n)?'herr':'dame',pts:0,w:0,l:0,d:0,played:0,gW:0,gL:0}})
   sc.forEach(rnd=>rnd.matches.forEach(m=>{
     if(!m.result) return
-    const aw=(n,pts,w,d)=>{if(!map[n])return;map[n].played++;map[n].pts+=pts;if(w)map[n].w++;else if(d)map[n].d++;else map[n].l++}
-    if(m.result==='p1'){aw(m.player1,2,true,false);aw(m.player2,0,false,false)}
-    if(m.result==='p2'){aw(m.player2,2,true,false);aw(m.player1,0,false,false)}
-    if(m.result==='draw'){aw(m.player1,1,false,true);aw(m.player2,1,false,true)}
+    const aw=(n,pts,w,d,gW,gL)=>{if(!map[n])return;map[n].played++;map[n].pts+=pts;if(w)map[n].w++;else if(d)map[n].d++;else map[n].l++;map[n].gW+=gW||0;map[n].gL+=gL||0}
+    const s1=m.score1??0, s2=m.score2??0
+    if(m.result==='p1'){aw(m.player1,2,true,false,s1,s2);aw(m.player2,0,false,false,s2,s1)}
+    if(m.result==='p2'){aw(m.player2,2,true,false,s2,s1);aw(m.player1,0,false,false,s1,s2)}
+    if(m.result==='draw'){aw(m.player1,1,false,true,s1,s2);aw(m.player2,1,false,true,s2,s1)}
   }))
-  return Object.values(map).sort((a,b)=>b.pts-a.pts||b.w-a.w||a.l-b.l)
+  return Object.values(map).sort((a,b)=>b.pts-a.pts||b.w-a.w||(b.gW-b.gL)-(a.gW-a.gL)||a.l-b.l)
 }
 
 function calcStandings() {
@@ -495,6 +545,12 @@ function syncSchedule() {
 function setView(v) {
   if((v==='plan'||v==='tabelle'||v==='paarungen')&&S.step==='setup'){toast('Bitte erst Turnier starten');return}
   S.view=v; save(); render()
+}
+
+function togglePause(name) {
+  const p = S.pausedPlayers||[]
+  S.pausedPlayers = p.includes(name) ? p.filter(x=>x!==name) : [...p, name]
+  save(); render()
 }
 
 function addPlayer(gender) {
@@ -609,10 +665,42 @@ function setKOResult(rIdx,mIdx,result) {
   save(); render()
 }
 
+function setMixedScore(rIdx,mIdx) {
+  const s1v=document.getElementById(`s1-${rIdx}-${mIdx}`)?.value
+  const s2v=document.getElementById(`s2-${rIdx}-${mIdx}`)?.value
+  const s1=s1v!==''&&s1v!=null?parseInt(s1v,10):null
+  const s2=s2v!==''&&s2v!=null?parseInt(s2v,10):null
+  const m=S.schedule[rIdx].matches[mIdx]
+  m.score1=isNaN(s1)?null:s1; m.score2=isNaN(s2)?null:s2
+  if(m.score1!==null&&m.score2!==null)
+    m.result=m.score1>m.score2?'team1':m.score1<m.score2?'team2':'draw'
+  else m.result=null
+  if(S.mode==='einfaches_ko') advanceKO(S.schedule)
+  if(S.mode==='doppeltes_ko') advanceDoubleKO()
+  save(); render()
+}
+
+function setIndividualScore(rIdx,mIdx) {
+  const s1v=document.getElementById(`s1-${rIdx}-${mIdx}`)?.value
+  const s2v=document.getElementById(`s2-${rIdx}-${mIdx}`)?.value
+  const s1=s1v!==''&&s1v!=null?parseInt(s1v,10):null
+  const s2=s2v!==''&&s2v!=null?parseInt(s2v,10):null
+  const m=S.schedule[rIdx].matches[mIdx]
+  m.score1=isNaN(s1)?null:s1; m.score2=isNaN(s2)?null:s2
+  if(m.score1!==null&&m.score2!==null)
+    m.result=m.score1>m.score2?'p1':m.score1<m.score2?'p2':'draw'
+  else m.result=null
+  save(); render()
+}
+
+function toggleUseScores() {
+  S.useScores=!S.useScores; save(); render()
+}
+
 function resetTournament() {
   if(!confirm('Turnier wirklich zurücksetzen?')) return
-  const {mode,herren,damen,numRounds,numCourts}=S
-  S={mode,step:'setup',view:'spieler',herren,damen,numRounds,numCourts,schedule:[],currentRound:0,loserSchedule:[],groups:[],koPhase:null}
+  const {mode,herren,damen,numRounds,numCourts,useScores}=S
+  S={mode,step:'setup',view:'spieler',herren,damen,numRounds,numCourts,useScores:useScores||false,schedule:[],currentRound:0,loserSchedule:[],groups:[],koPhase:null}
   localStorage.removeItem('donatocup_v4')
   if(_tournamentId) {
     if(DEMO_MODE){try{const t=JSON.parse(localStorage.getItem('tc_tourneys')||'[]');const i=t.findIndex(x=>x.id===_tournamentId);if(i>=0){delete t[i].state;localStorage.setItem('tc_tourneys',JSON.stringify(t))}}catch(e){}}
@@ -679,14 +767,21 @@ function renderSpieler() {
   const inT=S.step==='tournament'
   const ok=isMixed() ? (Math.min(S.herren.length,S.damen.length)>=2&&S.herren.length===S.damen.length) : allPlayers().length>=2
   const unbalanced=isMixed()&&S.herren.length!==S.damen.length&&allPlayers().length>0
-  const playerItem=(name,gender,idx)=>`
-    <div class="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
-      <div class="w-8 h-8 rounded-full ${gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-xs font-bold text-white font-headline flex-shrink-0">${initials(name)}</div>
-      <span class="text-sm font-body text-white font-medium flex-1 truncate">${esc(name)}</span>
+  const pausedPlayers = S.pausedPlayers||[]
+  const playerItem=(name,gender,idx)=>{
+    const isPaused=pausedPlayers.includes(name)
+    return `
+    <div class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors group ${isPaused?'bg-yellow-900/20 border border-yellow-500/20':'bg-white/5 hover:bg-white/10'}">
+      <div class="w-8 h-8 rounded-full ${gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-xs font-bold text-white font-headline flex-shrink-0 ${isPaused?'opacity-40':''}">${initials(name)}</div>
+      <span class="text-sm font-body font-medium flex-1 truncate ${isPaused?'text-white/35 line-through':'text-white'}">${esc(name)}</span>
+      ${inT&&!S.done?`<button onclick="togglePause('${esc(name)}')" title="${isPaused?'Wieder einsetzen':'Pausieren'}" class="flex-shrink-0 transition-colors ${isPaused?'text-yellow-400 hover:text-yellow-300':'text-white/20 hover:text-yellow-400 opacity-0 group-hover:opacity-100'}">
+        <span class="material-symbols-outlined text-sm">${isPaused?'play_circle':'pause_circle'}</span>
+      </button>`:''}
       ${S.done?'':`<button onclick="removePlayer('${gender}',${idx})" class="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0">
         <span class="material-symbols-outlined text-sm">close</span>
       </button>`}
     </div>`
+  }
   return `
     <div class="relative border-2 border-dashed border-white/15 rounded-2xl p-5 text-center cursor-pointer hover:border-secondary-fixed/40 hover:bg-white/5 transition-all mb-4" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
       <input type="file" accept=".xlsx,.xls,.csv" class="import-input" onchange="handleFileInput(event)"/>
@@ -703,7 +798,7 @@ function renderSpieler() {
       <span class="material-symbols-outlined text-base">warning</span>
       <span class="font-body">Mixed: gleiche Anzahl nötig — ${S.herren.length} Herren / ${S.damen.length} Damen</span>
     </div>`:''}
-    <div class="grid grid-cols-2 gap-3 mb-5">
+    <div class="grid grid-cols-2 gap-3 mb-3">
       ${(!isKO()&&!isGroup()&&S.mode!=='geloste_paarungen')?`<div class="flex items-center justify-between px-4 py-3 rounded-xl bg-black/25 border border-white/5">
         <div class="text-sm font-headline font-bold text-white">Runden</div>
         <div class="flex items-center gap-2">
@@ -721,6 +816,13 @@ function renderSpieler() {
         </div>
       </div>
     </div>
+    <button onclick="${S.done?'':'toggleUseScores()'}" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-5 transition-colors ${S.done?'opacity-50 cursor-default bg-black/20 border border-white/5':S.useScores?'bg-secondary-fixed/15 border border-secondary-fixed/30 hover:bg-secondary-fixed/20':'bg-black/25 border border-white/5 hover:bg-white/5'}">
+      <span class="material-symbols-outlined text-base ${S.useScores?'text-secondary-fixed':'text-white/30'}">${S.useScores?'check_box':'check_box_outline_blank'}</span>
+      <div class="text-left">
+        <div class="text-sm font-headline font-bold ${S.useScores?'text-secondary-fixed':'text-white'}">Spielstände eintragen</div>
+        <div class="text-xs font-body ${S.useScores?'text-secondary-fixed/60':'text-white/30'}">Exakte Ergebnisse (z.B. 6:3) statt nur Sieg/Niederlage</div>
+      </div>
+    </button>
     <div class="grid grid-cols-2 gap-4 mb-6">
       ${['herr','dame'].map(g=>{
         const list=g==='herr'?S.herren:S.damen
@@ -773,26 +875,39 @@ function renderRoundPills(schedule,current) {
 
 function renderMixedCard(m,rIdx,mIdx) {
   const res=m.result, w1=res==='team1', w2=res==='team2', dr=res==='draw'
-  const score=res?`<div class="flex items-center gap-1.5">
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w1?'1':dr?'½':'0'}</div>
-    <span class="font-headline font-bold text-white/30">:</span>
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w2?'1':dr?'½':'0'}</div>
-  </div>`:`<div class="flex items-center gap-1.5">
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-xl text-white/15 bg-white/5">–</div>
-    <span class="font-headline font-bold text-white/15">:</span>
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-xl text-white/15 bg-white/5">–</div>
-  </div>`
-  const btn=(type,icon,lbl)=>`<button onclick="setResult(${rIdx},${mIdx},'${type}')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs flex items-center gap-1 transition-all active:scale-95 ${res===type?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">${lbl}</button>`
+  let centerHtml
+  if(S.useScores&&!S.done) {
+    centerHtml=`<div class="flex items-center gap-1.5">
+      <input type="number" min="0" max="99" value="${m.score1??''}" id="s1-${rIdx}-${mIdx}" onchange="setMixedScore(${rIdx},${mIdx})"
+        class="w-12 h-10 text-center bg-white/10 border ${res?'border-secondary-fixed/40':'border-white/15'} rounded-xl font-headline font-bold text-lg text-white focus:outline-none focus:border-secondary-fixed/60 transition-colors"/>
+      <span class="font-headline font-bold text-white/30">:</span>
+      <input type="number" min="0" max="99" value="${m.score2??''}" id="s2-${rIdx}-${mIdx}" onchange="setMixedScore(${rIdx},${mIdx})"
+        class="w-12 h-10 text-center bg-white/10 border ${res?'border-secondary-fixed/40':'border-white/15'} rounded-xl font-headline font-bold text-lg text-white focus:outline-none focus:border-secondary-fixed/60 transition-colors"/>
+    </div>`
+  } else {
+    const hasScores=m.score1!=null&&m.score2!=null
+    const scoreHtml=hasScores
+      ?`<div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${m.score1}</div>
+        <span class="font-headline font-bold text-white/30">:</span>
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${m.score2}</div>`
+      :res
+        ?`<div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w1?'1':dr?'½':'0'}</div>
+          <span class="font-headline font-bold text-white/30">:</span>
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w2?'1':dr?'½':'0'}</div>`
+        :`<div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-xl text-white/15 bg-white/5">–</div>
+          <span class="font-headline font-bold text-white/15">:</span>
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-xl text-white/15 bg-white/5">–</div>`
+    const btn=(type,lbl)=>`<button onclick="setResult(${rIdx},${mIdx},'${type}')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs flex items-center gap-1 transition-all active:scale-95 ${res===type?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">${lbl}</button>`
+    centerHtml=`<div class="flex items-center gap-1.5">${scoreHtml}</div>
+      ${S.done?'':`<div class="flex gap-1">${btn('team1','T1')}${btn('draw','=')}${btn('team2','T2')}</div>`}`
+  }
   return `<div class="rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 border border-white/5 ${res?'bg-black/30':'bg-black/20'} relative">
     <div class="absolute top-2.5 right-3 text-[10px] font-headline text-white/30">Platz ${m.court}</div>
     <div class="flex-1 w-full">
       <div class="flex items-center gap-2"><span class="material-symbols-outlined text-blue-400 text-sm">person</span><span class="font-body font-bold text-sm ${w1?'text-secondary-fixed':'text-white'}">${esc(m.herr1)}</span></div>
       <div class="flex items-center gap-2 mt-1"><span class="material-symbols-outlined text-pink-400 text-sm">person</span><span class="font-body font-bold text-sm ${w1?'text-secondary-fixed':'text-white'}">${esc(m.dame1)}</span></div>
     </div>
-    <div class="flex flex-col items-center gap-2 shrink-0">
-      ${score}
-      ${S.done?'':`<div class="flex gap-1">${btn('team1','◀','T1')}${btn('draw','=','=')}${btn('team2','▶','T2')}</div>`}
-    </div>
+    <div class="flex flex-col items-center gap-2 shrink-0">${centerHtml}</div>
     <div class="flex-1 w-full md:text-right">
       <div class="flex items-center gap-2 md:flex-row-reverse"><span class="material-symbols-outlined text-blue-400 text-sm">person</span><span class="font-body font-bold text-sm ${w2?'text-secondary-fixed':'text-white'}">${esc(m.herr2)}</span></div>
       <div class="flex items-center gap-2 mt-1 md:flex-row-reverse"><span class="material-symbols-outlined text-pink-400 text-sm">person</span><span class="font-body font-bold text-sm ${w2?'text-secondary-fixed':'text-white'}">${esc(m.dame2)}</span></div>
@@ -800,32 +915,46 @@ function renderMixedCard(m,rIdx,mIdx) {
   </div>`
 }
 
-function renderIndividualCard(m,setResultFn,allowDraw=true) {
+function renderIndividualCard(m,setResultFn,allowDraw=true,rIdx=undefined,mIdx=undefined) {
   const res=m.result, w1=res==='p1', w2=res==='p2', dr=res==='draw'
-  const score=res?`<div class="flex items-center gap-1.5">
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w1?'✓':dr?'½':'✗'}</div>
-    <span class="font-headline font-bold text-white/30">:</span>
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w2?'✓':dr?'½':'✗'}</div>
-  </div>`:`<div class="flex items-center gap-1.5">
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white/15 bg-white/5 font-headline font-bold">–</div>
-    <span class="font-headline font-bold text-white/15">:</span>
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white/15 bg-white/5 font-headline font-bold">–</div>
-  </div>`
   const isHerr1=S.herren.includes(m.player1), isHerr2=S.herren.includes(m.player2)
+  const showScoreInputs=S.useScores&&!S.done&&rIdx!==undefined&&mIdx!==undefined
+  let centerHtml
+  if(showScoreInputs) {
+    centerHtml=`<div class="flex items-center gap-1.5">
+      <input type="number" min="0" max="99" value="${m.score1??''}" id="s1-${rIdx}-${mIdx}" onchange="setIndividualScore(${rIdx},${mIdx})"
+        class="w-12 h-10 text-center bg-white/10 border ${res?'border-secondary-fixed/40':'border-white/15'} rounded-xl font-headline font-bold text-lg text-white focus:outline-none focus:border-secondary-fixed/60 transition-colors"/>
+      <span class="font-headline font-bold text-white/30">:</span>
+      <input type="number" min="0" max="99" value="${m.score2??''}" id="s2-${rIdx}-${mIdx}" onchange="setIndividualScore(${rIdx},${mIdx})"
+        class="w-12 h-10 text-center bg-white/10 border ${res?'border-secondary-fixed/40':'border-white/15'} rounded-xl font-headline font-bold text-lg text-white focus:outline-none focus:border-secondary-fixed/60 transition-colors"/>
+    </div>`
+  } else {
+    const hasScores=m.score1!=null&&m.score2!=null
+    const scoreHtml=hasScores
+      ?`<div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${m.score1}</div>
+        <span class="font-headline font-bold text-white/30">:</span>
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${m.score2}</div>`
+      :res
+        ?`<div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w1?'✓':dr?'½':'✗'}</div>
+          <span class="font-headline font-bold text-white/30">:</span>
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-headline font-bold text-lg ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w2?'✓':dr?'½':'✗'}</div>`
+        :`<div class="w-10 h-10 rounded-xl flex items-center justify-center text-white/15 bg-white/5 font-headline font-bold">–</div>
+          <span class="font-headline font-bold text-white/15">:</span>
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white/15 bg-white/5 font-headline font-bold">–</div>`
+    centerHtml=`<div class="flex items-center gap-1.5">${scoreHtml}</div>
+      ${S.done?'': `<div class="flex gap-1">
+        <button onclick="${setResultFn}('p1')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs transition-all active:scale-95 ${res==='p1'?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">◀</button>
+        ${allowDraw?`<button onclick="${setResultFn}('draw')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs transition-all active:scale-95 ${res==='draw'?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">=</button>`:''}
+        <button onclick="${setResultFn}('p2')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs transition-all active:scale-95 ${res==='p2'?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">▶</button>
+      </div>`}`
+  }
   return `<div class="rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 border border-white/5 ${res?'bg-black/30':'bg-black/20'}">
     <div class="flex items-center gap-2 flex-1 w-full">
       <span class="material-symbols-outlined ${isHerr1?'text-blue-400':'text-pink-400'} text-sm">person</span>
       <span class="font-body font-bold text-sm flex-1 ${w1?'text-secondary-fixed':'text-white'}">${esc(m.player1||'TBD')}</span>
       ${m.court?`<span class="text-[10px] text-white/25 font-headline">P${m.court}</span>`:''}
     </div>
-    <div class="flex flex-col items-center gap-2 shrink-0">
-      ${score}
-      ${S.done?'': `<div class="flex gap-1">
-        <button onclick="${setResultFn}('p1')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs transition-all active:scale-95 ${res==='p1'?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">◀</button>
-        ${allowDraw?`<button onclick="${setResultFn}('draw')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs transition-all active:scale-95 ${res==='draw'?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">=</button>`:''}
-        <button onclick="${setResultFn}('p2')" class="h-7 px-2.5 rounded-lg font-headline font-bold text-xs transition-all active:scale-95 ${res==='p2'?'bg-secondary-fixed text-on-secondary-fixed':'bg-white/10 text-white/45 hover:bg-white/20'}">▶</button>
-      </div>`}
-    </div>
+    <div class="flex flex-col items-center gap-2 shrink-0">${centerHtml}</div>
     <div class="flex items-center gap-2 flex-1 w-full md:flex-row-reverse">
       <span class="material-symbols-outlined ${isHerr2?'text-blue-400':'text-pink-400'} text-sm">person</span>
       <span class="font-body font-bold text-sm flex-1 md:text-right ${w2?'text-secondary-fixed':'text-white'}">${esc(m.player2||'TBD')}</span>
@@ -851,11 +980,22 @@ function renderMixedPlan() {
   const byePairs=rnd.byePairs||[]
   const isLastRound=S.currentRound===S.schedule.length-1
   const isGeloste=S.mode==='geloste_paarungen'
-  const bye=byePairs.length?`<div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white/50 text-sm font-body mb-3">
-    <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-white/30 mb-1.5 flex items-center gap-1.5">
-      <span class="material-symbols-outlined text-xs">weekend</span>Freilos
+  const rndPaused=rnd.pausedPairs||[]
+  const bye=byePairs.length||rndPaused.length?`<div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white/50 text-sm font-body mb-3">
+    <div class="flex flex-wrap gap-4">
+      ${byePairs.length?`<div>
+        <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-white/30 mb-1.5 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-xs">weekend</span>Freilos
+        </div>
+        <div class="flex flex-wrap gap-2">${byePairs.map(p=>`<span class="text-xs px-2 py-1 rounded-lg bg-white/5 font-body text-white/40">${esc(p.herr)} &amp; ${esc(p.dame)}</span>`).join('')}</div>
+      </div>`:''}
+      ${rndPaused.length?`<div>
+        <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-yellow-500/50 mb-1.5 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-xs">pause_circle</span>Pause
+        </div>
+        <div class="flex flex-wrap gap-2">${rndPaused.map(p=>`<span class="text-xs px-2 py-1 rounded-lg bg-yellow-900/20 border border-yellow-500/20 font-body text-yellow-300/60">${esc(p.name)}</span>`).join('')}</div>
+      </div>`:''}
     </div>
-    <div class="flex flex-wrap gap-2">${byePairs.map(p=>`<span class="text-xs px-2 py-1 rounded-lg bg-white/5 font-body text-white/40">${esc(p.herr)} &amp; ${esc(p.dame)}</span>`).join('')}</div>
   </div>`:''
   return `
     <div class="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">${renderRoundPills(S.schedule,S.currentRound)}</div>
@@ -895,7 +1035,7 @@ function renderRRPlan() {
       <span class="text-xs font-bold bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-full font-headline">${doneCnt}/${S.schedule.length} fertig</span>
     </div>
     ${bye}
-    <div class="space-y-3">${rnd.matches.map((m,mi)=>renderIndividualCard(m,`(r=>setResult(${S.currentRound},${mi},r))`)).join('')}</div>`
+    <div class="space-y-3">${rnd.matches.map((m,mi)=>renderIndividualCard(m,`(r=>setResult(${S.currentRound},${mi},r))`,true,S.currentRound,mi)).join('')}</div>`
 }
 
 function renderSwissPlan() {
@@ -917,7 +1057,7 @@ function renderSwissPlan() {
       </div>
     </div>
     ${bye}
-    <div class="space-y-3">${rnd.matches.map((m,mi)=>renderIndividualCard(m,`(r=>setResult(${S.currentRound},${mi},r))`)).join('')}</div>`
+    <div class="space-y-3">${rnd.matches.map((m,mi)=>renderIndividualCard(m,`(r=>setResult(${S.currentRound},${mi},r))`,true,S.currentRound,mi)).join('')}</div>`
 }
 
 function renderKOPlan() {
@@ -931,47 +1071,104 @@ function renderKOPlan() {
 
 function renderBracket(schedule, title, setFn) {
   if(!schedule.length) return ''
-  const totalRounds=schedule.length
-  const finalWinner = totalRounds>0&&roundDone(schedule[totalRounds-1])&&schedule[totalRounds-1].matches.length===1
-    ? (schedule[totalRounds-1].matches[0].result==='p1'?schedule[totalRounds-1].matches[0].player1:schedule[totalRounds-1].matches[0].player2)
-    : null
-  const bracketCols = schedule.map((rnd,rIdx)=>{
-    const isLast=rIdx===totalRounds-1
-    const cards=rnd.matches.map((m,mIdx)=>{
+  const R=schedule.length
+  const N=schedule[0].matches.length  // first round match count
+  const CARD_H=72, SLOT_H=88, COL_W=168, CONN_W=40
+  const totalH=Math.max(N,1)*SLOT_H
+  const totalW=R*(COL_W+CONN_W)-CONN_W
+
+  const bracketRoundName=(rIdx)=>{
+    const rem=R-1-rIdx
+    if(rem===0) return 'Finale'
+    if(rem===1&&R>2) return 'Halbfinale'
+    if(rem===2&&R>3) return 'Viertelfinale'
+    return `Runde ${schedule[rIdx].round}`
+  }
+
+  // Generate match card HTML (absolutely positioned)
+  let cardsHtml=''
+  schedule.forEach((rnd,rIdx)=>{
+    const slotH=Math.pow(2,rIdx)*SLOT_H
+    const colX=rIdx*(COL_W+CONN_W)
+    rnd.matches.forEach((m,mIdx)=>{
+      const cardTop=mIdx*slotH+(slotH-CARD_H)/2
       const res=m.result, w1=res==='p1', w2=res==='p2'
       const p1=esc(m.player1||'TBD'), p2=esc(m.player2||'TBD')
-      const isHerr1=S.herren.includes(m.player1), isHerr2=S.herren.includes(m.player2)
-      return `<div class="rounded-xl bg-black/30 border ${res?'border-secondary-fixed/20':'border-white/8'} overflow-hidden mb-2">
-        <div onclick="${setFn(rIdx,mIdx,'p1')}" class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors border-b border-white/5 ${w1?'bg-secondary-fixed/10':''}">
-          <span class="material-symbols-outlined text-xs ${isHerr1?'text-blue-400':'text-pink-400'}">person</span>
-          <span class="font-body text-sm font-medium flex-1 ${w1?'text-secondary-fixed':'text-white/80'}">${p1}</span>
-          ${w1?'<span class="material-symbols-outlined text-sm text-secondary-fixed">check</span>':''}
-        </div>
-        <div onclick="${setFn(rIdx,mIdx,'p2')}" class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors ${w2?'bg-secondary-fixed/10':''}">
-          <span class="material-symbols-outlined text-xs ${isHerr2?'text-blue-400':'text-pink-400'}">person</span>
-          <span class="font-body text-sm font-medium flex-1 ${w2?'text-secondary-fixed':'text-white/80'}">${p2}</span>
-          ${w2?'<span class="material-symbols-outlined text-sm text-secondary-fixed">check</span>':''}
+      const isH1=S.herren.includes(m.player1), isH2=S.herren.includes(m.player2)
+      const isDone=!S.done&&m.player1&&m.player2
+      cardsHtml+=`<div style="position:absolute;left:${colX}px;top:${Math.round(cardTop)}px;width:${COL_W}px">
+        <div class="rounded-xl bg-black/30 border ${res?'border-secondary-fixed/25':'border-white/8'} overflow-hidden">
+          <div ${isDone?`onclick="${setFn(rIdx,mIdx,'p1')}" class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors border-b border-white/5 ${w1?'bg-secondary-fixed/10':''}"`:
+            `class="flex items-center gap-2 px-3 py-2 border-b border-white/5 ${w1?'bg-secondary-fixed/10':''}"`}>
+            <span class="material-symbols-outlined text-xs ${isH1?'text-blue-400':'text-pink-400'}">person</span>
+            <span class="font-body text-sm font-medium flex-1 truncate ${w1?'text-secondary-fixed':'text-white/80'}">${p1}</span>
+            ${w1?'<span class="material-symbols-outlined text-xs text-secondary-fixed">check</span>':''}
+          </div>
+          <div ${isDone?`onclick="${setFn(rIdx,mIdx,'p2')}" class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors ${w2?'bg-secondary-fixed/10':''}"`:`class="flex items-center gap-2 px-3 py-2 ${w2?'bg-secondary-fixed/10':''}"`}>
+            <span class="material-symbols-outlined text-xs ${isH2?'text-blue-400':'text-pink-400'}">person</span>
+            <span class="font-body text-sm font-medium flex-1 truncate ${w2?'text-secondary-fixed':'text-white/80'}">${p2}</span>
+            ${w2?'<span class="material-symbols-outlined text-xs text-secondary-fixed">check</span>':''}
+          </div>
         </div>
       </div>`
-    }).join('')
-    const roundName = isLast&&schedule[rIdx].matches.length===1 ? 'Finale' : `Runde ${rnd.round}`
-    return `<div class="flex-1 min-w-[140px]">
-      <div class="text-[10px] font-headline font-bold uppercase tracking-widest text-white/30 mb-3 text-center">${roundName}</div>
-      ${cards}
+    })
+  })
+
+  // Round labels
+  let labelsHtml=''
+  for(let rIdx=0;rIdx<R;rIdx++) {
+    const colX=rIdx*(COL_W+CONN_W)
+    labelsHtml+=`<div style="position:absolute;left:${colX}px;top:0;width:${COL_W}px" class="text-center">
+      <span class="text-[10px] font-headline font-bold uppercase tracking-widest text-white/35">${bracketRoundName(rIdx)}</span>
     </div>`
-  }).join('')
-  const winnerBanner = finalWinner ? `<div class="mt-4 flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-secondary-fixed/15 border border-secondary-fixed/30">
+  }
+
+  // SVG connecting lines
+  let svgLines=''
+  for(let rIdx=0;rIdx<R-1;rIdx++) {
+    const srcSlotH=Math.pow(2,rIdx)*SLOT_H
+    const dstSlotH=srcSlotH*2
+    const srcX=rIdx*(COL_W+CONN_W)+COL_W
+    const dstX=(rIdx+1)*(COL_W+CONN_W)
+    const midX=Math.round(srcX+CONN_W/2)
+    const numSrc=schedule[rIdx].matches.length
+    for(let i=0;i<numSrc;i+=2) {
+      if(i+1>=numSrc) break
+      const srcY1=Math.round(i*srcSlotH+srcSlotH/2)
+      const srcY2=Math.round((i+1)*srcSlotH+srcSlotH/2)
+      const dstY=Math.round((srcY1+srcY2)/2)
+      svgLines+=`<line x1="${srcX}" y1="${srcY1}" x2="${midX}" y2="${srcY1}" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <line x1="${srcX}" y1="${srcY2}" x2="${midX}" y2="${srcY2}" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <line x1="${midX}" y1="${srcY1}" x2="${midX}" y2="${srcY2}" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <line x1="${midX}" y1="${dstY}" x2="${dstX}" y2="${dstY}" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>`
+    }
+  }
+
+  const finalRound=schedule[R-1]
+  const finalWinner = roundDone(finalRound)&&finalRound.matches.length===1
+    ? (finalRound.matches[0].result==='p1'?finalRound.matches[0].player1:finalRound.matches[0].player2)
+    : null
+  const winnerBanner = finalWinner ? `<div class="mt-5 flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-secondary-fixed/15 border border-secondary-fixed/30">
     <span class="text-2xl">🏆</span>
     <div>
       <div class="text-[10px] font-headline uppercase tracking-widest text-secondary-fixed/70 mb-0.5">Sieger</div>
       <div class="font-headline font-bold text-xl text-secondary-fixed">${esc(finalWinner)}</div>
     </div>
   </div>`:''
+
   return `
-    <h2 class="text-lg font-headline font-bold text-white mb-4 flex items-center gap-2">
+    <h2 class="text-lg font-headline font-bold text-white mb-1 flex items-center gap-2">
       <span class="material-symbols-outlined text-base text-secondary-fixed">trophy</span>${title}
     </h2>
-    <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">${bracketCols}</div>
+    <div class="overflow-x-auto pb-4 scrollbar-hide">
+      <div style="position:relative;width:${totalW}px;height:${totalH+28}px">
+        <div style="position:relative;height:20px;width:${totalW}px;margin-bottom:8px">${labelsHtml}</div>
+        <div style="position:relative;width:${totalW}px;height:${totalH}px">
+          <svg style="position:absolute;inset:0;overflow:visible" width="${totalW}" height="${totalH}">${svgLines}</svg>
+          ${cardsHtml}
+        </div>
+      </div>
+    </div>
     ${winnerBanner}`
 }
 
@@ -1070,28 +1267,42 @@ function exportTournament() {
 
   // Sheet 1: Tabelle
   const standings = calcStandings()
-  const tRows = [['Platz','Name','Punkte','Spiele','Siege','Unentschieden','Niederlagen']]
-  standings.forEach((s,i) => tRows.push([i+1, s.name, s.pts, s.played, s.w, s.d||0, s.l]))
+  const tCols = ['Platz','Name','Punkte','Spiele','Siege','Unentschieden','Niederlagen']
+  if(S.useScores) tCols.push('Games gewonnen','Games verloren')
+  const tRows = [tCols]
+  standings.forEach((s,i) => {
+    const row = [i+1, s.name, s.pts, s.played, s.w, s.d||0, s.l]
+    if(S.useScores) row.push(s.gW||0, s.gL||0)
+    tRows.push(row)
+  })
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tRows), 'Tabelle')
 
   // Sheet 2: Alle Runden (mixed modes)
   if(isMixed() && S.schedule.length) {
-    const mRows = [['Runde','Platz','Herr 1','Dame 1','Ergebnis','Herr 2','Dame 2']]
+    const mCols = ['Runde','Platz','Herr 1','Dame 1','Ergebnis','Herr 2','Dame 2']
+    if(S.useScores) mCols.push('Score T1','Score T2')
+    const mRows = [mCols]
     S.schedule.forEach(rnd => rnd.matches.forEach(m => {
       const res = m.result==='team1'?'T1 gewinnt':m.result==='team2'?'T2 gewinnt':m.result==='draw'?'Unentschieden':''
-      mRows.push([rnd.round, m.court||'', m.herr1, m.dame1, res, m.herr2, m.dame2])
+      const row = [rnd.round, m.court||'', m.herr1, m.dame1, res, m.herr2, m.dame2]
+      if(S.useScores) row.push(m.score1??'', m.score2??'')
+      mRows.push(row)
     }))
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mRows), 'Spielplan')
   }
 
   // Sheet 2: Alle Runden (individual modes)
   if(!isMixed() && !isGroup() && S.schedule.length) {
-    const mRows = [['Runde','Spieler 1','Spieler 2','Ergebnis']]
+    const mCols = ['Runde','Spieler 1','Spieler 2','Ergebnis']
+    if(S.useScores) mCols.push('Score 1','Score 2')
+    const mRows = [mCols]
     S.schedule.forEach(rnd => {
       if(rnd.bye) mRows.push([rnd.round, rnd.bye, 'Freilos', ''])
       rnd.matches.forEach(m => {
         const res = m.result==='p1'?m.player1+' gewinnt':m.result==='p2'?m.player2+' gewinnt':m.result==='draw'?'Unentschieden':''
-        mRows.push([rnd.round, m.player1||'TBD', m.player2||'TBD', res])
+        const row = [rnd.round, m.player1||'TBD', m.player2||'TBD', res]
+        if(S.useScores) row.push(m.score1??'', m.score2??'')
+        mRows.push(row)
       })
     })
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mRows), 'Spielplan')
@@ -1144,13 +1355,15 @@ function renderTabelle() {
     </div>
     ${!rows.length||rows.every(r=>r.played===0)
       ?`<div class="text-center py-16 text-white/30 font-body"><span class="material-symbols-outlined text-4xl block mb-3">leaderboard</span>Noch keine Ergebnisse</div>`
-      :`<div class="space-y-2">${rows.map((s,i)=>`
+      :`<div class="space-y-2">${rows.map((s,i)=>{
+        const gameDiff=s.gW||s.gL?(s.gW>s.gL?'+':'')+(s.gW-s.gL):'';
+        return `
         <div class="rounded-xl p-4 bg-black/20 border border-white/5 flex items-center gap-3 ${accents[i]||''} hover:bg-white/5 transition-colors">
           <div class="text-lg w-8 text-center flex-shrink-0">${medals[i]||`<span class="font-headline font-bold text-white/30 text-sm">${i+1}</span>`}</div>
           <div class="w-10 h-10 rounded-full ${s.gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-sm font-headline font-bold text-white flex-shrink-0">${initials(s.name)}</div>
           <div class="flex-1 min-w-0">
             <div class="font-headline font-bold text-white text-sm md:text-base truncate">${esc(s.name)}</div>
-            <div class="text-xs text-white/40 font-body mt-0.5">${s.played} Sp · ${s.w}S${s.d>0?' '+s.d+'U':''} · ${s.l}N</div>
+            <div class="text-xs text-white/40 font-body mt-0.5">${s.played} Sp · ${s.w}S${s.d>0?' '+s.d+'U':''} · ${s.l}N${S.useScores&&(s.gW||s.gL)?` · <span class="text-secondary-fixed/70">${s.gW}:${s.gL} G</span>`:''}</div>
           </div>
           <div class="hidden sm:block flex-1 max-w-24 mx-3">
             <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -1161,7 +1374,7 @@ function renderTabelle() {
             <div class="font-headline font-bold text-lg ${i===0?'text-secondary-fixed':'text-white'}">${s.pts}</div>
             <div class="text-[10px] text-white/25 font-body uppercase">Pkt</div>
           </div>
-        </div>`).join('')}</div>`}
+        </div>`}).join('')}</div>`}
   `
 }
 
@@ -1277,6 +1490,11 @@ initAuth().then(async ok => {
   if(!loaded) load()
   render()
 })
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'))
+}
 </script>
 </body>
 </html>

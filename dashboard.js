@@ -90,9 +90,14 @@ async function renderMitglied(app) {
   const myIds    = new Set(myRegs.map(r => r.tournament_id))
 
   app.innerHTML = `
-    <div class="mb-8">
-      <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Willkommen${currentProfile?.display_name ? ', ' + esc(currentProfile.display_name.split(' ')[0]) : ''}</h1>
-      <p class="text-white/40 font-body mt-1">Hier sind die aktuellen Turniere.</p>
+    <div class="flex items-start justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Willkommen${currentProfile?.display_name ? ', ' + esc(currentProfile.display_name.split(' ')[0]) : ''}</h1>
+        <p class="text-white/40 font-body mt-1">Hier sind die aktuellen Turniere.</p>
+      </div>
+      <a href="stats.html" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors no-underline flex-shrink-0">
+        <span class="material-symbols-outlined text-base">bar_chart</span><span class="hidden md:inline">Statistiken</span>
+      </a>
     </div>
     ${!tourneys?.length
       ? `<div class="text-center py-20 text-white/30 font-body">
@@ -118,9 +123,14 @@ async function renderVeranstalter(app) {
         <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Turniere</h1>
         <p class="text-white/40 font-body mt-1">Verwalte und erstelle Turniere.</p>
       </div>
-      <button onclick="openCreateModal()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
-        <span class="material-symbols-outlined text-base">add</span>Turnier erstellen
-      </button>
+      <div class="flex items-center gap-2">
+        <a href="stats.html" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors no-underline">
+          <span class="material-symbols-outlined text-base">bar_chart</span><span class="hidden md:inline">Statistiken</span>
+        </a>
+        <button onclick="openCreateModal()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+          <span class="material-symbols-outlined text-base">add</span>Turnier erstellen
+        </button>
+      </div>
     </div>
     ${!active.length && !archived.length
       ? `<div class="text-center py-16 text-white/30 font-body">
@@ -345,7 +355,7 @@ async function changeRole(userId, role) {
 
 // ── Tournament Modes ─────────────────────────────────────────
 const MODES = {
-  geloste_paarungen: { label: 'Geloste Paarungen',       icon: 'shuffle',      desc: 'Zufällige Mixed-Teams jede Runde per 3-Topf-Losverfahren. Punkte laufen individuell.' },
+  geloste_paarungen: { label: 'Balanced Draw',            icon: 'shuffle',      desc: 'Mixed-Teams werden jede Runde neu ausgelost – Wiederholungen bei Partner und Gegner werden minimiert.' },
   americano:         { label: 'Amerikanisches Turnier',  icon: 'sync_alt',     desc: 'Spieler rotieren Partner jede Runde – soziales Format, jeder spielt mit jedem zusammen.' },
   round_robin:       { label: 'Jeder gegen jeden',       icon: 'grid_view',    desc: 'Alle spielen gegen alle in festen Paarungen. Die Tabelle entscheidet den Sieger.' },
   gruppenphase_ko:   { label: 'Gruppenphase + KO',       icon: 'account_tree', desc: 'Gruppenspiele in Pools, dann KO-Runden für die Besten jeder Gruppe.' },

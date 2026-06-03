@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#115217">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TC BSS">
+<link rel="apple-touch-icon" href="logo.png">
+<title>Anzeigetafel – TC Bad Soden-Salmünster</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+<script src="config.js"></script>
+<script>
+tailwind.config = {
+  darkMode:"class",
+  theme:{extend:{
+    colors:{
+      "primary":"#003908","primary-container":"#115217",
+      "on-primary-container":"#83c57c",
+      "secondary-fixed":"#dbed50","on-secondary-fixed":"#1a1e00",
+      "secondary-fixed-dim":"#bfd035",
+      "outline-variant":"#c0c9bb","error":"#ba1a1a"
+    },
+    fontFamily:{headline:["Lexend","sans-serif"],body:["Plus Jakarta Sans","sans-serif"]},
+    borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem","2xl":"0.75rem",full:"9999px"}
+  }}
+}
+</script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;background-color:#0a1f0b;color:#fff;}
+  .font-headline,h1,h2,h3,h4{font-family:'Lexend',sans-serif;}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
+</style>
+</head>
+<body class="min-h-screen">
+
+<header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
+  <div class="flex items-center gap-3">
+    <img src="logo.png" alt="TC Bad Soden-Salmünster" class="w-9 h-9 object-contain flex-shrink-0"/>
+    <div>
+      <div id="tournament-name" class="text-base font-black text-white tracking-tight font-headline leading-none">Anzeigetafel</div>
+      <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">TC Bad Soden-Salmünster</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <div id="round-badge" class="hidden text-xs font-bold bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-full font-headline"></div>
+    <div class="text-[10px] text-white/30 font-body">
+      <span class="material-symbols-outlined text-xs align-middle">sync</span>
+      <span id="last-update">–</span>
+    </div>
+    <button onclick="toggleFullscreen()" class="text-white/40 hover:text-white transition-colors px-3 py-1.5 rounded-xl hover:bg-white/10 flex items-center gap-1.5 text-sm font-headline font-semibold">
+      <span class="material-symbols-outlined text-base" id="fs-icon">fullscreen</span>
+      <span class="hidden md:inline">Vollbild</span>
+    </button>
+  </div>
+</header>
+
+<main class="max-w-screen-xl mx-auto px-4 py-6">
+  <div id="error-msg" class="hidden text-center py-20">
+    <span class="material-symbols-outlined text-5xl text-white/20 block mb-3">sports_tennis</span>
+    <p class="text-white/40 font-body text-lg">Turnier nicht gefunden.</p>
+    <p class="text-white/25 font-body text-sm mt-2">URL-Parameter <code class="bg-white/10 px-1 rounded">?t=&lt;id&gt;</code> prüfen</p>
+  </div>
+  <div id="content" class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <div class="lg:col-span-3" id="matches-panel"></div>
+    <div class="lg:col-span-2" id="standings-panel"></div>
+  </div>
+</main>
+
+<script>
+const POCKETBASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.POCKETBASE_URL : null) || 'YOUR_POCKETBASE_URL'
+const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
+const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
+const tid = new URLSearchParams(location.search).get('t')
+
+let S = null
+let tournamentMeta = null
+
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function initials(n) { return (n||'?').trim().split(/\s+/).map(w=>w[0].toUpperCase()).slice(0,2).join('') }
+function roundDone(r) { return r.matches.length>0 && r.matches.every(m=>m.result!==null) }
+
+const MIXED_MODES = new Set(['geloste_paarungen','americano'])
+function isMixed()  { return S && MIXED_MODES.has(S.mode) }
+function isKO()     { return S && (S.mode==='einfaches_ko' || S.mode==='doppeltes_ko') }
+function isGroup()  { return S && S.mode==='gruppenphase_ko' }
+function allPlayers() { return [...(S.herren||[]), ...(S.damen||[])] }
+
+const MODE_LABEL = {
+  geloste_paarungen:'Balanced Draw', americano:'Americano',
+  round_robin:'Jeder gegen jeden', gruppenphase_ko:'Gruppenphase + KO',
+  einfaches_ko:'Einfaches KO', doppeltes_ko:'Doppeltes KO', schweizer_system:'Schweizer System'
+}
+
+function calcMixedStandings() {
+  const map={}
+  ;[...S.herren.map(n=>({name:n,gender:'herr'})),...S.damen.map(n=>({name:n,gender:'dame'}))]
+    .forEach(p=>{map[p.name]={...p,pts:0,w:0,l:0,d:0,played:0,gW:0,gL:0}})
+  S.schedule.forEach(rnd=>rnd.matches.forEach(m=>{
+    if(!m.result) return
+    const aw=(ns,pts,w,d,gW,gL)=>ns.forEach(n=>{if(!map[n])return;map[n].played++;map[n].pts+=pts;if(w)map[n].w++;else if(d)map[n].d++;else map[n].l++;map[n].gW+=gW||0;map[n].gL+=gL||0})
+    const s1=m.score1??0, s2=m.score2??0
+    if(m.result==='team1'){aw([m.herr1,m.dame1],2,true,false,s1,s2);aw([m.herr2,m.dame2],0,false,false,s2,s1)}
+    if(m.result==='team2'){aw([m.herr2,m.dame2],2,true,false,s2,s1);aw([m.herr1,m.dame1],0,false,false,s1,s2)}
+    if(m.result==='draw'){aw([m.herr1,m.dame1],1,false,true,s1,s2);aw([m.herr2,m.dame2],1,false,true,s2,s1)}
+  }))
+  return Object.values(map).sort((a,b)=>b.pts-a.pts||b.w-a.w||a.l-b.l)
+}
+
+function calcIndividualStandings(schedule) {
+  const sc = schedule || S.schedule
+  const map={}
+  allPlayers().forEach(n=>{map[n]={name:n,gender:S.herren.includes(n)?'herr':'dame',pts:0,w:0,l:0,d:0,played:0,gW:0,gL:0}})
+  sc.forEach(rnd=>rnd.matches.forEach(m=>{
+    if(!m.result) return
+    const aw=(n,pts,w,d,gW,gL)=>{if(!map[n])return;map[n].played++;map[n].pts+=pts;if(w)map[n].w++;else if(d)map[n].d++;else map[n].l++;map[n].gW+=gW||0;map[n].gL+=gL||0}
+    const s1=m.score1??0, s2=m.score2??0
+    if(m.result==='p1'){aw(m.player1,2,true,false,s1,s2);aw(m.player2,0,false,false,s2,s1)}
+    if(m.result==='p2'){aw(m.player2,2,true,false,s2,s1);aw(m.player1,0,false,false,s1,s2)}
+    if(m.result==='draw'){aw(m.player1,1,false,true,s1,s2);aw(m.player2,1,false,true,s2,s1)}
+  }))
+  return Object.values(map).sort((a,b)=>b.pts-a.pts||b.w-a.w||a.l-b.l)
+}
+
+function calcStandings() {
+  if(isMixed()) return calcMixedStandings()
+  if(isGroup()) {
+    const allSched=(S.groups||[]).flatMap(g=>g.schedule)
+    return calcIndividualStandings(allSched)
+  }
+  return calcIndividualStandings()
+}
+
+function getCurrentRound() {
+  if (isGroup() && !S.koPhase) return null
+  if (isGroup() && S.koPhase) {
+    const koDone = S.koPhase.filter(roundDone).length
+    return S.koPhase[koDone] || S.koPhase[S.koPhase.length-1] || null
+  }
+  const schedule = S.schedule || []
+  return schedule[S.currentRound || 0] || null
+}
+
+function renderMatchCard(m) {
+  const res = m.result
+  const hasScores = m.score1 != null && m.score2 != null
+
+  if (isMixed()) {
+    const w1=res==='team1', w2=res==='team2', dr=res==='draw'
+    const scoreStr = hasScores
+      ? `<div class="flex items-center gap-2 my-1">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${m.score1}</div>
+          <span class="font-headline font-bold text-white/30 text-xl">:</span>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${m.score2}</div>
+        </div>`
+      : res
+        ? `<div class="flex items-center gap-2 my-1">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w1?'1':dr?'½':'0'}</div>
+            <span class="font-headline font-bold text-white/30 text-xl">:</span>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w2?'1':dr?'½':'0'}</div>
+          </div>`
+        : `<div class="flex items-center gap-2 my-1">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl text-white/15 bg-white/5">–</div>
+            <span class="font-headline font-bold text-white/15 text-xl">:</span>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl text-white/15 bg-white/5">–</div>
+          </div>`
+    return `<div class="rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-3 border border-white/5 ${res?'bg-black/30':'bg-black/20'} relative">
+      <div class="absolute top-3 right-4 text-xs font-headline font-bold text-white/30 bg-white/5 px-2 py-0.5 rounded-full">Platz ${m.court}</div>
+      <div class="flex-1 w-full text-center md:text-left">
+        <div class="flex items-center gap-2 justify-center md:justify-start mb-1.5">
+          <span class="material-symbols-outlined text-blue-400">person</span>
+          <span class="font-headline font-bold text-xl ${w1?'text-secondary-fixed':'text-white'}">${esc(m.herr1)}</span>
+        </div>
+        <div class="flex items-center gap-2 justify-center md:justify-start">
+          <span class="material-symbols-outlined text-pink-400">person</span>
+          <span class="font-headline font-bold text-xl ${w1?'text-secondary-fixed':'text-white'}">${esc(m.dame1)}</span>
+        </div>
+      </div>
+      <div class="flex flex-col items-center shrink-0">${scoreStr}</div>
+      <div class="flex-1 w-full text-center md:text-right">
+        <div class="flex items-center gap-2 justify-center md:justify-end mb-1.5">
+          <span class="font-headline font-bold text-xl ${w2?'text-secondary-fixed':'text-white'}">${esc(m.herr2)}</span>
+          <span class="material-symbols-outlined text-blue-400">person</span>
+        </div>
+        <div class="flex items-center gap-2 justify-center md:justify-end">
+          <span class="font-headline font-bold text-xl ${w2?'text-secondary-fixed':'text-white'}">${esc(m.dame2)}</span>
+          <span class="material-symbols-outlined text-pink-400">person</span>
+        </div>
+      </div>
+    </div>`
+  } else {
+    const w1=res==='p1', w2=res==='p2', dr=res==='draw'
+    const isH1=S.herren.includes(m.player1), isH2=S.herren.includes(m.player2)
+    const scoreStr = hasScores
+      ? `<div class="flex items-center gap-2">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${m.score1}</div>
+          <span class="font-headline font-bold text-white/30 text-xl">:</span>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${m.score2}</div>
+        </div>`
+      : res
+        ? `<div class="flex items-center gap-2">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl ${w1?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w1?'✓':dr?'½':'✗'}</div>
+            <span class="font-headline font-bold text-white/30 text-xl">:</span>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl ${w2?'bg-secondary-fixed text-on-secondary-fixed':dr?'bg-secondary-fixed/20 text-secondary-fixed':'bg-white/10 text-white/30'}">${w2?'✓':dr?'½':'✗'}</div>
+          </div>`
+        : `<div class="flex items-center gap-2">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl text-white/15 bg-white/5">–</div>
+            <span class="font-headline font-bold text-white/15 text-xl">:</span>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-headline font-bold text-2xl text-white/15 bg-white/5">–</div>
+          </div>`
+    return `<div class="rounded-2xl p-5 flex items-center justify-between gap-4 border border-white/5 ${res?'bg-black/30':'bg-black/20'}">
+      <div class="flex items-center gap-3 flex-1">
+        <span class="material-symbols-outlined ${isH1?'text-blue-400':'text-pink-400'}">person</span>
+        <span class="font-headline font-bold text-xl ${w1?'text-secondary-fixed':'text-white'}">${esc(m.player1||'TBD')}</span>
+        ${m.court?`<span class="ml-auto text-xs text-white/25 font-headline">P${m.court}</span>`:''}
+      </div>
+      <div class="shrink-0">${scoreStr}</div>
+      <div class="flex items-center gap-3 flex-1 flex-row-reverse">
+        <span class="material-symbols-outlined ${isH2?'text-blue-400':'text-pink-400'}">person</span>
+        <span class="font-headline font-bold text-xl ${w2?'text-secondary-fixed':'text-white'} text-right">${esc(m.player2||'TBD')}</span>
+      </div>
+    </div>`
+  }
+}
+
+function renderMatchesPanel() {
+  const rnd = getCurrentRound()
+  if (!rnd) {
+    if (isGroup() && !S.koPhase) {
+      return `<div class="text-center py-12 text-white/30">
+        <span class="material-symbols-outlined text-4xl block mb-2">groups</span>
+        <p class="font-body">Gruppenphase läuft</p>
+      </div>`
+    }
+    return `<div class="text-center py-12 text-white/30">
+      <span class="material-symbols-outlined text-4xl block mb-2">sports_tennis</span>
+      <p class="font-body">Keine aktive Runde</p>
+    </div>`
+  }
+
+  const totalRounds = isKO() ? S.schedule.length : (S.numRounds || S.schedule.length || 0)
+  const roundNum = rnd.round
+  const done = roundDone(rnd)
+
+  let byesHtml = ''
+  if (rnd.byePairs?.length) {
+    byesHtml = `<div class="mt-3 px-4 py-2.5 rounded-xl bg-yellow-900/20 border border-yellow-500/15">
+      <div class="text-[10px] font-headline uppercase tracking-widest text-yellow-400/60 mb-1">Freilos</div>
+      <div class="flex flex-wrap gap-2">
+        ${rnd.byePairs.map(p=>`<span class="text-sm font-body text-yellow-300/70">${esc(p.herr||'')}&nbsp;/&nbsp;${esc(p.dame||'')}</span>`).join('')}
+      </div>
+    </div>`
+  }
+  if (rnd.bye) {
+    byesHtml = `<div class="mt-3 px-4 py-2.5 rounded-xl bg-yellow-900/20 border border-yellow-500/15">
+      <span class="text-[10px] font-headline uppercase tracking-widest text-yellow-400/60">Freilos </span>
+      <span class="text-sm font-body text-yellow-300/70">${esc(rnd.bye)}</span>
+    </div>`
+  }
+
+  return `
+    <div class="flex items-center gap-3 mb-5">
+      <h2 class="text-3xl font-headline font-black text-white">Runde ${roundNum}</h2>
+      ${totalRounds ? `<span class="text-white/30 font-headline font-bold text-xl">/ ${totalRounds}</span>` : ''}
+      ${done ? `<span class="ml-2 bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-full text-xs font-headline font-bold">Beendet</span>` : ''}
+      ${S.done ? `<span class="ml-2 bg-white/10 text-white/50 px-3 py-1 rounded-full text-xs font-headline font-bold">Turnier beendet</span>` : ''}
+    </div>
+    <div class="space-y-3">
+      ${rnd.matches.map(m => renderMatchCard(m)).join('')}
+    </div>
+    ${byesHtml}`
+}
+
+function renderStandingsPanel() {
+  const rows = calcStandings()
+  const maxPts = Math.max(...rows.map(r=>r.pts), 1)
+  const medals = ['🥇','🥈','🥉']
+  const useScores = S.useScores
+
+  return `
+    <div class="sticky top-20">
+      <h2 class="text-2xl font-headline font-bold text-white mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary-fixed">leaderboard</span>Tabelle
+      </h2>
+      ${!rows.length || rows.every(r=>r.played===0)
+        ? `<div class="text-center py-12 text-white/30 font-body">Noch keine Ergebnisse</div>`
+        : `<div class="space-y-2">
+            ${rows.slice(0,15).map((s,i)=>`
+              <div class="rounded-xl px-4 py-3 bg-black/20 border border-white/5 flex items-center gap-3">
+                <div class="text-lg w-7 text-center flex-shrink-0">${medals[i]||`<span class="font-headline font-bold text-white/30 text-sm">${i+1}</span>`}</div>
+                <div class="w-9 h-9 rounded-full ${s.gender==='herr'?'bg-blue-500':'bg-pink-500'} flex items-center justify-center text-xs font-headline font-bold text-white flex-shrink-0">${initials(s.name)}</div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-headline font-bold text-white truncate">${esc(s.name)}</div>
+                  <div class="text-xs text-white/35 font-body mt-0.5">
+                    ${s.played} Sp · ${s.w}S${s.d>0?' '+s.d+'U':''} · ${s.l}N
+                    ${useScores && (s.gW||s.gL) ? `· <span class="text-secondary-fixed/70">${s.gW}:${s.gL}</span>` : ''}
+                  </div>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <div class="font-headline font-bold text-xl ${i===0?'text-secondary-fixed':'text-white'}">${s.pts}</div>
+                  <div class="text-[10px] text-white/25 font-body">Pkt</div>
+                </div>
+              </div>`).join('')}
+          </div>`}
+      <div class="mt-4 text-[10px] text-white/20 font-body text-center">
+        ${allPlayers().length} Spieler · ${MODE_LABEL[S.mode]||S.mode}
+      </div>
+    </div>`
+}
+
+async function loadState() {
+  if (!tid) return null
+  if (DEMO_MODE) {
+    try {
+      const tourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]')
+      const t = tourneys.find(x => x.id === tid)
+      if (!t || !t.state) return null
+      return { meta: t, state: t.state }
+    } catch(e) { return null }
+  }
+  try {
+    const data = await pb.collection('tournaments').getOne(tid, { fields: 'id,name,state,num_rounds,game_mode' })
+    if (!data.state) return null
+    return { meta: data, state: data.state }
+  } catch(e) { return null }
+}
+
+async function render() {
+  const data = await loadState()
+
+  document.getElementById('last-update').textContent = new Date().toLocaleTimeString('de-DE')
+
+  if (!data) {
+    document.getElementById('error-msg').classList.remove('hidden')
+    document.getElementById('content').classList.add('hidden')
+    return
+  }
+
+  document.getElementById('error-msg').classList.add('hidden')
+  document.getElementById('content').classList.remove('hidden')
+
+  tournamentMeta = data.meta
+  S = data.state
+
+  const nameEl = document.getElementById('tournament-name')
+  if (nameEl) nameEl.textContent = tournamentMeta.name || 'Turnier'
+
+  const badge = document.getElementById('round-badge')
+  if (S.done) {
+    badge.textContent = 'Abgeschlossen'
+    badge.classList.remove('hidden')
+  } else if (S.step === 'tournament') {
+    const total = S.schedule?.length || 0
+    const done = S.schedule?.filter(roundDone).length || 0
+    badge.textContent = `${done}/${total} Runden`
+    badge.classList.remove('hidden')
+  } else {
+    badge.classList.add('hidden')
+  }
+
+  document.getElementById('matches-panel').innerHTML = renderMatchesPanel()
+  document.getElementById('standings-panel').innerHTML = renderStandingsPanel()
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(()=>{})
+    document.getElementById('fs-icon').textContent = 'fullscreen_exit'
+  } else {
+    document.exitFullscreen().catch(()=>{})
+    document.getElementById('fs-icon').textContent = 'fullscreen'
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  document.getElementById('fs-icon').textContent = document.fullscreenElement ? 'fullscreen_exit' : 'fullscreen'
+})
+
+render()
+setInterval(render, 30000)
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'))
+}
+</script>
+</body>
+</html>

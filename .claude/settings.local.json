@@ -25,7 +25,11 @@
       "Bash(gh issue *)",
       "Bash(curl -s http://127.0.0.1:8090/api/health)",
       "Read(//Users/louisdunkelprivat/Downloads/**)",
-      "Read(//opt/**)"
+      "Read(//opt/**)",
+      "Bash(grep -n \"von \\\\${S.numRounds}\" /Users/louisdunkelprivat/Dev/Donatocup/tournament.html)",
+      "Bash(grep -n \"von \\\\${S\" /Users/louisdunkelprivat/Dev/Donatocup/tournament.html)",
+      "Bash(grep -n \"numRounds\\\\|von \\\\$\" /Users/louisdunkelprivat/Dev/Donatocup/tournament.html)",
+      "Bash(git checkout *)"
     ]
   }
 }
