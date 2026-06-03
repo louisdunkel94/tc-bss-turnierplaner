@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script>try{if((localStorage.getItem('tc-theme')||'dark')==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.classList.add('dark')}</script>
+<link rel="stylesheet" href="theme.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#115217">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,6 +14,7 @@
 <title>Impressum – TC Bad Soden-Salmünster Turniere</title>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="theme.js" defer></script>
 <script>
 tailwind.config = {
   theme:{extend:{
@@ -27,7 +30,7 @@ tailwind.config = {
 }
 </script>
 <style>
-  body{font-family:'Inter',sans-serif;background-color:#115217;color:#fff;}
+  body{font-family:'Inter',sans-serif;background-color:var(--page-bg,#115217);color:var(--text,#fff);}
   .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
   a{color:#dbed50;}a:hover{color:#c0d034;}
 </style>
@@ -36,12 +39,15 @@ tailwind.config = {
 
 <header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
   <a href="dashboard.html" class="flex items-center gap-3 no-underline">
-    <img src="logo.png" alt="TC BSS" class="w-9 h-9 object-contain"/>
+    <img src="icon-hd.jpg" alt="TC BSS" class="w-9 h-9 object-cover rounded-xl"/>
     <div>
       <div class="text-base font-black text-white tracking-tight font-headline leading-none">TC Bad Soden-Salmünster</div>
       <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">Turniere</div>
     </div>
   </a>
+  <button onclick="tcToggleTheme()" class="theme-toggle-btn" title="Design wechseln">
+    <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
+  </button>
 </header>
 
 <main class="max-w-2xl mx-auto px-4 py-10">

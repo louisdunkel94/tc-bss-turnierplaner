@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script>try{if((localStorage.getItem('tc-theme')||'dark')==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.classList.add('dark')}</script>
+<link rel="stylesheet" href="theme.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#115217">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,6 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
 <script src="config.js"></script>
+<script src="theme.js"></script>
 <script>
 tailwind.config = {
   darkMode:"class",
@@ -42,7 +45,7 @@ tailwind.config = {
 }
 </script>
 <style>
-  body{font-family:'Inter',sans-serif;background-color:#115217;color:#fff;}
+  body{font-family:'Inter',sans-serif;background-color:var(--page-bg,#115217);color:var(--text,#fff);}
   .font-headline,h1,h2,h3,h4{font-family:'Lexend',sans-serif;}
   .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
   .scrollbar-hide::-webkit-scrollbar{display:none;}
@@ -58,7 +61,7 @@ tailwind.config = {
     <a href="dashboard.html" class="text-white/30 hover:text-white transition-colors flex-shrink-0 flex items-center" title="Zurück zum Dashboard">
       <span class="material-symbols-outlined text-xl">arrow_back</span>
     </a>
-    <img src="logo.png" alt="TC Bad Soden-Salmünster" class="w-9 h-9 object-contain flex-shrink-0"/>
+    <img src="icon-hd.jpg" alt="TC Bad Soden-Salmünster" class="w-9 h-9 object-cover flex-shrink-0 rounded-xl"/>
     <div>
       <div id="tournament-title" class="text-base font-black text-white tracking-tight font-headline leading-none">Turnierplan</div>
       <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">TC Bad Soden-Salmünster</div>
@@ -72,6 +75,9 @@ tailwind.config = {
   </nav>
   <div class="flex items-center gap-2">
     <span id="header-badge" class="hidden text-xs font-bold bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-full font-headline"></span>
+    <button onclick="tcToggleTheme()" class="theme-toggle-btn" title="Design wechseln">
+      <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
+    </button>
     <button onclick="resetTournament()" class="text-white/40 hover:text-white/80 text-sm font-headline font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors flex items-center gap-1">
       <span class="material-symbols-outlined text-base">refresh</span>
       <span class="hidden md:inline">Reset</span>

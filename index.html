@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script>try{if((localStorage.getItem('tc-theme')||'dark')==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.classList.add('dark')}</script>
+<link rel="stylesheet" href="theme.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#115217">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,6 +17,7 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
 <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
 <script src="config.js"></script>
+<script src="theme.js"></script>
 <script>
 tailwind.config = {
   darkMode:"class",
@@ -41,7 +44,7 @@ tailwind.config = {
 }
 </script>
 <style>
-  body{font-family:'Inter',sans-serif;background-color:#0a1f0b;color:#fff;min-height:100vh;}
+  body{font-family:'Inter',sans-serif;background-color:var(--page-bg,#0a1f0b);color:var(--text,#fff);min-height:100vh;}
   .font-headline,h1,h2,h3{font-family:'Lexend',sans-serif;}
   .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;user-select:none;}
   .bg-hero{background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(219,237,80,.12) 0%, transparent 60%), linear-gradient(180deg, #0a1f0b 0%, #115217 50%, #0a1f0b 100%);}
@@ -58,7 +61,7 @@ tailwind.config = {
   <!-- ── Logo ── -->
   <div class="flex flex-col items-center mb-10 select-none">
     <div class="mb-3 drop-shadow-[0_0_24px_rgba(219,237,80,.25)]">
-      <img src="logo.png" alt="TC Bad Soden-Salmünster" class="w-28 h-28 object-contain"/>
+      <img src="icon-hd.jpg" alt="TC Bad Soden-Salmünster" class="w-28 h-28 object-cover rounded-3xl shadow-xl"/>
     </div>
     <div class="text-2xl font-black tracking-tight font-headline text-white leading-tight text-center">TC Bad Soden-<br>Salmünster</div>
     <div class="text-xs text-secondary-fixed font-headline uppercase tracking-[.25em] mt-1.5 opacity-80">Turnierplaner</div>
@@ -96,6 +99,9 @@ tailwind.config = {
   <p class="text-white/20 text-xs font-body mt-10 text-center">
     Mit der Registrierung stimmst du der Nutzung deiner Daten für den Turnierbetrieb beim TC Bad Soden-Salmünster zu.
   </p>
+  <button onclick="tcToggleTheme()" class="theme-toggle-btn fixed top-4 right-4 z-50" title="Design wechseln">
+    <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
+  </button>
   <div class="flex items-center gap-4 mt-4">
     <a href="impressum.html" class="text-white/50 hover:text-white text-xs font-body transition-colors underline underline-offset-2">Impressum</a>
     <span class="text-white/30 text-xs">·</span>
