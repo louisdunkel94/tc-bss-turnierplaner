@@ -4,17 +4,17 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <script>try{if((localStorage.getItem('tc-theme')||'light')==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.classList.add('dark')}</script>
-<link rel="stylesheet" href="theme.css">
-<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="../theme.css">
+<link rel="manifest" href="../manifest.json">
 <meta name="theme-color" content="#115217">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TC BSS">
-<link rel="apple-touch-icon" href="icon-hd.jpg">
+<link rel="apple-touch-icon" href="../icon-hd.jpg">
 <title>Impressum – TC Bad Soden-Salmünster Turniere</title>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="theme.js" defer></script>
+<script src="../theme.js" defer></script>
 <script>
 tailwind.config = {
   theme:{extend:{
@@ -38,8 +38,8 @@ tailwind.config = {
 <body class="min-h-screen">
 
 <header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
-  <a href="dashboard.html" class="flex items-center gap-3 no-underline">
-    <img src="icon-hd.jpg" alt="TC BSS" class="w-9 h-9 object-cover rounded-xl"/>
+  <a href="../dashboard/" class="flex items-center gap-3 no-underline">
+    <img src="../icon-hd.jpg" alt="TC BSS" class="w-9 h-9 object-cover rounded-xl"/>
     <div>
       <div class="text-base font-black text-white tracking-tight font-headline leading-none">TC Bad Soden-Salmünster</div>
       <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">Turniere</div>
@@ -95,15 +95,15 @@ tailwind.config = {
   </div>
 
   <div class="mt-10 pt-6 border-t border-white/10 flex gap-6 text-xs text-white/30 font-body">
-    <a href="impressum.html" class="text-secondary-fixed">Impressum</a>
-    <a href="datenschutz.html">Datenschutz</a>
-    <a href="dashboard.html">Zurück zum Dashboard</a>
+    <a href="../impressum/" class="text-secondary-fixed">Impressum</a>
+    <a href="../datenschutz/">Datenschutz</a>
+    <a href="../dashboard/">Zurück zum Dashboard</a>
   </div>
 
 </main>
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'))
+  window.addEventListener('load', () => navigator.serviceWorker.register('../sw.js'))
 }
 </script>
 </body>

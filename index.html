@@ -261,7 +261,7 @@ tailwind.config = {
   </div>
 
   <div class="text-center mt-8">
-    <a href="anleitung.html" class="inline-flex items-center gap-1.5 text-sm font-headline font-bold text-secondary-fixed hover:underline">
+    <a href="anleitung/" class="inline-flex items-center gap-1.5 text-sm font-headline font-bold text-secondary-fixed hover:underline">
       <span class="material-symbols-outlined text-base">open_in_new</span>Vollständige Anleitung →
     </a>
   </div>
@@ -312,9 +312,9 @@ tailwind.config = {
 <footer class="text-center pb-12 px-6">
   <p class="text-white/15 text-xs font-body mb-3">Mit der Nutzung stimmst du der Verarbeitung deiner Daten für den Turnierbetrieb beim TC Bad Soden-Salmünster zu.</p>
   <div class="flex items-center gap-4 justify-center">
-    <a href="impressum.html" class="text-white/30 hover:text-white text-xs font-body transition-colors underline underline-offset-2">Impressum</a>
+    <a href="impressum/" class="text-white/30 hover:text-white text-xs font-body transition-colors underline underline-offset-2">Impressum</a>
     <span class="text-white/20 text-xs">·</span>
-    <a href="datenschutz.html" class="text-white/30 hover:text-white text-xs font-body transition-colors underline underline-offset-2">Datenschutz</a>
+    <a href="datenschutz/" class="text-white/30 hover:text-white text-xs font-body transition-colors underline underline-offset-2">Datenschutz</a>
   </div>
 </footer>
 
@@ -323,8 +323,8 @@ const POCKETBASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.POCKETBASE_URL : 
 const DEMO_MODE = POCKETBASE_URL === 'YOUR_POCKETBASE_URL'
 const pb = DEMO_MODE ? null : new PocketBase(POCKETBASE_URL)
 
-if (!DEMO_MODE && pb.authStore.isValid) window.location.replace('dashboard.html')
-if (DEMO_MODE && sessionStorage.getItem('tc_auth')) window.location.replace('dashboard.html')
+if (!DEMO_MODE && pb.authStore.isValid) window.location.replace('dashboard/')
+if (DEMO_MODE && sessionStorage.getItem('tc_auth')) window.location.replace('dashboard/')
 
 function showMsg(text, type = 'error') {
   const el = document.getElementById('msg')
@@ -352,7 +352,7 @@ function handleLogin(e) {
   const pw    = document.getElementById('pw-input').value
   if (DEMO_USERS[email] && DEMO_USERS[email] === pw) {
     sessionStorage.setItem('tc_auth', email)
-    window.location.replace('dashboard.html')
+    window.location.replace('dashboard/')
   } else {
     showMsg('E-Mail oder Passwort falsch.')
     document.getElementById('pw-input').value = ''
