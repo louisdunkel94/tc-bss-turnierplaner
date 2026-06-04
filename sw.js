@@ -1,4 +1,4 @@
-const CACHE = 'tc-bss-v6'
+const CACHE = 'tc-bss-v7'
 const PRECACHE = [
   './index.html', './dashboard.html', './tournament.html',
   './checkin.html', './stats.html', './display.html',
