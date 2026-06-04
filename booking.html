@@ -206,6 +206,7 @@ tailwind.config = {
         <div id="partners-section">
           <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-2">Mitspieler</label>
           <div id="partner-chips" class="flex flex-wrap gap-1.5 mb-2 min-h-[24px]"></div>
+          <div id="recent-partners" class="flex flex-wrap items-center gap-1.5 mb-2" style="display:none"></div>
           <div class="relative" id="partner-input-wrap">
             <input type="text" id="partner-input" autocomplete="off" placeholder="Mitglied suchen und hinzufügen…" aria-autocomplete="list" aria-controls="partner-suggest"
               class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
@@ -640,12 +641,46 @@ function buildCourtOptions(selectEl, selectedCourt) {
 let _partners = []
 let _rescheduleId = null
 
+function getRecentPartners(excludeName) {
+  const myBookings = getBookings()
+    .filter(b => b.userId === currentUserId || b.memberName === excludeName)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  const seen = new Set()
+  const result = []
+  for (const b of myBookings) {
+    for (const p of (b.partners || [])) {
+      if (!seen.has(p) && p !== excludeName && result.length < 5) {
+        seen.add(p); result.push(p)
+      }
+    }
+    if (result.length >= 5) break
+  }
+  return result
+}
+
+function renderRecentPartners() {
+  const el = document.getElementById('recent-partners')
+  if (!el) return
+  const bookerName = document.getElementById('book-member')?.value.trim() || ''
+  const recent = getRecentPartners(bookerName)
+  if (!recent.length) { el.innerHTML = ''; el.style.display = 'none'; return }
+  el.style.display = ''
+  el.innerHTML = `<span class="text-[10px] text-white/30 font-body self-center mr-1">Zuletzt:</span>` +
+    recent.map(name => {
+      const added = _partners.includes(name)
+      return `<button type="button" onclick="addPartner('${name.replace(/'/g,"\\'")}')"
+        class="partner-chip text-[11px] transition-opacity ${added ? 'opacity-30 cursor-default' : 'hover:opacity-80'}"
+        ${added ? 'disabled' : ''}>${esc(name)}</button>`
+    }).join('')
+}
+
 function renderPartnerChips() {
   const wrap = document.getElementById('partner-chips')
   if (!wrap) return
   wrap.innerHTML = _partners.map(name =>
     `<span class="partner-chip">${esc(name)}<button type="button" onclick="removePartner(${JSON.stringify(name)})" class="ml-1 w-5 h-5 flex items-center justify-center rounded-full text-white/60 hover:text-red-400 hover:bg-white/10 text-sm leading-none">×</button></span>`
   ).join('')
+  renderRecentPartners()
 }
 
 function addPartner(name) {
@@ -715,6 +750,7 @@ function openBook(date, court, timeStart) {
   // Reset partners
   _partners = []
   renderPartnerChips()
+  renderRecentPartners()
   const soloEl = document.getElementById('solo-training')
   if (soloEl) soloEl.checked = false
   const inputEl = document.getElementById('partner-input')
@@ -881,6 +917,7 @@ function rescheduleBooking() {
   // Restore partners
   _partners = [...(b.partners || [])]
   renderPartnerChips()
+  renderRecentPartners()
   // Restore solo training checkbox
   const soloEl = document.getElementById('solo-training')
   if (soloEl) soloEl.checked = (b.partners?.length === 0 && b.type !== 'team' && !b.note?.includes('Mannschaft'))
@@ -918,19 +955,29 @@ function selectMember(name) {
 }
 
 // Partner autocomplete
+function showPartnerDropdown(q) {
+  const pSuggest = document.getElementById('partner-suggest')
+  const bookerName = document.getElementById('book-member').value.trim()
+  const members = getMembers()
+    .filter(m => !_partners.includes(m.name) && m.name !== bookerName &&
+      (!q || m.name.toLowerCase().includes(q)))
+    .slice(0, 10)
+  if (!members.length) { pSuggest.classList.add('hidden'); return }
+  pSuggest.innerHTML = members.map(m =>
+    `<li role="option" onclick="addPartner('${m.name.replace(/'/g,"\\'")}')"> ${esc(m.name)}</li>`
+  ).join('')
+  pSuggest.classList.remove('hidden')
+}
+
+document.getElementById('partner-input').addEventListener('focus', function() {
+  if (!this.value.trim()) showPartnerDropdown('')
+})
+
 document.getElementById('partner-input').addEventListener('input', function() {
   const q = this.value.trim().toLowerCase()
   const pSuggest = document.getElementById('partner-suggest')
   if (!q) { pSuggest.classList.add('hidden'); return }
-  const bookerName = document.getElementById('book-member').value.trim()
-  const matches = getMembers()
-    .filter(m => m.name.toLowerCase().includes(q) && !_partners.includes(m.name) && m.name !== bookerName)
-    .slice(0, 8)
-  if (!matches.length) { pSuggest.classList.add('hidden'); return }
-  pSuggest.innerHTML = matches.map(m =>
-    `<li role="option" onclick="addPartner('${m.name.replace(/'/g,"\\'")}')"> ${esc(m.name)}</li>`
-  ).join('')
-  pSuggest.classList.remove('hidden')
+  showPartnerDropdown(q)
 })
 
 // ── Toast ─────────────────────────────────────────
