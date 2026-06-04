@@ -4,20 +4,20 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <script>try{if((localStorage.getItem('tc-theme')||'light')==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.classList.add('dark')}</script>
-<link rel="stylesheet" href="theme.css">
-<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="../theme.css">
+<link rel="manifest" href="../manifest.json">
 <meta name="theme-color" content="#115217">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TC BSS">
-<link rel="apple-touch-icon" href="icon-hd.jpg">
+<link rel="apple-touch-icon" href="../icon-hd.jpg">
 <title>Check-in – TC Bad Soden-Salmünster</title>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
-<script src="config.js"></script>
-<script src="theme.js"></script>
+<script src="../config.js"></script>
+<script src="../theme.js"></script>
 <script>
 tailwind.config = {
   theme:{extend:{
@@ -118,9 +118,9 @@ async function boot() {
 // ── Screens ───────────────────────────────────────────────────
 function showLogin() {
   app.innerHTML = `
-    <img src="logo.png" alt="TC BSS" class="w-20 h-20 object-contain mx-auto mb-6"/>
+    <img src="../logo.png" alt="TC BSS" class="w-20 h-20 object-contain mx-auto mb-6"/>
     <p class="text-white/50 font-body mb-5">Bitte zuerst anmelden, um einzuchecken.</p>
-    <a href="index.html?redirect=${encodeURIComponent(location.href)}"
+    <a href="../?redirect=${encodeURIComponent(location.href)}"
       class="inline-flex items-center gap-2 px-6 py-3 rounded-full font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
       <span class="material-symbols-outlined text-base">login</span>Anmelden
     </a>`
@@ -131,7 +131,7 @@ function showNotRegistered(t) {
     <div class="text-5xl mb-4">🚫</div>
     <h1 class="text-xl font-headline font-bold text-white mb-2">Nicht angemeldet</h1>
     <p class="text-white/40 font-body text-sm">Du bist nicht für <strong>${esc(t.name)}</strong> angemeldet.<br>Melde dich zuerst über das Dashboard an.</p>
-    <a href="dashboard.html" class="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full font-headline font-bold text-sm bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
+    <a href="../dashboard/" class="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full font-headline font-bold text-sm bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
       Zum Dashboard
     </a>`
 }
@@ -152,7 +152,7 @@ function showCheckinScreen(t, user) {
     ? new Date(t.start_at).toLocaleDateString('de-DE', {weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit'})
     : ''
   app.innerHTML = `
-    <img src="logo.png" alt="TC BSS" class="w-16 h-16 object-contain mx-auto mb-5"/>
+    <img src="../logo.png" alt="TC BSS" class="w-16 h-16 object-contain mx-auto mb-5"/>
     <div class="text-[10px] font-headline uppercase tracking-widest text-secondary-fixed mb-2">Check-in</div>
     <h1 class="text-2xl font-headline font-bold text-white mb-1">${esc(t.name)}</h1>
     ${dateStr ? `<p class="text-white/35 font-body text-sm mb-8">${dateStr}</p>` : '<div class="mb-8"></div>'}
@@ -216,7 +216,7 @@ boot()
 </script>
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'))
+  window.addEventListener('load', () => navigator.serviceWorker.register('../sw.js'))
 }
 </script>
 </body>
