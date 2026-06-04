@@ -13,7 +13,7 @@ let _dashNextBooking = null
 // ── Boot ─────────────────────────────────────────────────────
 async function boot() {
   const authEmail = sessionStorage.getItem('tc_auth')
-  if (!authEmail) { window.location.replace('../'); return }
+  if (!authEmail) { window.location.replace('index.html'); return }
 
   currentUser = { id: authEmail }
   const saved = getProfile(authEmail)
@@ -216,7 +216,7 @@ function dashTimelineClick(event, court, date) {
   const mins = START + pct * RANGE
   const snapped = Math.round(mins / 30) * 30
   const startTime = fmtTime(Math.max(START, Math.min(END - 60, snapped)))
-  window.location.href = `../booking/?date=${date}&court=${court}&start=${startTime}`
+  window.location.href = `booking.html?date=${date}&court=${court}&start=${startTime}`
 }
 
 function getFreeSlots(todayBookings, numCourts) {
@@ -566,7 +566,7 @@ async function renderMitglied(app) {
           <span class="material-symbols-outlined text-sm">calendar_export</span>Zum Kalender exportieren
         </button>
         <div class="flex gap-2">
-          <a href="../booking/?reschedule=${nextBooking.id}" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/70 hover:bg-white/15 transition-colors flex items-center justify-center gap-1.5 no-underline border border-white/10">
+          <a href="booking.html?reschedule=${nextBooking.id}" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/70 hover:bg-white/15 transition-colors flex items-center justify-center gap-1.5 no-underline border border-white/10">
             <span class="material-symbols-outlined text-base">edit_calendar</span>Verschieben
           </a>
           <button onclick="cancelDashBooking('${nextBooking.id}')" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-red-900/30 border border-red-500/25 text-red-300 hover:bg-red-900/50 transition-colors flex items-center justify-center gap-1.5">
@@ -577,7 +577,7 @@ async function renderMitglied(app) {
     </div>`
   })() : `<div class="flex flex-col items-center justify-center h-full py-2 gap-3">
     <p class="text-white/40 font-body text-sm text-center">Keine Buchung geplant.</p>
-    <a href="../booking/" class="inline-flex items-center gap-1 text-xs font-headline font-bold text-secondary-fixed hover:underline">
+    <a href="booking.html" class="inline-flex items-center gap-1 text-xs font-headline font-bold text-secondary-fixed hover:underline">
       Jetzt buchen <span class="material-symbols-outlined text-sm">arrow_forward</span>
     </a>
   </div>`
@@ -617,7 +617,7 @@ async function renderMitglied(app) {
       </h2>
       ${freeSlots.length
         ? `<div class="flex flex-wrap gap-2">${freeSlots.map(s => `
-            <a href="../booking/?date=${isoToday()}&court=${s.court}&start=${s.timeStart}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-white/8 text-white/70 hover:bg-secondary-fixed/15 hover:text-secondary-fixed transition-colors no-underline border border-white/8 hover:border-secondary-fixed/20">
+            <a href="booking.html?date=${isoToday()}&court=${s.court}&start=${s.timeStart}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-white/8 text-white/70 hover:bg-secondary-fixed/15 hover:text-secondary-fixed transition-colors no-underline border border-white/8 hover:border-secondary-fixed/20">
               <span class="material-symbols-outlined text-xs">schedule</span>
               ${s.timeStart}–${s.timeEnd} · Platz ${s.court}
             </a>`).join('')}</div>`
@@ -741,14 +741,14 @@ async function renderMitglied(app) {
             <span class="material-symbols-outlined text-sm text-secondary-fixed">sports_tennis</span>
             Platzauslastung heute
           </h2>
-          <a href="../booking/" class="text-xs font-headline font-bold text-secondary-fixed hover:underline flex items-center gap-0.5">
+          <a href="booking.html" class="text-xs font-headline font-bold text-secondary-fixed hover:underline flex items-center gap-0.5">
             Alle<span class="material-symbols-outlined text-sm">chevron_right</span>
           </a>
         </div>
         <div class="space-y-1.5">${renderCourtTimeline(todayBookings, numCourts)}</div>
         <div class="mt-4 flex items-center justify-between">
           <span class="text-xs text-white/30 font-body">${todayBookings.length} Buchung${todayBookings.length !== 1 ? 'en' : ''} heute</span>
-          <a href="../booking/" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
+          <a href="booking.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
             Platz buchen
           </a>
         </div>
@@ -786,7 +786,7 @@ async function renderMitglied(app) {
       <h2 class="font-headline font-bold text-white text-base mb-3 flex items-center gap-2">
         <span class="material-symbols-outlined text-base text-white/40">recommend</span>
         Turniervorschläge
-        ${!currentProfile?.gender && !currentProfile?.lk ? `<span class="text-xs font-body font-normal text-white/30 ml-1">(<a href="../profile/" class="text-secondary-fixed hover:underline">Profil vervollständigen</a> für bessere Matches)</span>` : ''}
+        ${!currentProfile?.gender && !currentProfile?.lk ? `<span class="text-xs font-body font-normal text-white/30 ml-1">(<a href="profile.html" class="text-secondary-fixed hover:underline">Profil vervollständigen</a> für bessere Matches)</span>` : ''}
       </h2>
       ${suggested.length
         ? `<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">${suggested.map(t => tournamentCard(t, false, false)).join('')}</div>`
@@ -827,12 +827,12 @@ async function renderVeranstalter(app) {
           <span class="material-symbols-outlined text-secondary-fixed text-xl">sports_tennis</span>
           <h2 class="font-headline font-bold text-white text-base">Platzbuchungen heute</h2>
         </div>
-        <a href="../booking/" class="text-xs font-headline font-bold text-secondary-fixed hover:underline flex items-center gap-0.5">
+        <a href="booking.html" class="text-xs font-headline font-bold text-secondary-fixed hover:underline flex items-center gap-0.5">
           Alle<span class="material-symbols-outlined text-sm">arrow_forward</span>
         </a>
       </div>
       ${todayBookingsHtml}
-      <a href="../booking/" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
+      <a href="booking.html" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
         <span class="material-symbols-outlined text-base">add</span>Platz buchen
       </a>
     </section>
@@ -842,7 +842,7 @@ async function renderVeranstalter(app) {
         <p class="text-white/40 font-body mt-1">Verwalte und erstelle Turniere.</p>
       </div>
       <div class="flex items-center gap-2">
-        <a href="../stats/" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors no-underline">
+        <a href="stats.html" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors no-underline">
           <span class="material-symbols-outlined text-base">bar_chart</span><span class="hidden md:inline">Statistiken</span>
         </a>
         <button onclick="openMembersModal()" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors">
@@ -1202,7 +1202,7 @@ function tournamentCard(t, isRegistered, isOrganizer) {
         ${isRegistered && t.status === 'open' ? `<button onclick="unregisterFromTournament('${t.id}')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-red-900/30 hover:text-red-300 transition-colors">
           <span class="material-symbols-outlined text-xs">person_remove</span>Abmelden
         </button>` : ''}
-        ${isRegistered && t.status === 'running' ? `<a href="../tournament/?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed/15 text-secondary-fixed hover:bg-secondary-fixed/25 transition-colors no-underline">
+        ${isRegistered && t.status === 'running' ? `<a href="tournament.html?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed/15 text-secondary-fixed hover:bg-secondary-fixed/25 transition-colors no-underline">
           <span class="material-symbols-outlined text-xs">open_in_new</span>Zum Turnier
         </a>` : ''}
         ${isRegistered && t.status === 'closed' ? `<span class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed/10 text-secondary-fixed/60">
@@ -1215,10 +1215,10 @@ function tournamentCard(t, isRegistered, isOrganizer) {
           ${t.status === 'open' ? `<button onclick="setTournamentStatus('${t.id}','running')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
             <span class="material-symbols-outlined text-xs">play_arrow</span>Starten
           </button>` : ''}
-          ${t.status === 'running' ? `<a href="../tournament/?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
+          ${t.status === 'running' ? `<a href="tournament.html?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
             <span class="material-symbols-outlined text-xs">open_in_new</span>Spielplan
           </a>` : ''}
-          ${t.status === 'closed' ? `<a href="../tournament/?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors no-underline">
+          ${t.status === 'closed' ? `<a href="tournament.html?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors no-underline">
             <span class="material-symbols-outlined text-xs">leaderboard</span>Ergebnisse
           </a>` : ''}
           ${(t.status === 'open' || t.status === 'running') ? `<button onclick="openQR('${t.id}')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
@@ -1510,7 +1510,7 @@ async function hardRefresh() {
 function logout() {
   if (DEMO_MODE) sessionStorage.removeItem('tc_auth')
   else pb.authStore.clear()
-  window.location.replace('../')
+  window.location.replace('index.html')
 }
 
 // ── QR Code ───────────────────────────────────────────────────
@@ -1521,7 +1521,7 @@ function openQR(tournamentId) {
   const tournamentName = findCachedTourney(tournamentId)?.name || ''
   document.getElementById('qr-tourney-name').textContent = tournamentName
   const base = location.href.replace(/[^/]*(\?.*)?$/, '')
-  const url  = base + 'checkin/?t=' + tournamentId
+  const url  = base + 'checkin.html?t=' + tournamentId
   const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url) + '&bgcolor=ffffff&color=0a1f0b&margin=10'
   document.getElementById('qr-img').src = qrSrc
   document.getElementById('modal-qr').showModal()
@@ -1659,7 +1659,7 @@ async function refreshParticipants() {
       : ''
     const hasProfile = p.id && p.id.includes('@')
     const nameEl = hasProfile
-      ? `<a href="../profile/?email=${encodeURIComponent(p.id)}" class="flex-1 text-sm font-body font-medium text-white/70 hover:text-white transition-colors no-underline">${esc(p.display_name)}</a>`
+      ? `<a href="profile.html?email=${encodeURIComponent(p.id)}" class="flex-1 text-sm font-body font-medium text-white/70 hover:text-white transition-colors no-underline">${esc(p.display_name)}</a>`
       : `<span class="flex-1 text-sm font-body font-medium text-white/70">${esc(p.display_name)}</span>`
     return `<div class="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 border border-white/5">
       <span class="material-symbols-outlined text-base ${ic}">person</span>
