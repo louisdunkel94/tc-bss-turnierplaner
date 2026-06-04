@@ -687,9 +687,6 @@ async function renderMitglied(app) {
         <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Willkommen${currentProfile?.display_name ? ', ' + esc(currentProfile.display_name.split(' ')[0]) : ''}</h1>
         <p class="text-white/40 font-body mt-1">Dein Überblick.</p>
       </div>
-      <a href="stats.html" class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors no-underline flex-shrink-0">
-        <span class="material-symbols-outlined text-base">bar_chart</span><span class="hidden md:inline">Statistiken</span>
-      </a>
     </div>
 
     ${announcementsHtml}
@@ -1442,6 +1439,19 @@ async function sendEmail() {
   } finally {
     btn.disabled = false
   }
+}
+
+// ── Hard Refresh ──────────────────────────────────────────────
+async function hardRefresh() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map(r => r.unregister()))
+    }
+    const keys = await caches.keys()
+    await Promise.all(keys.map(k => caches.delete(k)))
+  } catch(e) {}
+  location.reload()
 }
 
 // ── Logout ────────────────────────────────────────────────────
