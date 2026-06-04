@@ -668,16 +668,32 @@ function finishTournament() {
 function confirmFinish(mode) {
   document.getElementById('modal-finish').close()
   S.done=true; S.view='tabelle'
-  if(_tournamentId) {
-    if(DEMO_MODE){try{const t=JSON.parse(localStorage.getItem('tc_tourneys')||'[]');const i=t.findIndex(x=>x.id===_tournamentId);if(i>=0){t[i].status='closed';localStorage.setItem('tc_tourneys',JSON.stringify(t))}}catch(e){}}
-    else pb.collection('tournaments').update(_tournamentId,{status:'closed'}).catch(()=>{})
+
+  const _standings = calcStandings()
+  const _regs = JSON.parse(localStorage.getItem('tc_regs') || '[]').filter(r => r.tournament_id === _tournamentId)
+  const _getUid = name => _regs.find(r => r.display_name === name)?.user_id || null
+  const placements = {}
+  if (_standings[0]) placements.gold   = _getUid(_standings[0].name)
+  if (_standings[1]) placements.silver = _getUid(_standings[1].name)
+  if (_standings[2]) placements.bronze = _getUid(_standings[2].name)
+
+  if (_tournamentId) {
+    if (DEMO_MODE) {
+      try {
+        const t = JSON.parse(localStorage.getItem('tc_tourneys') || '[]')
+        const i = t.findIndex(x => x.id === _tournamentId)
+        if (i >= 0) {
+          t[i].status = 'closed'
+          t[i].placements = placements
+          localStorage.setItem('tc_tourneys', JSON.stringify(t))
+        }
+      } catch(e) {}
+    } else {
+      pb.collection('tournaments').update(_tournamentId, { status: 'closed', placements }).catch(() => {})
+    }
   }
   save(); toast('Turnier beendet')
-  if(mode==='ceremony') {
-    showCeremony(calcStandings())
-  } else {
-    render()
-  }
+  if (mode === 'ceremony') { showCeremony(calcStandings()) } else { render() }
 }
 
 let _ceremonySteps=[], _ceremonyIdx=0, _confettiInterval=null

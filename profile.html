@@ -373,6 +373,49 @@ function renderBadges(displayName) {
   </div>`
 }
 
+function renderTournamentBadges(email) {
+  const regs = JSON.parse(localStorage.getItem('tc_regs') || '[]').filter(r => r.user_id === email)
+  const tourneys = JSON.parse(localStorage.getItem('tc_tourneys') || '[]')
+  if (!regs.length) return ''
+
+  const results = regs.map(reg => {
+    const t = tourneys.find(x => x.id === reg.tournament_id)
+    if (!t) return null
+    const p = t.placements || {}
+    const placement = p.gold === email ? 'gold' : p.silver === email ? 'silver' : p.bronze === email ? 'bronze' : null
+    return { name: t.name, placement }
+  }).filter(Boolean)
+
+  if (!results.length) return ''
+
+  const medal = { gold: '🥇', silver: '🥈', bronze: '🥉' }
+  const plabel = { gold: '1. Platz', silver: '2. Platz', bronze: '3. Platz' }
+  const items = results.map(r => {
+    const icon = r.placement ? medal[r.placement] : '🎾'
+    const lbl = r.placement ? plabel[r.placement] : 'Teilnahme'
+    const style = r.placement ? 'border-secondary-fixed/20 bg-secondary-fixed/5' : 'border-white/5 bg-black/10'
+    return `<div class="flex flex-col items-center gap-1 p-2.5 rounded-xl border ${style}" style="min-width:56px;max-width:64px" title="${esc(r.name)}">
+      <span class="text-xl leading-none">${icon}</span>
+      <div class="text-[9px] font-headline font-bold text-white/70 text-center leading-tight">${esc(lbl)}</div>
+      <div class="text-[8px] text-white/30 text-center leading-tight" style="max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</div>
+    </div>`
+  }).join('')
+
+  const nGold = results.filter(r => r.placement === 'gold').length
+  const nSilver = results.filter(r => r.placement === 'silver').length
+  const nBronze = results.filter(r => r.placement === 'bronze').length
+  const parts = [nGold ? nGold + '× 🥇' : '', nSilver ? nSilver + '× 🥈' : '', nBronze ? nBronze + '× 🥉' : ''].filter(Boolean)
+  const summary = parts.length ? ' · ' + parts.join(' ') : ''
+
+  return `<div class="rounded-2xl bg-black/20 border border-white/5 p-5 mb-4">
+    <div class="text-[10px] font-headline uppercase tracking-widest text-white/40 mb-3 flex items-center gap-2">
+      <span class="material-symbols-outlined text-xs">emoji_events</span>
+      Turnier-Badges (${results.length}${summary})
+    </div>
+    <div class="flex flex-wrap gap-2">${items}</div>
+  </div>`
+}
+
 // ── Own profile (edit mode) ───────────────────────────────────
 function renderOwnProfile(email, profile) {
   const app = document.getElementById('app')
@@ -470,7 +513,7 @@ function renderOwnProfile(email, profile) {
       <span class="material-symbols-outlined text-base">save</span>Änderungen speichern
     </button>
 
-    <div class="mt-6">${renderBadges(profile.display_name)}</div>
+    <div class="mt-6">${renderBadges(profile.display_name)}${renderTournamentBadges(email)}</div>
 
     <div class="mt-4" id="booking-history-section"></div>
   `
@@ -613,7 +656,7 @@ function renderPublicProfile(targetEmail, profile, viewerEmail) {
       </div>
     </div>
 
-    ${renderBadges(profile.display_name)}
+    ${renderBadges(profile.display_name)}${renderTournamentBadges(targetEmail)}
 
     ${profile.privacy.show_matches ? `
     ${profileStreakHtml(streak)}
