@@ -42,7 +42,9 @@
       "Bash(sed -i '' 's/TC Bad Soden-Salmünster – Turniere/TC Bad Soden-Salmünster – TC BSS App/g' dashboard.html tournament.html profile.html stats.html checkin.html anleitung.html datenschutz.html impressum.html display.html)",
       "Bash(sed -i '' 's/>Turnierplaner</>TC BSS App</g' index.html anleitung.html)",
       "Bash(sed -i '' 's/TC Bad Soden-Salmünster – Turnierplan/TC Bad Soden-Salmünster – TC BSS App/g' /Users/louisdunkelprivat/Dev/Donatocup/tournament.html)",
-      "Bash(sed -i '' 's|>Turniere</div>|>TC BSS App</div>|g' /Users/louisdunkelprivat/Dev/Donatocup/dashboard.html)"
+      "Bash(sed -i '' 's|>Turniere</div>|>TC BSS App</div>|g' /Users/louisdunkelprivat/Dev/Donatocup/dashboard.html)",
+      "Bash(node --input-type=module)",
+      "Bash(python3 -)"
     ]
   }
 }
