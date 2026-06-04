@@ -191,7 +191,7 @@ function renderCourtTimeline(todayBookings, numCourts) {
       ? `<div class="absolute top-0 bottom-0 w-px bg-red-500 z-20 pointer-events-none" style="left:${nowPct}%"></div>` : ''
     rows += `<div class="flex items-center gap-2">
       <span class="text-xs text-white/40 font-body w-14 flex-shrink-0 text-right">Platz ${c}</span>
-      <div class="flex-1 h-12 rounded-md bg-green-500/10 border border-green-500/10 relative overflow-hidden cursor-pointer hover:bg-green-500/15 transition-colors" onclick="dashTimelineClick(event,${c},'${today}')" title="Klicken zum Buchen">${halfLines}${hourLines}${blocks}${nowLine}</div>
+      <div role="button" tabindex="0" class="flex-1 h-12 rounded-md bg-green-500/10 border border-green-500/10 relative overflow-hidden cursor-pointer hover:bg-green-500/15 transition-colors focus-visible:outline-2 focus-visible:outline-secondary-fixed" aria-label="Platz ${c} buchen" onclick="dashTimelineClick(event,${c},'${today}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashTimelineClick(event,${c},'${today}')}">${halfLines}${hourLines}${blocks}${nowLine}</div>
     </div>`
   }
 
@@ -428,7 +428,7 @@ function renderMembersList() {
       ${arr.map(m => `
         <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/5 mb-1">
           <span class="flex-1 text-sm font-body text-white/80">${esc(m.name)}</span>
-          <button onclick="removeMemberUI(${JSON.stringify(m.name)})" class="text-white/20 hover:text-red-400 transition-colors">
+          <button onclick="removeMemberUI(${JSON.stringify(m.name)})" aria-label="Mitglied entfernen" class="text-white/20 hover:text-red-400 transition-colors">
             <span class="material-symbols-outlined text-sm">person_remove</span>
           </button>
         </div>`).join('')}
@@ -697,7 +697,7 @@ async function renderMitglied(app) {
         <div class="mb-3 rounded-2xl bg-secondary-fixed/8 border border-secondary-fixed/20 p-4">
           <div class="flex items-start justify-between gap-2 mb-1">
             <span class="text-xs font-headline font-bold text-secondary-fixed uppercase tracking-wider">Mein Gesuch</span>
-            <button onclick="deleteMeinGesuch('${myGesuch.id}')" class="text-white/20 hover:text-red-400 transition-colors">
+            <button onclick="deleteMeinGesuch('${myGesuch.id}')" aria-label="Spielgesuch löschen" class="text-white/20 hover:text-red-400 transition-colors">
               <span class="material-symbols-outlined text-sm">delete</span>
             </button>
           </div>
@@ -992,7 +992,7 @@ function renderAnnouncementsEditor() {
                 <p class="text-sm font-body text-white/80 leading-relaxed">${esc(a.text)}</p>
                 <p class="text-xs text-white/25 font-body mt-0.5">${fmtAnnDate(a.createdAt)} · ${esc(a.authorName)}</p>
               </div>
-              <button onclick="adminDeleteAnnouncement('${a.id}')" class="flex-shrink-0 text-white/20 hover:text-red-400 transition-colors mt-0.5">
+              <button onclick="adminDeleteAnnouncement('${a.id}')" aria-label="Ankündigung löschen" class="flex-shrink-0 text-white/20 hover:text-red-400 transition-colors mt-0.5">
                 <span class="material-symbols-outlined text-sm">delete</span>
               </button>
             </div>`).join('')}</div>`
@@ -1101,13 +1101,13 @@ async function renderAdmin(app) {
       </h2>
       <div class="rounded-2xl border border-white/5 overflow-hidden bg-black/20">
         <div class="overflow-x-auto">
-          <table class="w-full text-sm font-body">
+          <table class="w-full text-sm font-body"><caption class="sr-only">Vereinsmitglieder</caption>
             <thead>
               <tr class="border-b border-white/5 text-white/30 text-xs font-headline uppercase tracking-wider">
                 <th class="text-left px-4 py-3">Name</th>
-                <th class="text-left px-4 py-3 hidden md:table-cell">E-Mail</th>
-                <th class="text-left px-4 py-3">Rolle</th>
-                <th class="text-left px-4 py-3 hidden md:table-cell">Dabei seit</th>
+                <th scope="col" class="text-left px-4 py-3 hidden md:table-cell">E-Mail</th>
+                <th scope="col" class="text-left px-4 py-3">Rolle</th>
+                <th scope="col" class="text-left px-4 py-3 hidden md:table-cell">Dabei seit</th>
               </tr>
             </thead>
             <tbody>
@@ -1639,7 +1639,7 @@ async function refreshParticipants() {
   list.innerHTML = participants.map(p => {
     const ic = p.gender === 'herr' ? 'text-blue-400' : 'text-pink-400'
     const removeBtn = _participantsIsOrganizer
-      ? `<button onclick="removeParticipant('${p.id}')" class="text-white/20 hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-sm">person_remove</span></button>`
+      ? `<button onclick="removeParticipant('${p.id}')" aria-label="Teilnehmer entfernen" class="text-white/20 hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-sm" aria-hidden="true">person_remove</span></button>`
       : ''
     const hasProfile = p.id && p.id.includes('@')
     const nameEl = hasProfile
