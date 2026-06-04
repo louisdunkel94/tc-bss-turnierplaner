@@ -108,17 +108,26 @@ tailwind.config = {
   <!-- ── Toolbar ── -->
   <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <!-- Day navigation -->
-    <div class="flex items-center gap-1">
-      <button onclick="prevDay()" aria-label="Vorheriger Tag" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
-        <span class="material-symbols-outlined text-base" aria-hidden="true">chevron_left</span>
+    <div class="flex items-center gap-1 flex-wrap">
+      <div class="flex items-center gap-1" id="day-nav">
+        <button onclick="prevDay()" aria-label="Vorheriger Tag" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
+          <span class="material-symbols-outlined text-base" aria-hidden="true">chevron_left</span>
+        </button>
+        <button onclick="goToday()" class="px-3 py-2 rounded-xl text-xs font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/60">
+          Heute
+        </button>
+        <button onclick="nextDay()" aria-label="Nächster Tag" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
+          <span class="material-symbols-outlined text-base" aria-hidden="true">chevron_right</span>
+        </button>
+        <span id="day-label" class="ml-2 text-sm font-headline font-bold text-white"></span>
+      </div>
+      <div id="week-pills" class="flex items-center gap-1 overflow-x-auto pb-1" style="display:none"></div>
+      <button onclick="toggleViewMode()" id="view-mode-btn"
+        class="px-3 py-2 rounded-xl text-xs font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/60 flex items-center gap-1"
+        aria-label="Ansicht wechseln">
+        <span class="material-symbols-outlined text-base" aria-hidden="true">calendar_view_week</span>
+        <span id="view-mode-label">7 Tage</span>
       </button>
-      <button onclick="goToday()" class="px-3 py-2 rounded-xl text-xs font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/60">
-        Heute
-      </button>
-      <button onclick="nextDay()" aria-label="Nächster Tag" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
-        <span class="material-symbols-outlined text-base" aria-hidden="true">chevron_right</span>
-      </button>
-      <span id="day-label" class="ml-2 text-sm font-headline font-bold text-white"></span>
     </div>
     <!-- Courts setting (admin/veranstalter only) -->
     <div class="flex items-center gap-2" id="court-controls-wrap">
@@ -412,10 +421,16 @@ const COURT_COLORS = [
 // ── Day state ─────────────────────────────────────
 let _viewDate = new Date()
 _viewDate.setHours(0,0,0,0)
+let _viewMode = 'today' // 'today' | 'week'
 
 function prevDay() { _viewDate.setDate(_viewDate.getDate() - 1); render() }
 function nextDay() { _viewDate.setDate(_viewDate.getDate() + 1); render() }
 function goToday() { _viewDate = new Date(); _viewDate.setHours(0,0,0,0); render() }
+function toggleViewMode() {
+  _viewMode = _viewMode === 'today' ? 'week' : 'today'
+  if (_viewMode === 'today') goToday()
+  else render()
+}
 
 function setCourts(delta) { setNumCourts(getNumCourts() + delta) }
 
@@ -464,7 +479,39 @@ function render() {
     rulesEl.innerHTML = ''
   }
 
-  // Day label
+  // Day navigation / week pills
+  const dayNavEl = document.getElementById('day-nav')
+  if (dayNavEl) dayNavEl.style.display = _viewMode === 'today' ? '' : 'none'
+  const weekPillsEl = document.getElementById('week-pills')
+  if (weekPillsEl) {
+    if (_viewMode === 'week') {
+      const todayD = new Date(); todayD.setHours(0,0,0,0)
+      let pills = ''
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(todayD); d.setDate(todayD.getDate() + i)
+        const diso = isoDate(d)
+        const isSelected = diso === isoDate(_viewDate)
+        const dayShort = d.toLocaleDateString('de-DE', { weekday:'short' })
+        const dayNum = d.getDate()
+        pills += `<button onclick="_viewDate=new Date('${diso}T00:00:00');render()"
+          class="flex flex-col items-center px-3 py-1.5 rounded-xl text-xs font-headline font-bold transition-colors min-w-[3.5rem] ${isSelected ? 'bg-secondary-fixed text-on-secondary-fixed' : 'bg-black/8 hover:bg-black/15 text-white/60'}"
+          aria-pressed="${isSelected}"
+          aria-label="${d.toLocaleDateString('de-DE', {weekday:'long', day:'numeric', month:'long'})}">
+          <span class="text-[10px] uppercase tracking-wide opacity-70">${dayShort}</span>
+          <span class="text-base leading-tight">${dayNum}</span>
+          ${i === 0 ? '<span class="w-1 h-1 rounded-full bg-current mt-0.5 opacity-60"></span>' : ''}
+        </button>`
+      }
+      weekPillsEl.innerHTML = pills
+      weekPillsEl.style.display = ''
+    } else {
+      weekPillsEl.style.display = 'none'
+    }
+  }
+  const viewModeLabel = document.getElementById('view-mode-label')
+  if (viewModeLabel) viewModeLabel.textContent = _viewMode === 'today' ? '7 Tage' : 'Heute'
+
+  // Day label (only in today mode)
   const isToday = isoDate(_viewDate) === isoDate(new Date())
   const dayLabel = _viewDate.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })
   const dayLabelEl = document.getElementById('day-label')
