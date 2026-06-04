@@ -68,9 +68,10 @@ tailwind.config = {
   .court-color-8 { background-color: rgba(20,140,100,0.80); }
 
   /* autocomplete */
-  #suggest-list { position:absolute; z-index:50; background:var(--card-bg,#fff); border:1px solid var(--border,rgba(17,82,23,0.12)); border-radius:0.5rem; box-shadow:0 4px 16px rgba(0,0,0,.1); max-height:160px; overflow-y:auto; width:100%; }
-  #suggest-list li { padding:0.5rem 0.75rem; cursor:pointer; font-size:0.875rem; }
-  #suggest-list li:hover { background:var(--card-bg2,#f2f4ef); }
+  #suggest-list, #partner-suggest { position:absolute; z-index:50; background:#0d2e10; border:1px solid rgba(255,255,255,0.12); border-radius:0.5rem; box-shadow:0 4px 16px rgba(0,0,0,.3); max-height:160px; overflow-y:auto; width:100%; }
+  #suggest-list li, #partner-suggest li { padding:0.5rem 0.75rem; cursor:pointer; font-size:0.875rem; color:rgba(255,255,255,0.8); }
+  #suggest-list li:hover, #partner-suggest li:hover { background:rgba(255,255,255,0.08); }
+  .partner-chip { display:inline-flex; align-items:center; gap:4px; padding:2px 8px 2px 10px; border-radius:9999px; background:rgba(219,237,80,0.15); border:1px solid rgba(219,237,80,0.3); color:#dbed50; font-size:11px; font-family:'Lexend',sans-serif; font-weight:700; }
 </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -111,8 +112,8 @@ tailwind.config = {
       </button>
       <span id="day-label" class="ml-2 text-sm font-headline font-bold text-white"></span>
     </div>
-    <!-- Courts setting -->
-    <div class="flex items-center gap-2">
+    <!-- Courts setting (admin/veranstalter only) -->
+    <div class="flex items-center gap-2" id="court-controls-wrap">
       <span class="text-xs text-white/40 font-body">Plätze:</span>
       <button onclick="setCourts(-1)" class="w-7 h-7 rounded-lg bg-black/10 hover:bg-black/20 text-white/60 flex items-center justify-center text-base font-bold transition-colors">−</button>
       <span id="courts-count" class="text-sm font-headline font-bold text-white w-4 text-center"></span>
@@ -169,16 +170,35 @@ tailwind.config = {
         </div>
         <div>
           <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-2">Spielart</label>
-          <div class="flex gap-5">
+          <div class="flex flex-wrap gap-4">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="book-type" value="singles" checked class="accent-secondary-fixed"/>
+              <input type="radio" name="book-type" value="singles" checked class="accent-secondary-fixed" onchange="updatePartnerSection()"/>
               <span class="text-sm text-white font-body">Einzel</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="book-type" value="doubles" class="accent-secondary-fixed"/>
+              <input type="radio" name="book-type" value="doubles" class="accent-secondary-fixed" onchange="updatePartnerSection()"/>
               <span class="text-sm text-white font-body">Doppel</span>
             </label>
+            <label class="flex items-center gap-2 cursor-pointer" id="team-type-label" style="display:none">
+              <input type="radio" name="book-type" value="team" class="accent-secondary-fixed" onchange="updatePartnerSection()"/>
+              <span class="text-sm text-white font-body">Mannschaftstraining</span>
+            </label>
           </div>
+        </div>
+        <!-- Mitspieler -->
+        <div id="partners-section">
+          <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-2">Mitspieler</label>
+          <div id="partner-chips" class="flex flex-wrap gap-1.5 mb-2 min-h-[24px]"></div>
+          <div class="relative" id="partner-input-wrap">
+            <input type="text" id="partner-input" autocomplete="off" placeholder="Mitglied suchen und hinzufügen…"
+              class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+            <ul id="partner-suggest" class="hidden mt-1"></ul>
+          </div>
+          <label class="flex items-center gap-2 cursor-pointer mt-2" id="solo-training-label">
+            <input type="checkbox" id="solo-training" class="accent-secondary-fixed" onchange="onSoloTrainingChange()"/>
+            <span class="text-sm text-white/70 font-body">Einzeltraining (kein Mitspieler)</span>
+          </label>
+          <p id="partner-hint" class="text-[10px] text-white/30 font-body mt-1">Max. 3 Mitspieler bei Einzel/Doppel.</p>
         </div>
         <div>
           <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Notiz <span class="normal-case font-normal">(optional)</span></label>
@@ -221,9 +241,18 @@ tailwind.config = {
           <span class="material-symbols-outlined text-white/40">notes</span>
           <span id="detail-note" class="text-white/50 font-body text-sm italic"></span>
         </div>
-        <button onclick="deleteBooking()" class="w-full py-2.5 rounded-xl font-headline font-bold text-sm bg-red-900/30 border border-red-500/25 text-red-300 hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2 mt-2">
-          <span class="material-symbols-outlined text-base">delete</span>Buchung löschen
-        </button>
+        <div id="detail-partners-row" class="flex items-start gap-3">
+          <span class="material-symbols-outlined text-white/40">group</span>
+          <span id="detail-partners" class="text-white/70 font-body text-sm"></span>
+        </div>
+        <div class="flex gap-2 mt-2">
+          <button onclick="exportDetailICS()" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/15 transition-colors flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-base">calendar_export</span>Zum Kalender
+          </button>
+          <button onclick="deleteBooking()" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-red-900/30 border border-red-500/25 text-red-300 hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-base">delete</span>Löschen
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -244,6 +273,20 @@ let currentRole = 'mitglied'
       if (p?.role) currentRole = p.role
       else if (currentUserId === 'admin@tennisclub-bss.de') currentRole = 'admin'
     } catch(e) {}
+  }
+  // Hide court controls for members
+  if (currentRole === 'mitglied') {
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('court-controls-wrap')?.classList.add('hidden')
+    }, { once: true })
+    document.getElementById('court-controls-wrap')?.classList.add('hidden')
+  }
+  // Show Mannschaftstraining for non-members
+  if (currentRole !== 'mitglied') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = document.getElementById('team-type-label')
+      if (el) el.style.display = ''
+    }, { once: true })
   }
 })()
 
@@ -493,6 +536,56 @@ function buildCourtOptions(selectEl, selectedCourt) {
   }
 }
 
+// ── Partners state ────────────────────────────────
+let _partners = []
+
+function renderPartnerChips() {
+  const wrap = document.getElementById('partner-chips')
+  if (!wrap) return
+  wrap.innerHTML = _partners.map(name =>
+    `<span class="partner-chip">${esc(name)}<button type="button" onclick="removePartner(${JSON.stringify(name)})" class="ml-1 text-white/60 hover:text-red-400 leading-none text-base">×</button></span>`
+  ).join('')
+}
+
+function addPartner(name) {
+  const type = document.querySelector('input[name="book-type"]:checked')?.value || 'singles'
+  const maxP = type === 'team' ? 99 : 3
+  if (_partners.includes(name) || _partners.length >= maxP) return
+  _partners.push(name)
+  renderPartnerChips()
+  document.getElementById('partner-input').value = ''
+  document.getElementById('partner-suggest').classList.add('hidden')
+}
+
+function removePartner(name) {
+  _partners = _partners.filter(n => n !== name)
+  renderPartnerChips()
+}
+
+function onSoloTrainingChange() {
+  const solo = document.getElementById('solo-training').checked
+  const inputWrap = document.getElementById('partner-input-wrap')
+  if (inputWrap) inputWrap.style.opacity = solo ? '0.4' : '1'
+  const input = document.getElementById('partner-input')
+  if (input) input.disabled = solo
+}
+
+function updatePartnerSection() {
+  const type = document.querySelector('input[name="book-type"]:checked')?.value || 'singles'
+  const soloLabel = document.getElementById('solo-training-label')
+  const hint = document.getElementById('partner-hint')
+  if (type === 'team') {
+    if (soloLabel) soloLabel.style.display = 'none'
+    if (hint) hint.textContent = 'Beliebig viele Mitspieler möglich.'
+    // Remove partner cap: if over 3 was applied before, no action needed
+  } else {
+    if (soloLabel) soloLabel.style.display = ''
+    if (hint) hint.textContent = 'Max. 3 Mitspieler bei Einzel/Doppel.'
+    // Trim to 3 if switching back from team
+    if (_partners.length > 3) { _partners = _partners.slice(0, 3); renderPartnerChips() }
+  }
+}
+
 // ── Book modal ────────────────────────────────────
 function openBook(date, court, timeStart) {
   document.getElementById('book-date').value = date
@@ -511,6 +604,18 @@ function openBook(date, court, timeStart) {
   document.getElementById('book-note').value = ''
   document.getElementById('book-conflict').classList.add('hidden')
   document.getElementById('suggest-list').classList.add('hidden')
+
+  // Reset partners
+  _partners = []
+  renderPartnerChips()
+  const soloEl = document.getElementById('solo-training')
+  if (soloEl) soloEl.checked = false
+  const inputEl = document.getElementById('partner-input')
+  if (inputEl) { inputEl.value = ''; inputEl.disabled = false }
+  document.getElementById('partner-suggest')?.classList.add('hidden')
+  document.querySelector('input[name="book-type"][value="singles"]').checked = true
+  updatePartnerSection()
+
   document.getElementById('modal-book').showModal()
   setTimeout(() => document.getElementById('book-member').focus(), 50)
 
@@ -530,12 +635,19 @@ function confirmBook() {
   const member = document.getElementById('book-member').value.trim()
   const note   = document.getElementById('book-note').value.trim()
   const type   = document.querySelector('input[name="book-type"]:checked')?.value || 'singles'
+  const soloTraining = document.getElementById('solo-training')?.checked || false
   const conflict = document.getElementById('book-conflict')
 
   if (!member) { conflict.textContent = 'Bitte einen Namen eingeben.'; conflict.classList.remove('hidden'); return }
   if (toMinutes(end) <= toMinutes(start)) { conflict.textContent = 'Endzeit muss nach Startzeit liegen.'; conflict.classList.remove('hidden'); return }
 
-  const ruleErr = validateBookingRules(type, start, end)
+  // Partner validation
+  if (type !== 'team' && !soloTraining && _partners.length === 0) {
+    conflict.textContent = 'Bitte mindestens einen Mitspieler wählen oder Einzeltraining aktivieren.'
+    conflict.classList.remove('hidden'); return
+  }
+
+  const ruleErr = type !== 'team' ? validateBookingRules(type, start, end) : null
   if (ruleErr) { conflict.textContent = ruleErr; conflict.classList.remove('hidden'); return }
 
   // Check overlap
@@ -554,6 +666,7 @@ function confirmBook() {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     date, court, timeStart: start, timeEnd: end,
     memberName: member, note, type, userId: currentUserId,
+    partners: [..._partners],
     createdAt: new Date().toISOString()
   })
   saveBookings(bookings)
@@ -569,8 +682,8 @@ function showDetail(id) {
   if (!b) return
   _detailId = id
   document.getElementById('detail-member').textContent = b.memberName
-  document.getElementById('detail-court').textContent =
-    'Platz ' + b.court + (b.type ? ' · ' + (b.type === 'doubles' ? 'Doppel' : 'Einzel') : '')
+  const typeLabel = b.type === 'doubles' ? 'Doppel' : b.type === 'team' ? 'Mannschaftstraining' : 'Einzel'
+  document.getElementById('detail-court').textContent = 'Platz ' + b.court + (b.type ? ' · ' + typeLabel : '')
   document.getElementById('detail-time').textContent =
     b.date.split('-').reverse().join('.') + ' · ' + b.timeStart + '–' + b.timeEnd +
     ' (' + Math.round((toMinutes(b.timeEnd) - toMinutes(b.timeStart)) / 60 * 10) / 10 + ' h)'
@@ -581,7 +694,43 @@ function showDetail(id) {
   } else {
     noteRow.classList.add('hidden')
   }
+  const partnersRow = document.getElementById('detail-partners-row')
+  if (b.partners?.length) {
+    document.getElementById('detail-partners').textContent = b.partners.join(', ')
+    partnersRow.classList.remove('hidden')
+  } else {
+    partnersRow.classList.add('hidden')
+  }
   document.getElementById('modal-detail').showModal()
+}
+
+function exportDetailICS() {
+  const b = getBookings().find(x => x.id === _detailId)
+  if (!b) return
+  exportBookingICS(b)
+}
+
+function exportBookingICS(b) {
+  if (!b) return
+  const dtStart = b.date.replace(/-/g,'') + 'T' + b.timeStart.replace(':','') + '00'
+  const dtEnd   = b.date.replace(/-/g,'') + 'T' + b.timeEnd.replace(':','') + '00'
+  const typeLabel = b.type === 'doubles' ? 'Doppel' : b.type === 'team' ? 'Mannschaftstraining' : 'Einzel'
+  const desc = typeLabel + (b.partners?.length ? ' mit ' + b.partners.join(', ') : '') + (b.note ? ' · ' + b.note : '')
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//TC BSS//Platzbuchung//DE',
+    'BEGIN:VEVENT',
+    'UID:' + (b.id || Date.now()) + '@tc-bss',
+    'DTSTART;TZID=Europe/Berlin:' + dtStart,
+    'DTEND;TZID=Europe/Berlin:' + dtEnd,
+    'SUMMARY:Platzbuchung – Platz ' + b.court,
+    'DESCRIPTION:' + desc,
+    'LOCATION:TC Bad Soden-Salmünster – Platz ' + b.court,
+    'END:VEVENT', 'END:VCALENDAR'
+  ].join('\r\n')
+  const a = document.createElement('a')
+  a.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics)
+  a.download = 'buchung_platz' + b.court + '_' + b.date + '.ics'
+  document.body.appendChild(a); a.click(); document.body.removeChild(a)
 }
 
 function deleteBooking() {
@@ -610,12 +759,31 @@ memberInput.addEventListener('input', () => {
 
 document.addEventListener('click', e => {
   if (!suggestList.contains(e.target) && e.target !== memberInput) suggestList.classList.add('hidden')
+  const pSuggest = document.getElementById('partner-suggest')
+  const pInput   = document.getElementById('partner-input')
+  if (pSuggest && !pSuggest.contains(e.target) && e.target !== pInput) pSuggest.classList.add('hidden')
 })
 
 function selectMember(name) {
   memberInput.value = name
   suggestList.classList.add('hidden')
 }
+
+// Partner autocomplete
+document.getElementById('partner-input').addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase()
+  const pSuggest = document.getElementById('partner-suggest')
+  if (!q) { pSuggest.classList.add('hidden'); return }
+  const bookerName = document.getElementById('book-member').value.trim()
+  const matches = getMembers()
+    .filter(m => m.name.toLowerCase().includes(q) && !_partners.includes(m.name) && m.name !== bookerName)
+    .slice(0, 8)
+  if (!matches.length) { pSuggest.classList.add('hidden'); return }
+  pSuggest.innerHTML = matches.map(m =>
+    `<li onclick="addPartner('${m.name.replace(/'/g,"\\'")}')"> ${esc(m.name)}</li>`
+  ).join('')
+  pSuggest.classList.remove('hidden')
+})
 
 // ── Toast ─────────────────────────────────────────
 function toast(msg) {

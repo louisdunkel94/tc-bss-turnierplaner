@@ -8,6 +8,7 @@ let currentProfile = null
 let activeTournamentId = null
 let _showArchive = false
 let _showSgForm = false
+let _dashNextBooking = null
 
 // ── Boot ─────────────────────────────────────────────────────
 async function boot() {
@@ -105,7 +106,11 @@ function isoToday() {
 function getMyBookings() {
   const uid  = currentUser?.id
   const name = currentProfile?.display_name
-  return getBookings().filter(b => (uid && b.userId === uid) || (name && b.memberName === name))
+  return getBookings().filter(b =>
+    (uid && b.userId === uid) ||
+    (name && b.memberName === name) ||
+    (name && (b.partners || []).includes(name))
+  )
 }
 
 function getNextMyBooking() {
@@ -155,6 +160,12 @@ function renderCourtTimeline(todayBookings, numCourts) {
   const nowMins = now.getHours() * 60 + now.getMinutes()
   const nowPct  = (nowMins >= START && nowMins <= END) ? ((nowMins - START) / RANGE * 100).toFixed(1) : null
 
+  // Stündliche Gitterlinien (09:00–21:00 = 13 Linien)
+  const hourLines = Array.from({ length: 13 }, (_, i) => {
+    const pct = (((i + 1) * 60) / RANGE * 100).toFixed(1)
+    return `<div class="absolute top-0 bottom-0 w-px bg-white/8 pointer-events-none" style="left:${pct}%"></div>`
+  }).join('')
+
   let rows = ''
   for (let c = 1; c <= numCourts; c++) {
     const blocks = todayBookings.filter(b => b.court === c).map(b => {
@@ -165,15 +176,16 @@ function renderCourtTimeline(todayBookings, numCourts) {
       const width = ((e - s) / RANGE * 100).toFixed(1)
       const col   = colors[(c - 1) % colors.length]
       const label = esc((b.memberName || '').split(' ')[0])
-      return `<div class="${col} absolute top-0 bottom-0 flex items-center px-1 overflow-hidden opacity-85" style="left:${left}%;width:${width}%" title="${esc(b.memberName)} · ${b.timeStart}–${b.timeEnd}">
-        <span class="text-[10px] font-headline font-bold text-white truncate leading-none select-none">${label}</span>
+      return `<div class="${col} absolute top-0 bottom-0 flex flex-col justify-center px-1.5 overflow-hidden opacity-85" style="left:${left}%;width:${width}%" title="${esc(b.memberName)} · ${b.timeStart}–${b.timeEnd}">
+        <span class="text-[10px] font-headline font-bold text-white truncate leading-tight select-none">${label}</span>
+        <span class="text-[9px] text-white/70 truncate leading-tight select-none">${b.timeStart}–${b.timeEnd}</span>
       </div>`
     }).join('')
     const nowLine = nowPct !== null
       ? `<div class="absolute top-0 bottom-0 w-px bg-red-500 z-10 pointer-events-none" style="left:${nowPct}%"></div>` : ''
     rows += `<div class="flex items-center gap-2">
       <span class="text-xs text-white/40 font-body w-14 flex-shrink-0 text-right">Platz ${c}</span>
-      <div class="flex-1 h-5 rounded-md bg-green-500/10 border border-green-500/10 relative overflow-hidden">${blocks}${nowLine}</div>
+      <div class="flex-1 h-8 rounded-md bg-green-500/10 border border-green-500/10 relative overflow-hidden">${hourLines}${blocks}${nowLine}</div>
     </div>`
   }
 
@@ -189,6 +201,7 @@ function renderCourtTimeline(todayBookings, numCourts) {
 
 function getFreeSlots(todayBookings, numCourts) {
   const START = 8 * 60, END = 22 * 60, SLOT = 30
+  const slotDur = Math.max(30, (JSON.parse(localStorage.getItem('tc_settings') || '{}').freeSlotDurationMins) || 60)
   const now = new Date()
   const nowMins  = now.getHours() * 60 + now.getMinutes()
   const fromMins = Math.ceil(nowMins / SLOT) * SLOT
@@ -201,18 +214,73 @@ function getFreeSlots(todayBookings, numCourts) {
       const [eh, em] = b.timeEnd.split(':').map(Number)
       for (let m = sh * 60 + sm; m < eh * 60 + em; m += SLOT) booked.add(m)
     })
-    let blockStart = null
-    for (let m = Math.max(START, fromMins); m < END; m += SLOT) {
-      if (!booked.has(m)) {
-        if (blockStart === null) blockStart = m
-      } else {
-        if (blockStart !== null && m - blockStart >= 60) results.push({ court: c, timeStart: fmtTime(blockStart), timeEnd: fmtTime(m) })
-        blockStart = null
+    let found = 0
+    for (let m = Math.max(START, fromMins); m + slotDur <= END && found < 2; m += SLOT) {
+      let allFree = true
+      for (let t = m; t < m + slotDur; t += SLOT) {
+        if (booked.has(t)) { allFree = false; break }
       }
+      if (allFree) { results.push({ court: c, timeStart: fmtTime(m), timeEnd: fmtTime(m + slotDur) }); found++ }
     }
-    if (blockStart !== null && END - blockStart >= 60) results.push({ court: c, timeStart: fmtTime(blockStart), timeEnd: fmtTime(END) })
   }
-  return results.sort((a, b) => a.timeStart.localeCompare(b.timeStart) || a.court - b.court).slice(0, 6)
+  return results.sort((a, b) => a.timeStart.localeCompare(b.timeStart) || a.court - b.court)
+}
+
+function exportBookingICS(booking) {
+  if (!booking) return
+  const dtStart = booking.date.replace(/-/g,'') + 'T' + booking.timeStart.replace(':','') + '00'
+  const dtEnd   = booking.date.replace(/-/g,'') + 'T' + booking.timeEnd.replace(':','') + '00'
+  const typeLabel = booking.type === 'doubles' ? 'Doppel' : booking.type === 'team' ? 'Mannschaftstraining' : 'Einzel'
+  const desc = typeLabel + (booking.partners?.length ? ' mit ' + booking.partners.join(', ') : '')
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//TC BSS//Platzbuchung//DE',
+    'BEGIN:VEVENT',
+    'UID:' + (booking.id || Date.now()) + '@tc-bss',
+    'DTSTART;TZID=Europe/Berlin:' + dtStart,
+    'DTEND;TZID=Europe/Berlin:' + dtEnd,
+    'SUMMARY:Platzbuchung – Platz ' + booking.court,
+    'DESCRIPTION:' + desc,
+    'LOCATION:TC Bad Soden-Salmünster – Platz ' + booking.court,
+    'END:VEVENT', 'END:VCALENDAR'
+  ].join('\r\n')
+  const a = document.createElement('a')
+  a.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics)
+  a.download = 'buchung_platz' + booking.court + '_' + booking.date + '.ics'
+  document.body.appendChild(a); a.click(); document.body.removeChild(a)
+}
+
+function saveCourtConfig() {
+  const s = JSON.parse(localStorage.getItem('tc_settings') || '{}')
+  s.numCourts = Math.max(1, Math.min(12, parseInt(document.getElementById('cfg-courts')?.value) || 6))
+  s.freeSlotDurationMins = Math.max(30, Math.min(240, parseInt(document.getElementById('cfg-slot-dur')?.value) || 60))
+  localStorage.setItem('tc_settings', JSON.stringify(s))
+  toast('Einstellungen gespeichert')
+}
+
+function renderCourtConfig() {
+  const s = JSON.parse(localStorage.getItem('tc_settings') || '{}')
+  const numCourts = s.numCourts || 6
+  const slotDur   = s.freeSlotDurationMins || 60
+  return `
+    <section class="mb-10">
+      <h2 class="text-lg font-headline font-bold text-white mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-base text-white/40">settings</span>
+        Platzkonfiguration
+      </h2>
+      <div class="flex flex-wrap gap-4 items-end rounded-2xl border border-white/5 bg-black/20 p-5">
+        <div>
+          <label class="text-xs text-white/40 font-body block mb-1">Anzahl Plätze</label>
+          <input type="number" id="cfg-courts" value="${numCourts}" min="1" max="12" class="w-24 bg-white/8 border border-white/10 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
+        <div>
+          <label class="text-xs text-white/40 font-body block mb-1">Freie-Slot-Dauer (min)</label>
+          <input type="number" id="cfg-slot-dur" value="${slotDur}" min="30" max="240" step="30" class="w-28 bg-white/8 border border-white/10 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
+        <button onclick="saveCourtConfig()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+          <span class="material-symbols-outlined text-base">save</span>Speichern
+        </button>
+      </div>
+    </section>`
 }
 
 function getProfile(email) {
@@ -409,6 +477,7 @@ async function renderMitglied(app) {
   const todayBookings = getTodayBookings()
   const numCourts  = Math.max(1, Math.min(12, (JSON.parse(localStorage.getItem('tc_settings')||'{}').numCourts) || 6))
   const nextBooking  = getNextMyBooking()
+  _dashNextBooking = nextBooking
   const myTourneys   = getMyTourneys(myRegs, tourneys)
   const suggested    = getSuggestedTourneys(myRegs, tourneys, currentProfile)
   const announcements = getAnnouncements().slice(0, 3)
@@ -444,7 +513,7 @@ async function renderMitglied(app) {
   const nextBookingHtml = nextBooking ? (() => {
     const d = new Date(nextBooking.date + 'T00:00:00')
     const dayLabel  = d.toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short' })
-    const typeLabel = nextBooking.type === 'doubles' ? 'Doppel' : 'Einzel'
+    const typeLabel = nextBooking.type === 'doubles' ? 'Doppel' : nextBooking.type === 'team' ? 'Mannschaftstraining' : 'Einzel'
     return `<div class="space-y-2.5">
       <div class="flex items-center gap-2.5">
         <span class="material-symbols-outlined text-secondary-fixed">calendar_month</span>
@@ -458,6 +527,13 @@ async function renderMitglied(app) {
         <span class="material-symbols-outlined text-white/40">sports_tennis</span>
         <span class="text-white/70 font-body text-sm">Platz ${nextBooking.court} · ${typeLabel}</span>
       </div>
+      ${nextBooking.partners?.length ? `<div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-white/40">group</span>
+        <span class="text-white/50 font-body text-xs">${esc(nextBooking.partners.join(', '))}</span>
+      </div>` : ''}
+      <button onclick="exportBookingICS(_dashNextBooking)" class="mt-1 flex items-center gap-1.5 text-xs font-headline font-bold text-secondary-fixed hover:underline">
+        <span class="material-symbols-outlined text-xs">calendar_export</span>Zum Kalender
+      </button>
     </div>`
   })() : `<div class="flex flex-col items-center justify-center h-full py-2 gap-3">
     <p class="text-white/40 font-body text-sm text-center">Keine Buchung geplant.</p>
@@ -978,6 +1054,8 @@ async function renderAdmin(app) {
       <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Admin</h1>
       <p class="text-white/40 font-body mt-1">Übersicht aller Mitglieder und Turniere.</p>
     </div>
+
+    ${renderCourtConfig()}
 
     ${renderBookingRulesEditor()}
 
