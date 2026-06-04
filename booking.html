@@ -1407,7 +1407,9 @@ function renderWeather(data) {
     const curH = String(now.getHours()).padStart(2, '0')
     let startIdx = data.hourly.time.findIndex(t => t >= `${todayStr}T${curH}:00`)
     if (startIdx < 0) startIdx = 0
-    hourlyEl.innerHTML = data.hourly.time.slice(startIdx, startIdx + 10).map((t, i) => {
+    const endIdx = data.hourly.time.findIndex((t, i) => i > startIdx && !t.startsWith(todayStr))
+    const sliceEnd = endIdx > 0 ? endIdx : startIdx + 24
+    hourlyEl.innerHTML = data.hourly.time.slice(startIdx, sliceEnd).map((t, i) => {
       const idx = startIdx + i
       const label = i === 0 ? 'Jetzt' : t.slice(11, 13) + 'h'
       const rain = Math.round(data.hourly.precipitation_probability[idx] ?? 0)
