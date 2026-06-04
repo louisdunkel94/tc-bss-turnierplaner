@@ -1,4 +1,4 @@
-const CACHE = 'tc-bss-v24'
+const CACHE = 'tc-bss-v26'
 const PRECACHE = [
   './index.html', './dashboard.html', './tournament.html',
   './checkin.html', './stats.html', './display.html',
@@ -22,6 +22,11 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    caches.match(e.request).then(cached => {
+      if (cached) return cached
+      return fetch(e.request).catch(() => {
+        if (e.request.mode === 'navigate') return caches.match('./index.html')
+      })
+    })
   )
 })
