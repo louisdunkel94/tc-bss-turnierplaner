@@ -63,7 +63,7 @@ tailwind.config = {
     <img src="icon-hd.jpg" alt="Logo" class="w-12 h-12 object-cover rounded-2xl"/>
     <div>
       <div class="font-headline font-black text-xl text-white leading-tight">TC Bad Soden-Salmünster</div>
-      <div class="font-headline text-xs uppercase tracking-[.2em] text-secondary-fixed opacity-70 mt-0.5">Turnierplaner · Anleitung</div>
+      <div class="font-headline text-xs uppercase tracking-[.2em] text-secondary-fixed opacity-70 mt-0.5">TC BSS App · Anleitung</div>
     </div>
     <span class="badge ml-auto">Beta</span>
     <button onclick="tcToggleTheme()" class="theme-toggle-btn ml-2" title="Design wechseln">
@@ -80,7 +80,7 @@ tailwind.config = {
         <li>Daten werden nur im Browser gespeichert (localStorage). Beim Löschen des Browser-Caches gehen alle Daten verloren.</li>
         <li>Keine Synchronisation zwischen Geräten – jedes Gerät hat eigene Daten.</li>
         <li>Kein echter Nutzeraccount – alle Nutzer des gleichen Geräts sehen dieselben Daten.</li>
-        <li>Passwort (<code>tcbss</code>) schützt nur die Seite, nicht die Daten selbst.</li>
+        <li>Zugangsdaten sind vereinsintern — bitte nicht weitergeben.</li>
       </ul>
     </div>
   </div>
@@ -91,8 +91,84 @@ tailwind.config = {
       <span class="material-symbols-outlined text-secondary-fixed text-lg">lock</span>
       <h2 class="font-headline font-bold text-base">1. Anmeldung</h2>
     </div>
+    <p class="text-sm text-white/60 leading-relaxed mb-2">
+      Login mit deiner vereinseigenen E-Mail-Adresse und deinem Passwort.
+    </p>
+    <div class="tip text-xs">
+      <span class="font-headline font-bold block mb-1">Demo-Zugänge</span>
+      Admin: <code>admin@tennisclub-bss.de</code> · PW: <code>Admin_BSS#2026</code><br/>
+      Mitglied: <code>test@tennisclub-bss.de</code> · PW: <code>Test_BSS#2026</code>
+    </div>
+  </div>
+
+  <!-- Platzbuchung -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">calendar_month</span>
+      <h2 class="font-headline font-bold text-base">2. Platzbuchung</h2>
+    </div>
+    <ol class="text-sm text-white/60 leading-relaxed list-decimal list-inside space-y-1.5">
+      <li>Im Dashboard auf <strong class="text-white">„Platzbuchung"</strong> tippen.</li>
+      <li>Mit den Pfeilen (← →) oder der Wochenansicht zum gewünschten Datum navigieren.</li>
+      <li>Freien Slot im Gantt antippen → Buchungsformular öffnet sich.</li>
+      <li>Mitgliedname, Spielart (Einzel / Doppel / Teamtraining), optionalen Gastnamen und Notiz eingeben.</li>
+      <li><strong class="text-white">„Buchen"</strong> bestätigen — Eintrag erscheint sofort im Kalender.</li>
+      <li>Eigene Buchung antippen → Detail-Modal mit Lösch-Option.</li>
+    </ol>
+  </div>
+
+  <!-- Favoriten -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">star</span>
+      <h2 class="font-headline font-bold text-base">3. Favoriten & Schnellbuchung</h2>
+    </div>
+    <ol class="text-sm text-white/60 leading-relaxed list-decimal list-inside space-y-1.5">
+      <li>Eigene Buchung antippen → im Detail-Modal <strong class="text-white">„Als Favorit speichern ⭐"</strong> wählen.</li>
+      <li>Favoriten erscheinen als Kacheln über dem Kalender (Platz + Uhrzeit).</li>
+      <li><strong class="text-white">„Buchen"</strong> auf der Kachel → Formular wird mit Platz und Zeit vorausgefüllt.</li>
+    </ol>
+  </div>
+
+  <!-- Platzzustand -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">warning_amber</span>
+      <h2 class="font-headline font-bold text-base">4. Platzzustand melden</h2>
+    </div>
+    <ol class="text-sm text-white/60 leading-relaxed list-decimal list-inside space-y-1.5">
+      <li>Im Gantt-Kopf bei jedem Platz auf den Zustand-Chip klicken (<code>✅ gut</code> / <code>melden</code>).</li>
+      <li>Im Modal <strong class="text-white">Gut</strong>, <strong class="text-white">Nass</strong> oder <strong class="text-white">Beschädigt</strong> wählen.</li>
+      <li>Zustand wird tagesbezogen gespeichert und für alle Mitglieder sichtbar angezeigt.</li>
+    </ol>
+  </div>
+
+  <!-- Buchungs-Erinnerungen -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">notifications</span>
+      <h2 class="font-headline font-bold text-base">5. Buchungs-Erinnerungen</h2>
+    </div>
     <p class="text-sm text-white/60 leading-relaxed">
-      Die Seite ist mit einem gemeinsamen Passwort geschützt. Passwort: <code>tcbss</code>
+      Nach der ersten Buchung fragt die App, ob Browser-Benachrichtigungen erlaubt werden sollen. Bei Zustimmung erscheint automatisch eine Notification ca. 30 Minuten vor jeder eigenen Buchung — auch wenn die App nicht geöffnet ist.
+    </p>
+  </div>
+
+  <!-- Profil & Badges -->
+  <div class="section mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-secondary-fixed text-lg">military_tech</span>
+      <h2 class="font-headline font-bold text-base">6. Profil & Badges</h2>
+    </div>
+    <p class="text-sm text-white/60 leading-relaxed mb-2">
+      Über das Profilbild oben rechts im Dashboard das eigene Profil öffnen. Dort sind alle verdienten Auszeichnungen sichtbar:
+    </p>
+    <ul class="text-sm text-white/60 list-disc list-inside space-y-1">
+      <li>🎾 <strong class="text-white">Teilnahme-Badge</strong> für jedes Turnier, bei dem man angemeldet war</li>
+      <li>🥇🥈🥉 <strong class="text-white">Platzierungs-Trophäen</strong> für Top-3-Platzierungen</li>
+    </ul>
+    <p class="text-sm text-white/60 leading-relaxed mt-2">
+      Profile anderer Mitglieder sind über die Mitgliederliste im Dashboard einsehbar.
     </p>
   </div>
 
@@ -100,7 +176,7 @@ tailwind.config = {
   <div class="section mb-4">
     <div class="flex items-center gap-2 mb-3">
       <span class="material-symbols-outlined text-secondary-fixed text-lg">dashboard</span>
-      <h2 class="font-headline font-bold text-base">2. Dashboard – Turnier anlegen</h2>
+      <h2 class="font-headline font-bold text-base">7. Dashboard – Turnier anlegen</h2>
     </div>
     <ol class="text-sm text-white/60 leading-relaxed list-decimal list-inside space-y-1.5">
       <li>Auf <strong class="text-white">„Neues Turnier"</strong> tippen.</li>
@@ -113,7 +189,7 @@ tailwind.config = {
   <div class="section mb-4">
     <div class="flex items-center gap-2 mb-3">
       <span class="material-symbols-outlined text-secondary-fixed text-lg">group</span>
-      <h2 class="font-headline font-bold text-base">3. Teilnehmer verwalten</h2>
+      <h2 class="font-headline font-bold text-base">8. Teilnehmer verwalten</h2>
     </div>
     <p class="text-sm text-white/60 leading-relaxed mb-2">
       Über das Personen-Symbol beim Turnier die Teilnehmerliste öffnen. Spieler können einzeln eingetragen oder per CSV importiert werden.
@@ -130,7 +206,7 @@ tailwind.config = {
   <div class="section mb-4">
     <div class="flex items-center gap-2 mb-3">
       <span class="material-symbols-outlined text-secondary-fixed text-lg">qr_code_2</span>
-      <h2 class="font-headline font-bold text-base">4. QR-Code teilen</h2>
+      <h2 class="font-headline font-bold text-base">9. QR-Code teilen</h2>
     </div>
     <p class="text-sm text-white/60 leading-relaxed">
       Über das QR-Symbol beim Turnier wird ein QR-Code generiert, der direkt auf den Turnierplan verlinkt. Dieser kann gedruckt oder am Eingang ausgehängt werden.
@@ -141,7 +217,7 @@ tailwind.config = {
   <div class="section mb-4">
     <div class="flex items-center gap-2 mb-3">
       <span class="material-symbols-outlined text-secondary-fixed text-lg">sports_tennis</span>
-      <h2 class="font-headline font-bold text-base">5. Turnierplan durchführen</h2>
+      <h2 class="font-headline font-bold text-base">10. Turnierplan durchführen</h2>
     </div>
     <ol class="text-sm text-white/60 leading-relaxed list-decimal list-inside space-y-1.5">
       <li>Turnier in der Übersicht öffnen → Turnierplan-Seite.</li>
@@ -156,7 +232,7 @@ tailwind.config = {
   <div class="section mb-6">
     <div class="flex items-center gap-2 mb-3">
       <span class="material-symbols-outlined text-secondary-fixed text-lg">tune</span>
-      <h2 class="font-headline font-bold text-base">6. Spielmodi im Überblick</h2>
+      <h2 class="font-headline font-bold text-base">11. Spielmodi im Überblick</h2>
     </div>
     <ul class="text-sm text-white/60 leading-relaxed space-y-2">
       <li><strong class="text-white">Balanced Draw</strong> – zufällige Doppel-Teams, mehrere Runden, gemischte Spieler. Partner und Gegner werden über alle Runden ausbalanciert.</li>
