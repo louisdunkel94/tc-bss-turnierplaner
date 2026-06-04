@@ -1811,10 +1811,16 @@ const WEATHER_WIDGET_HTML = `<div id="weather-widget" style="display:none" class
     <span id="weather-rain" class="text-white/45 font-body text-xs"></span>
     <span class="ml-auto text-[10px] text-white/20 font-body">Bad Soden-Salmünster</span>
   </div>
-  <div class="border-t border-white/5 px-3 py-2 overflow-x-auto scrollbar-hide">
-    <div id="weather-hourly" class="flex gap-3 min-w-max"></div>
+  <div class="border-t border-white/5 px-3 pt-2 pb-1">
+    <div class="text-[9px] font-headline uppercase tracking-widest text-white/25 mb-1.5">Stündlich</div>
+    <div class="overflow-x-auto scrollbar-hide">
+      <div id="weather-hourly" class="flex gap-2.5 min-w-max pb-1"></div>
+    </div>
   </div>
-  <div id="weather-daily" class="border-t border-white/5 px-3 py-2 flex"></div>
+  <div class="border-t border-white/5 px-3 pt-2 pb-2">
+    <div class="text-[9px] font-headline uppercase tracking-widest text-white/25 mb-1.5">5 Tage</div>
+    <div id="weather-daily" class="flex"></div>
+  </div>
 </div>`
 
 function weatherEmoji(code) {
@@ -1846,10 +1852,13 @@ function renderWeather(data) {
     hourlyEl.innerHTML = data.hourly.time.slice(startIdx, startIdx + 10).map((t, i) => {
       const idx = startIdx + i
       const label = i === 0 ? 'Jetzt' : t.slice(11, 13) + 'h'
-      return `<div class="flex flex-col items-center gap-0.5 min-w-[36px]">
+      const rain = Math.round(data.hourly.precipitation_probability[idx] ?? 0)
+      const rainColor = rain >= 50 ? 'text-red-400' : rain >= 20 ? 'text-yellow-400' : 'text-white/30'
+      return `<div class="flex flex-col items-center gap-0.5 min-w-[44px]">
         <div class="text-[9px] text-white/35 font-body">${label}</div>
         <div class="text-sm">${weatherEmoji(data.hourly.weathercode[idx] ?? 0)}</div>
         <div class="text-[10px] font-headline font-bold text-white/70">${Math.round(data.hourly.temperature_2m[idx] ?? 0)}°</div>
+        <div class="text-[9px] font-body ${rainColor}">${rain}%</div>
       </div>`
     }).join('')
   }
@@ -1872,7 +1881,7 @@ function renderWeather(data) {
 async function loadWeather() {
   try {
     const cached = JSON.parse(localStorage.getItem('tc_weather') || 'null')
-    if (cached && Date.now() - cached.ts < 30 * 60 * 1000) { renderWeather(cached.data); return }
+    if (cached && cached.data?.hourly && Date.now() - cached.ts < 30 * 60 * 1000) { renderWeather(cached.data); return }
     const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.05&longitude=9.48&current=temperature_2m,precipitation_probability,weathercode&hourly=temperature_2m,precipitation_probability,weathercode&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode&forecast_days=5&timezone=Europe%2FBerlin')
     const d = await r.json()
     localStorage.setItem('tc_weather', JSON.stringify({ ts: Date.now(), data: d }))
