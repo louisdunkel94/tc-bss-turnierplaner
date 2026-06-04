@@ -51,16 +51,22 @@ tailwind.config = {
   .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none;}
   dialog::backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(4px);}
   dialog{background:transparent;border:none;padding:0;max-width:100vw;max-height:100vh;}
+
+  /* Mobile: bottom sheet modals */
+  @media (max-width: 640px) {
+    dialog { position:fixed !important; inset:0 !important; margin:0 !important; display:flex !important; flex-direction:column; justify-content:flex-end; width:100vw; height:100dvh; max-width:100vw; max-height:100dvh; padding:0; }
+    dialog > div { margin:0 !important; max-width:100% !important; border-radius:1.25rem 1.25rem 0 0 !important; max-height:92dvh; overflow-y:auto; padding-bottom:max(env(safe-area-inset-bottom),0.75rem); }
+  }
 </style>
 </head>
-<body class="min-h-screen pb-10">
+<body class="min-h-screen" style="padding-bottom:max(2.5rem,env(safe-area-inset-bottom))">
 
 <!-- ── Header ── -->
 <header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
   <div class="flex items-center gap-3">
     <a href="dashboard.html" class="flex items-center gap-3 no-underline">
       <img src="icon-hd.jpg" alt="TC Bad Soden-Salmünster" class="w-9 h-9 object-cover flex-shrink-0 rounded-xl"/>
-      <div>
+      <div class="hidden sm:block">
         <div class="text-base font-black text-white tracking-tight font-headline leading-none">TC Bad Soden-Salmünster</div>
         <div class="text-[10px] text-lime-300 font-headline uppercase tracking-widest mt-0.5">TC BSS App</div>
       </div>
@@ -77,7 +83,7 @@ tailwind.config = {
     <button onclick="tcToggleTheme()" class="theme-toggle-btn" title="Design wechseln">
       <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
     </button>
-    <a href="anleitung.html" class="flex items-center gap-1.5 text-white/40 hover:text-white/80 text-sm font-headline font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors">
+    <a href="anleitung.html" class="hidden sm:flex items-center gap-1.5 text-white/40 hover:text-white/80 text-sm font-headline font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors">
       <span class="material-symbols-outlined text-base">help_outline</span>
       <span class="hidden md:inline">Anleitung</span>
     </a>
@@ -108,6 +114,7 @@ tailwind.config = {
 <dialog id="modal-create">
   <div class="w-full max-w-lg mx-auto mt-8 md:mt-16 px-4">
     <div class="bg-[#1a3320] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
         <h2 id="modal-create-title" class="font-headline font-bold text-lg text-white">Turnier erstellen</h2>
         <button onclick="closeModal()" class="text-white/40 hover:text-white transition-colors">
@@ -153,7 +160,7 @@ tailwind.config = {
             <input type="number" id="t-duration" value="3" min="1" max="12" class="input"/>
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div>
             <label class="label">Max. Spieler</label>
             <input type="number" id="t-maxp" value="30" min="4" max="100" class="input"/>
@@ -180,6 +187,7 @@ tailwind.config = {
 <dialog id="modal-email">
   <div class="w-full max-w-lg mx-auto mt-8 md:mt-16 px-4">
     <div class="bg-[#1a3320] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
         <h2 class="font-headline font-bold text-lg text-white">Info-Mail senden</h2>
         <button onclick="document.getElementById('modal-email').close()" class="text-white/40 hover:text-white transition-colors">
@@ -211,6 +219,7 @@ tailwind.config = {
 <dialog id="modal-qr">
   <div class="w-full max-w-sm mx-auto mt-12 px-4">
     <div class="bg-[#1a3320] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
         <h2 class="font-headline font-bold text-lg text-white">Check-in QR-Code</h2>
         <button onclick="document.getElementById('modal-qr').close()" class="text-white/40 hover:text-white transition-colors">
@@ -240,6 +249,7 @@ tailwind.config = {
 <dialog id="modal-checkin">
   <div class="w-full max-w-md mx-auto mt-8 px-4">
     <div class="bg-[#1a3320] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
         <h2 class="font-headline font-bold text-lg text-white flex items-center gap-2">
           <span class="material-symbols-outlined text-base text-secondary-fixed">fact_check</span>
@@ -266,6 +276,7 @@ tailwind.config = {
 <dialog id="modal-members">
   <div class="w-full max-w-md mx-auto mt-8 px-4">
     <div class="bg-[#1a3320] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
         <h2 class="font-headline font-bold text-lg text-white flex items-center gap-2">
           <span class="material-symbols-outlined text-base text-secondary-fixed">group</span>
@@ -302,6 +313,7 @@ tailwind.config = {
 <dialog id="modal-participants">
   <div class="w-full max-w-md mx-auto mt-8 px-4">
     <div class="bg-[#1a3320] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
       <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
         <h2 class="font-headline font-bold text-lg text-white flex items-center gap-2">
           <span class="material-symbols-outlined text-base text-secondary-fixed">group</span>

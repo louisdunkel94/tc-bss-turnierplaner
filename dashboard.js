@@ -198,7 +198,7 @@ function renderCourtTimeline(todayBookings, numCourts) {
   const axis = `<div class="flex items-center gap-2 mt-1.5">
     <div class="w-14 flex-shrink-0"></div>
     <div class="flex-1 flex justify-between">
-      ${['08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00'].map(t => `<span class="text-[9px] text-white/20 font-body">${t}</span>`).join('')}
+      ${['08:00','11:00','14:00','17:00','20:00','22:00'].map(t => `<span class="text-[10px] text-white/25 font-body">${t}</span>`).join('')}
     </div>
   </div>`
 
