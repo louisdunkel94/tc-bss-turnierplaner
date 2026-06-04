@@ -137,8 +137,23 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- ── Weather ── -->
+  <div id="weather-widget" style="display:none" class="mb-4 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-black/10 border border-white/8">
+    <span id="weather-emoji" class="text-xl leading-none"></span>
+    <span id="weather-temp" class="font-headline font-bold text-white/80 text-sm"></span>
+    <span class="text-white/15">·</span>
+    <span id="weather-rain" class="text-white/45 font-body text-xs"></span>
+    <span class="ml-auto text-[10px] text-white/20 font-body">Bad Soden-Salmünster</span>
+  </div>
+
   <!-- ── Booking Rules Editor (admin/veranstalter only) ── -->
   <div id="rules-editor" class="mb-5"></div>
+
+  <!-- ── Recurring Admin (admin only) ── -->
+  <div id="recurring-editor" class="mb-5"></div>
+
+  <!-- ── Closure Admin (admin only) ── -->
+  <div id="closure-editor" class="mb-5"></div>
 
   <!-- ── Calendar Grid ── -->
   <div class="overflow-x-auto scrollbar-hide rounded-2xl border border-white/8 bg-black/10">
@@ -244,6 +259,9 @@ tailwind.config = {
         </button>
       </div>
       <div class="p-5 space-y-3">
+        <div id="detail-recurring-badge" class="hidden flex items-center gap-1.5 text-xs font-headline font-bold text-secondary-fixed bg-secondary-fixed/10 px-2.5 py-1 rounded-full w-fit">
+          <span class="material-symbols-outlined text-xs">repeat</span>Dauerreservierung
+        </div>
         <div class="flex items-center gap-3">
           <span class="material-symbols-outlined text-secondary-fixed">person</span>
           <span id="detail-member" class="font-headline font-bold text-white text-lg"></span>
@@ -265,18 +283,139 @@ tailwind.config = {
           <span id="detail-partners" class="text-white/70 font-body text-sm"></span>
         </div>
         <div class="pt-1 border-t border-white/8 space-y-2">
-          <button onclick="exportDetailICS()" class="w-full flex items-center justify-center gap-1.5 text-xs font-headline font-bold text-white/40 hover:text-white/70 transition-colors py-1">
+          <button id="detail-ics-btn" onclick="exportDetailICS()" class="w-full flex items-center justify-center gap-1.5 text-xs font-headline font-bold text-white/40 hover:text-white/70 transition-colors py-1">
             <span class="material-symbols-outlined text-sm">calendar_export</span>Zum Kalender exportieren
           </button>
           <div class="flex gap-2">
-            <button onclick="rescheduleBooking()" class="flex-1 py-3 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/80 hover:bg-white/15 transition-colors flex items-center justify-center gap-2 border border-white/10">
+            <button id="detail-reschedule-btn" onclick="rescheduleBooking()" class="flex-1 py-3 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/80 hover:bg-white/15 transition-colors flex items-center justify-center gap-2 border border-white/10">
               <span class="material-symbols-outlined text-base">edit_calendar</span>Verschieben
             </button>
-            <button onclick="cancelBooking()" class="flex-1 py-3 rounded-xl font-headline font-bold text-sm bg-red-900/30 border border-red-500/25 text-red-300 hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2">
+            <button id="detail-cancel-btn" onclick="cancelBooking()" class="flex-1 py-3 rounded-xl font-headline font-bold text-sm bg-red-900/30 border border-red-500/25 text-red-300 hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2">
               <span class="material-symbols-outlined text-base">event_busy</span>Stornieren
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- ── Recurring Modal ── -->
+<dialog id="modal-recurring" aria-modal="true" aria-labelledby="modal-recurring-title">
+  <div class="w-full max-w-sm mx-auto mt-16 px-4">
+    <div class="bg-[#0d2e10] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
+      <div class="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <h2 id="modal-recurring-title" class="font-headline font-bold text-base text-white flex items-center gap-2">
+          <span class="material-symbols-outlined text-base text-secondary-fixed">repeat</span>Dauerreservierung
+        </h2>
+        <button onclick="document.getElementById('modal-recurring').close()" aria-label="Schließen" class="text-white/40 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Wochentag</label>
+            <select id="rec-day" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed">
+              <option value="1">Montag</option><option value="2">Dienstag</option><option value="3">Mittwoch</option>
+              <option value="4">Donnerstag</option><option value="5">Freitag</option><option value="6">Samstag</option><option value="0">Sonntag</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Platz</label>
+            <select id="rec-court" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Von</label>
+            <select id="rec-start" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Bis</label>
+            <select id="rec-end" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"></select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Mitglied</label>
+          <input type="text" id="rec-member" placeholder="Name…" class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
+        <div>
+          <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Notiz <span class="normal-case font-normal">(optional)</span></label>
+          <input type="text" id="rec-note" placeholder="z.B. Training…" class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Gültig ab <span class="normal-case font-normal">(opt.)</span></label>
+            <input type="date" id="rec-valid-from" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+          </div>
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Gültig bis <span class="normal-case font-normal">(opt.)</span></label>
+            <input type="date" id="rec-valid-until" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+          </div>
+        </div>
+        <div id="rec-conflict" class="hidden px-3 py-2 rounded-xl bg-red-900/30 border border-red-500/25 text-red-300 text-xs font-body"></div>
+        <button onclick="confirmRecurring()" class="w-full py-3 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-base">repeat</span>Speichern
+        </button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- ── Closure Modal ── -->
+<dialog id="modal-closure" aria-modal="true" aria-labelledby="modal-closure-title">
+  <div class="w-full max-w-sm mx-auto mt-16 px-4">
+    <div class="bg-[#0d2e10] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
+      <div class="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <h2 id="modal-closure-title" class="font-headline font-bold text-base text-white flex items-center gap-2">
+          <span class="material-symbols-outlined text-base text-secondary-fixed">block</span>Platzsperrung
+        </h2>
+        <button onclick="document.getElementById('modal-closure').close()" aria-label="Schließen" class="text-white/40 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Von</label>
+            <input type="date" id="cl-date-from" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+          </div>
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Bis</label>
+            <input type="date" id="cl-date-to" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Platz</label>
+          <select id="cl-court" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"></select>
+        </div>
+        <div>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="cl-allday" checked class="accent-secondary-fixed" onchange="document.getElementById('cl-time-wrap').style.display=this.checked?'none':''"/>
+            <span class="text-sm text-white font-body">Ganztägig</span>
+          </label>
+        </div>
+        <div id="cl-time-wrap" style="display:none" class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Von</label>
+            <select id="cl-start" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Bis</label>
+            <select id="cl-end" class="w-full bg-white/10 border border-white/15 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"></select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Grund <span class="normal-case font-normal">(optional)</span></label>
+          <input type="text" id="cl-reason" placeholder="z.B. Turnier, Platzsanierung…" class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
+        <div id="cl-conflict" class="hidden px-3 py-2 rounded-xl bg-red-900/30 border border-red-500/25 text-red-300 text-xs font-body"></div>
+        <button onclick="confirmClosure()" class="w-full py-3 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-base">block</span>Sperrung speichern
+        </button>
       </div>
     </div>
   </div>
@@ -327,6 +466,16 @@ function getBookings() {
   try { return JSON.parse(localStorage.getItem('tc_bookings') || '[]') } catch(e) { return [] }
 }
 function saveBookings(b) { localStorage.setItem('tc_bookings', JSON.stringify(b)) }
+
+function getRecurring() {
+  try { return JSON.parse(localStorage.getItem('tc_recurring') || '[]') } catch(e) { return [] }
+}
+function saveRecurring(r) { localStorage.setItem('tc_recurring', JSON.stringify(r)) }
+
+function getClosures() {
+  try { return JSON.parse(localStorage.getItem('tc_closures') || '[]') } catch(e) { return [] }
+}
+function saveClosures(c) { localStorage.setItem('tc_closures', JSON.stringify(c)) }
 
 function getMembers() {
   try { return JSON.parse(localStorage.getItem('tc_members') || '[]') } catch(e) { return [] }
@@ -409,6 +558,28 @@ function getMondayOf(d) {
   return copy
 }
 
+function getEffectiveBookingsForDate(dateISO) {
+  const regular = getBookings().filter(b => b.date === dateISO)
+  const dow = new Date(dateISO + 'T00:00:00').getDay()
+  const recurring = getRecurring()
+    .filter(r => r.dayOfWeek === dow)
+    .filter(r => (!r.validFrom || dateISO >= r.validFrom) && (!r.validUntil || dateISO <= r.validUntil))
+    .map(r => ({ ...r, date: dateISO, id: 'rec_' + r.id, isRecurring: true }))
+  return [...regular, ...recurring]
+}
+
+function getClosuresForDate(dateISO) {
+  return getClosures().filter(cl => dateISO >= cl.dateFrom && dateISO <= cl.dateTo)
+}
+
+function isSlotBlocked(dateISO, court, startMin, endMin) {
+  return getClosuresForDate(dateISO).some(cl => {
+    if (cl.court !== 0 && cl.court !== court) return false
+    if (!cl.timeStart) return true
+    return toMinutes(cl.timeStart) < endMin && toMinutes(cl.timeEnd) > startMin
+  })
+}
+
 const TIME_START = 8 * 60   // 08:00
 const TIME_END   = 22 * 60  // 22:00
 const SLOT_MIN   = 30       // 30-minute slots
@@ -479,6 +650,9 @@ function render() {
     rulesEl.innerHTML = ''
   }
 
+  renderRecurringAdmin()
+  renderClosureAdmin()
+
   // Toggle button label
   const viewModeLabel = document.getElementById('view-mode-label')
   if (viewModeLabel) viewModeLabel.textContent = _viewMode === 'today' ? '7 Tage' : 'Heute'
@@ -496,7 +670,7 @@ function render() {
   if (dayLabelEl) dayLabelEl.textContent = dayLabel + (isToday ? ' · Heute' : '')
 
   const iso = isoDate(_viewDate)
-  const bookings = getBookings()
+  const bookings = getEffectiveBookingsForDate(iso)
 
   // Time slots
   const slots = []
@@ -525,7 +699,7 @@ function render() {
 
     for (let c = 1; c <= numCourts; c++) {
       const booking = bookings.find(b =>
-        b.date === iso && b.court === c &&
+        b.court === c &&
         toMinutes(b.timeStart) <= slotMin && toMinutes(b.timeEnd) > slotMin
       )
       const isSlotStart = booking && toMinutes(booking.timeStart) === slotMin
@@ -540,10 +714,17 @@ function render() {
         html += `<td rowspan="${durationSlots}" class="${colorClass} ${colBorder} rounded-lg cursor-pointer" style="height:${durationSlots*40}px;padding:4px 6px;vertical-align:top;" onclick="showDetail('${booking.id}')">`
         html += `<div class="text-white font-headline font-bold leading-tight truncate text-xs">${esc(booking.memberName)}</div>`
         if (durationSlots > 1) html += `<div class="text-white/70 text-[10px] leading-tight">${booking.timeStart}–${booking.timeEnd}</div>`
-        if (booking.type) html += `<div class="text-white/50 text-[9px]">${booking.type === 'doubles' ? 'Doppel' : 'Einzel'}</div>`
+        if (booking.isRecurring) html += `<div class="text-white/50 text-[9px] flex items-center gap-0.5"><span class="material-symbols-outlined text-[9px]">repeat</span>wöchentlich</div>`
+        else if (booking.type) html += `<div class="text-white/50 text-[9px]">${booking.type === 'doubles' ? 'Doppel' : 'Einzel'}</div>`
         html += `</td>`
       } else {
-        html += `<td class="slot-cell ${colBorder} ${topBorder}" style="height:40px;" onclick="openBook('${iso}',${c},'${fromMinutes(slotMin)}')"></td>`
+        const blocked = isSlotBlocked(iso, c, slotMin, slotMin + SLOT_MIN)
+        if (blocked) {
+          const reasons = getClosuresForDate(iso).filter(cl => (cl.court === 0 || cl.court === c) && (!cl.timeStart || (toMinutes(cl.timeStart) < slotMin + SLOT_MIN && toMinutes(cl.timeEnd) > slotMin))).map(cl => cl.reason).filter(Boolean)
+          html += `<td class="${colBorder} ${topBorder}" title="${reasons.length ? 'Gesperrt: ' + reasons.join(', ') : 'Gesperrt'}" style="height:40px;background:repeating-linear-gradient(45deg,rgba(239,68,68,0.07),rgba(239,68,68,0.07) 4px,transparent 4px,transparent 8px);cursor:default;"></td>`
+        } else {
+          html += `<td class="slot-cell ${colBorder} ${topBorder}" style="height:40px;" onclick="openBook('${iso}',${c},'${fromMinutes(slotMin)}')"></td>`
+        }
       }
     }
     html += `</tr>`
@@ -555,7 +736,6 @@ function render() {
 
 // ── 7-day overview ────────────────────────────────
 function renderWeekView() {
-  const bookings = getBookings()
   const numCourts = getNumCourts()
   const RANGE = TIME_END - TIME_START
   const today = new Date(); today.setHours(0,0,0,0)
@@ -571,7 +751,8 @@ function renderWeekView() {
     const diso = isoDate(d)
     const isToday = i === 0
     const dayLabel = d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'short' })
-    const dayBookings = bookings.filter(b => b.date === diso)
+    const dayBookings = getEffectiveBookingsForDate(diso)
+    const dayClosures = getClosuresForDate(diso)
     html += `<div class="rounded-2xl border border-white/8 bg-black/10 overflow-hidden">`
     html += `<div class="px-4 py-2.5 border-b border-white/6"><span class="text-sm font-headline font-bold ${isToday ? 'text-secondary-fixed' : 'text-white/80'}">${dayLabel}${isToday ? ' · Heute' : ''}</span></div>`
     html += `<div class="px-3 pt-2 pb-3">${axisHtml}`
@@ -579,6 +760,14 @@ function renderWeekView() {
       const courtBookings = dayBookings.filter(b => b.court === c)
       const colorClass = COURT_COLORS[(c-1) % COURT_COLORS.length]
       let blocks = ''
+      // Closure overlays
+      dayClosures.filter(cl => cl.court === 0 || cl.court === c).forEach(cl => {
+        const s = cl.timeStart ? toMinutes(cl.timeStart) : TIME_START
+        const e = cl.timeEnd ? toMinutes(cl.timeEnd) : TIME_END
+        const left = ((s - TIME_START) / RANGE * 100).toFixed(1)
+        const width = ((e - s) / RANGE * 100).toFixed(1)
+        blocks += `<div class="absolute inset-y-0 pointer-events-none" style="left:${left}%;width:${width}%;background:repeating-linear-gradient(45deg,rgba(239,68,68,0.15),rgba(239,68,68,0.15) 4px,transparent 4px,transparent 8px);" title="${cl.reason ? 'Gesperrt: '+cl.reason : 'Gesperrt'}"></div>`
+      })
       courtBookings.forEach(b => {
         const s = toMinutes(b.timeStart), e = toMinutes(b.timeEnd)
         const left = ((s - TIME_START) / RANGE * 100).toFixed(1)
@@ -586,8 +775,8 @@ function renderWeekView() {
         blocks += `<div class="absolute inset-y-0 ${colorClass} opacity-80 flex items-center px-1.5 overflow-hidden cursor-pointer"
           style="left:${left}%;width:${width}%"
           onclick="event.stopPropagation();showDetail('${b.id}')"
-          title="${b.memberName} ${b.timeStart}–${b.timeEnd}">
-          <span class="text-white text-[10px] font-body truncate">${b.timeStart} ${b.memberName}</span>
+          title="${b.memberName} ${b.timeStart}–${b.timeEnd}${b.isRecurring?' (wöchentlich)':''}">
+          <span class="text-white text-[10px] font-body truncate">${b.isRecurring?'↻ ':''}${b.timeStart} ${b.memberName}</span>
         </div>`
       })
       html += `<div class="flex items-center gap-2 mb-1.5">
@@ -796,6 +985,14 @@ function confirmBook() {
   const ruleErr = type !== 'team' ? validateBookingRules(type, start, end) : null
   if (ruleErr) { conflict.textContent = ruleErr; conflict.classList.remove('hidden'); return }
 
+  // Check closure (non-admin blocked)
+  if (currentRole !== 'admin' && isSlotBlocked(date, court, toMinutes(start), toMinutes(end))) {
+    const cl = getClosuresForDate(date).find(cl => (cl.court === 0 || cl.court === court) && (!cl.timeStart || (toMinutes(cl.timeStart) < toMinutes(end) && toMinutes(cl.timeEnd) > toMinutes(start))))
+    conflict.textContent = 'Dieser Platz ist gesperrt' + (cl?.reason ? ': ' + cl.reason : '') + '. Bitte wähle einen anderen Zeitraum.'
+    conflict.classList.remove('hidden')
+    return
+  }
+
   // Check overlap (exclude the booking being rescheduled)
   let bookings = getBookings()
   const overlapCheck = _rescheduleId ? bookings.filter(b => b.id !== _rescheduleId) : bookings
@@ -807,6 +1004,21 @@ function confirmBook() {
     conflict.textContent = `Platz ${court} ist von ${overlap.timeStart}–${overlap.timeEnd} bereits durch ${overlap.memberName} belegt.`
     conflict.classList.remove('hidden')
     return
+  }
+
+  // Check recurring conflicts (non-admin blocked)
+  if (currentRole !== 'admin') {
+    const dow = new Date(date + 'T00:00:00').getDay()
+    const recConflict = getRecurring().find(r =>
+      r.dayOfWeek === dow && r.court === court &&
+      (!r.validFrom || date >= r.validFrom) && (!r.validUntil || date <= r.validUntil) &&
+      toMinutes(r.timeStart) < toMinutes(end) && toMinutes(r.timeEnd) > toMinutes(start)
+    )
+    if (recConflict) {
+      conflict.textContent = `Platz ${court} ist von ${recConflict.timeStart}–${recConflict.timeEnd} dauerhaft für ${recConflict.memberName} reserviert.`
+      conflict.classList.remove('hidden')
+      return
+    }
   }
 
   const isReschedule = !!_rescheduleId
@@ -830,9 +1042,38 @@ function confirmBook() {
 // ── Detail modal ──────────────────────────────────
 let _detailId = null
 function showDetail(id) {
+  const badge = document.getElementById('detail-recurring-badge')
+  const icsBtn = document.getElementById('detail-ics-btn')
+  const rescheduleBtn = document.getElementById('detail-reschedule-btn')
+  const cancelBtn = document.getElementById('detail-cancel-btn')
+
+  if (id.startsWith('rec_')) {
+    const r = getRecurring().find(x => x.id === id.replace('rec_', ''))
+    if (!r) return
+    _detailId = id
+    const DAYS = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag']
+    document.getElementById('detail-member').textContent = r.memberName
+    document.getElementById('detail-court').textContent = 'Platz ' + r.court + ' · Einzel'
+    document.getElementById('detail-time').textContent = DAYS[r.dayOfWeek] + ' · ' + r.timeStart + '–' + r.timeEnd + ' (wöchentlich)'
+    const noteRow = document.getElementById('detail-note-row')
+    if (r.note) { document.getElementById('detail-note').textContent = r.note; noteRow.classList.remove('hidden') }
+    else { noteRow.classList.add('hidden') }
+    document.getElementById('detail-partners-row').classList.add('hidden')
+    badge.classList.remove('hidden')
+    if (icsBtn) icsBtn.style.display = 'none'
+    if (rescheduleBtn) rescheduleBtn.style.display = 'none'
+    if (cancelBtn) cancelBtn.style.display = 'none'
+    document.getElementById('modal-detail').showModal()
+    return
+  }
+
   const b = getBookings().find(x => x.id === id)
   if (!b) return
   _detailId = id
+  badge.classList.add('hidden')
+  if (icsBtn) icsBtn.style.display = ''
+  if (rescheduleBtn) rescheduleBtn.style.display = ''
+  if (cancelBtn) cancelBtn.style.display = ''
   document.getElementById('detail-member').textContent = b.memberName
   const typeLabel = b.type === 'doubles' ? 'Doppel' : b.type === 'team' ? 'Mannschaftstraining' : 'Einzel'
   document.getElementById('detail-court').textContent = 'Platz ' + b.court + (b.type ? ' · ' + typeLabel : '')
@@ -983,6 +1224,182 @@ document.getElementById('partner-input').addEventListener('input', function() {
   showPartnerDropdown(q)
 })
 
+// ── Admin: Recurring ──────────────────────────────
+const _REC_DAYS = ['So','Mo','Di','Mi','Do','Fr','Sa']
+
+function renderRecurringAdmin() {
+  const el = document.getElementById('recurring-editor')
+  if (!el || currentRole !== 'admin') { if (el) el.innerHTML = ''; return }
+  const entries = getRecurring()
+  el.innerHTML = `
+    <div class="rounded-2xl border border-white/8 bg-black/10 p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-headline font-bold text-white text-sm flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-sm text-secondary-fixed">repeat</span>Dauerreservierungen
+        </h2>
+        <button onclick="openRecurringModal()" class="px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">+ Neu</button>
+      </div>
+      ${entries.length
+        ? `<div class="divide-y divide-white/5">${entries.map(r => `
+          <div class="flex items-center justify-between py-2 gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-[10px] font-headline font-bold text-secondary-fixed bg-secondary-fixed/10 px-1.5 py-0.5 rounded-lg flex-shrink-0">${_REC_DAYS[r.dayOfWeek]}</span>
+              <span class="text-xs font-body text-white/70 truncate">${r.timeStart}–${r.timeEnd} · P${r.court} · ${esc(r.memberName)}</span>
+            </div>
+            <button onclick="deleteRecurringEntry('${r.id}')" class="text-white/25 hover:text-red-400 transition-colors flex-shrink-0 p-1" title="Löschen">
+              <span class="material-symbols-outlined text-sm">delete</span>
+            </button>
+          </div>`).join('')}</div>`
+        : `<p class="text-xs text-white/30 font-body">Noch keine Dauerreservierungen.</p>`}
+    </div>`
+}
+
+function openRecurringModal() {
+  const courtSel = document.getElementById('rec-court')
+  courtSel.innerHTML = Array.from({length: getNumCourts()}, (_,i) => `<option value="${i+1}">Platz ${i+1}</option>`).join('')
+  buildTimeOptions(document.getElementById('rec-start'), '19:00')
+  buildTimeOptions(document.getElementById('rec-end'), '20:30')
+  document.getElementById('rec-member').value = ''
+  document.getElementById('rec-note').value = ''
+  document.getElementById('rec-valid-from').value = ''
+  document.getElementById('rec-valid-until').value = ''
+  document.getElementById('rec-conflict').classList.add('hidden')
+  document.getElementById('modal-recurring').showModal()
+}
+
+function confirmRecurring() {
+  const dayOfWeek = parseInt(document.getElementById('rec-day').value)
+  const court     = parseInt(document.getElementById('rec-court').value)
+  const timeStart = document.getElementById('rec-start').value
+  const timeEnd   = document.getElementById('rec-end').value
+  const memberName = document.getElementById('rec-member').value.trim()
+  const note      = document.getElementById('rec-note').value.trim()
+  const validFrom  = document.getElementById('rec-valid-from').value || null
+  const validUntil = document.getElementById('rec-valid-until').value || null
+  const conflict  = document.getElementById('rec-conflict')
+  if (!memberName) { conflict.textContent = 'Bitte Namen eingeben.'; conflict.classList.remove('hidden'); return }
+  if (toMinutes(timeEnd) <= toMinutes(timeStart)) { conflict.textContent = 'Endzeit muss nach Startzeit liegen.'; conflict.classList.remove('hidden'); return }
+  const entries = getRecurring()
+  entries.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), dayOfWeek, court, timeStart, timeEnd, memberName, note, validFrom, validUntil, type: 'singles', partners: [], userId: currentUserId, createdAt: new Date().toISOString() })
+  saveRecurring(entries)
+  document.getElementById('modal-recurring').close()
+  toast('Dauerreservierung gespeichert')
+  render()
+}
+
+function deleteRecurringEntry(id) {
+  saveRecurring(getRecurring().filter(r => r.id !== id))
+  toast('Dauerreservierung gelöscht')
+  render()
+}
+
+// ── Admin: Closures ───────────────────────────────
+function renderClosureAdmin() {
+  const el = document.getElementById('closure-editor')
+  if (!el || currentRole !== 'admin') { if (el) el.innerHTML = ''; return }
+  const today = isoDate(new Date())
+  const entries = getClosures().filter(cl => cl.dateTo >= today).sort((a,b) => a.dateFrom.localeCompare(b.dateFrom))
+  el.innerHTML = `
+    <div class="rounded-2xl border border-white/8 bg-black/10 p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-headline font-bold text-white text-sm flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-sm text-secondary-fixed">block</span>Platzsperrungen
+        </h2>
+        <button onclick="openClosureModal()" class="px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">+ Neu</button>
+      </div>
+      ${entries.length
+        ? `<div class="divide-y divide-white/5">${entries.map(cl => {
+          const fmtD = iso => iso.split('-').reverse().join('.')
+          const dateStr = cl.dateFrom === cl.dateTo ? fmtD(cl.dateFrom) : fmtD(cl.dateFrom) + '–' + fmtD(cl.dateTo)
+          const courtStr = cl.court === 0 ? 'Alle Plätze' : 'Platz ' + cl.court
+          const timeStr = cl.timeStart ? cl.timeStart + '–' + cl.timeEnd : 'Ganztägig'
+          return `<div class="flex items-center justify-between py-2 gap-2">
+            <div class="min-w-0">
+              <div class="text-xs font-body text-white/70 truncate">${dateStr} · ${courtStr} · ${timeStr}</div>
+              ${cl.reason ? `<div class="text-[10px] text-white/40 font-body">${esc(cl.reason)}</div>` : ''}
+            </div>
+            <button onclick="deleteClosureEntry('${cl.id}')" class="text-white/25 hover:text-red-400 transition-colors flex-shrink-0 p-1" title="Löschen">
+              <span class="material-symbols-outlined text-sm">delete</span>
+            </button>
+          </div>`}).join('')}</div>`
+        : `<p class="text-xs text-white/30 font-body">Keine aktiven Sperrungen.</p>`}
+    </div>`
+}
+
+function openClosureModal() {
+  const today = isoDate(new Date())
+  document.getElementById('cl-date-from').value = today
+  document.getElementById('cl-date-to').value = today
+  document.getElementById('cl-court').innerHTML = `<option value="0">Alle Plätze</option>` + Array.from({length: getNumCourts()}, (_,i) => `<option value="${i+1}">Platz ${i+1}</option>`).join('')
+  document.getElementById('cl-allday').checked = true
+  document.getElementById('cl-time-wrap').style.display = 'none'
+  buildTimeOptions(document.getElementById('cl-start'), '08:00')
+  buildTimeOptions(document.getElementById('cl-end'), '22:00')
+  document.getElementById('cl-reason').value = ''
+  document.getElementById('cl-conflict').classList.add('hidden')
+  document.getElementById('modal-closure').showModal()
+}
+
+function confirmClosure() {
+  const dateFrom = document.getElementById('cl-date-from').value
+  const dateTo   = document.getElementById('cl-date-to').value
+  const court    = parseInt(document.getElementById('cl-court').value)
+  const allDay   = document.getElementById('cl-allday').checked
+  const timeStart = allDay ? null : document.getElementById('cl-start').value
+  const timeEnd   = allDay ? null : document.getElementById('cl-end').value
+  const reason   = document.getElementById('cl-reason').value.trim()
+  const conflict = document.getElementById('cl-conflict')
+  if (!dateFrom || !dateTo) { conflict.textContent = 'Bitte Datum ausfüllen.'; conflict.classList.remove('hidden'); return }
+  if (dateTo < dateFrom) { conflict.textContent = 'Bis-Datum muss ≥ Von-Datum sein.'; conflict.classList.remove('hidden'); return }
+  if (!allDay && toMinutes(timeEnd) <= toMinutes(timeStart)) { conflict.textContent = 'Endzeit muss nach Startzeit liegen.'; conflict.classList.remove('hidden'); return }
+  const entries = getClosures()
+  entries.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), dateFrom, dateTo, court, timeStart, timeEnd, reason, createdAt: new Date().toISOString() })
+  saveClosures(entries)
+  document.getElementById('modal-closure').close()
+  toast('Sperrung gespeichert')
+  render()
+}
+
+function deleteClosureEntry(id) {
+  saveClosures(getClosures().filter(cl => cl.id !== id))
+  toast('Sperrung gelöscht')
+  render()
+}
+
+// ── Weather ───────────────────────────────────────
+function weatherEmoji(code) {
+  if (code === 0) return '☀️'
+  if (code <= 3) return '⛅'
+  if (code <= 48) return '🌫️'
+  if (code <= 67) return '🌧️'
+  if (code <= 77) return '🌨️'
+  if (code <= 82) return '🌦️'
+  if (code <= 86) return '🌨️'
+  return '⛈️'
+}
+
+function renderWeather(data) {
+  const c = data?.current
+  if (!c) return
+  const el = document.getElementById('weather-widget')
+  if (!el) return
+  document.getElementById('weather-emoji').textContent = weatherEmoji(c.weathercode ?? 0)
+  document.getElementById('weather-temp').textContent = Math.round(c.temperature_2m ?? 0) + '°C'
+  document.getElementById('weather-rain').textContent = Math.round(c.precipitation_probability ?? 0) + '% Regen'
+  el.style.display = 'flex'
+}
+
+async function loadWeather() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('tc_weather') || 'null')
+    if (cached && Date.now() - cached.ts < 30 * 60 * 1000) { renderWeather(cached.data); return }
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.05&longitude=9.48&current=temperature_2m,precipitation_probability,weathercode&timezone=Europe%2FBerlin')
+    const d = await r.json()
+    localStorage.setItem('tc_weather', JSON.stringify({ ts: Date.now(), data: d }))
+    renderWeather(d)
+  } catch(e) {}
+}
+
 // ── Toast ─────────────────────────────────────────
 function toast(msg) {
   const el = document.getElementById('toast')
@@ -994,6 +1411,7 @@ function toast(msg) {
 
 // ── Init ──────────────────────────────────────────
 render()
+loadWeather()
 
 // Auto-open from URL params (dashboard Gantt click or reschedule link)
 ;(function() {

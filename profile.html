@@ -471,7 +471,42 @@ function renderOwnProfile(email, profile) {
     </button>
 
     <div class="mt-6">${renderBadges(profile.display_name)}</div>
+
+    <div class="mt-4" id="booking-history-section"></div>
   `
+  renderBookingHistory(email)
+}
+
+function renderBookingHistory(email) {
+  const el = document.getElementById('booking-history-section')
+  if (!el) return
+  const today = new Date().toISOString().split('T')[0]
+  let past = []
+  try { past = JSON.parse(localStorage.getItem('tc_bookings') || '[]') } catch(e) {}
+  past = past.filter(b => b.userId === email && b.date < today)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 20)
+
+  const typeLabel = t => t === 'doubles' ? 'Doppel' : t === 'team' ? 'Mannschaft' : 'Einzel'
+  const fmtDate = iso => iso.split('-').reverse().join('.')
+
+  el.innerHTML = `
+    <div class="rounded-2xl bg-black/20 border border-white/5 overflow-hidden mb-4">
+      <div class="px-5 py-4 border-b border-white/5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-base text-secondary-fixed">history</span>
+        <span class="font-headline font-bold text-white/80 text-sm uppercase tracking-widest">Buchungshistorie</span>
+      </div>
+      ${past.length ? `<div class="divide-y divide-white/5">${past.map(b => `
+        <div class="flex items-center gap-3 px-5 py-3">
+          <span class="material-symbols-outlined text-base text-white/25">sports_tennis</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-body font-semibold text-white/75">${fmtDate(b.date)} · Platz ${b.court}</div>
+            <div class="text-xs text-white/35 font-body truncate">${b.timeStart}–${b.timeEnd}${b.partners?.length ? ' · mit ' + b.partners.join(', ') : ''}</div>
+          </div>
+          <span class="text-xs font-headline font-bold text-white/30 flex-shrink-0">${typeLabel(b.type)}</span>
+        </div>`).join('')}</div>`
+      : `<div class="px-5 py-8 text-center text-white/30 font-body text-sm">Noch keine vergangenen Buchungen.</div>`}
+    </div>`
 }
 
 function toggleRow(id, label, desc, checked) {
