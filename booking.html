@@ -245,16 +245,18 @@ tailwind.config = {
           <span class="material-symbols-outlined text-white/40">group</span>
           <span id="detail-partners" class="text-white/70 font-body text-sm"></span>
         </div>
-        <div class="flex gap-2 mt-2">
-          <button onclick="exportDetailICS()" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/60 hover:bg-white/15 transition-colors flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-base">calendar_export</span>Kalender
+        <div class="pt-1 border-t border-white/8 space-y-2">
+          <button onclick="exportDetailICS()" class="w-full flex items-center justify-center gap-1.5 text-xs font-headline font-bold text-white/40 hover:text-white/70 transition-colors py-1">
+            <span class="material-symbols-outlined text-sm">calendar_export</span>Zum Kalender exportieren
           </button>
-          <button onclick="rescheduleBooking()" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-blue-900/30 border border-blue-500/25 text-blue-300 hover:bg-blue-900/50 transition-colors flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-base">edit_calendar</span>Verschieben
-          </button>
-          <button onclick="cancelBooking()" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-red-900/30 border border-red-500/25 text-red-300 hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-base">cancel</span>Stornieren
-          </button>
+          <div class="flex gap-2">
+            <button onclick="rescheduleBooking()" class="flex-1 py-3 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/80 hover:bg-white/15 transition-colors flex items-center justify-center gap-2 border border-white/10">
+              <span class="material-symbols-outlined text-base">edit_calendar</span>Verschieben
+            </button>
+            <button onclick="cancelBooking()" class="flex-1 py-3 rounded-xl font-headline font-bold text-sm bg-red-900/30 border border-red-500/25 text-red-300 hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-base">event_busy</span>Stornieren
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -848,16 +850,27 @@ function toast(msg) {
 // ── Init ──────────────────────────────────────────
 render()
 
-// Auto-open booking modal from URL params (e.g. from dashboard Gantt click)
+// Auto-open from URL params (dashboard Gantt click or reschedule link)
 ;(function() {
   const p = new URLSearchParams(location.search)
+
+  // ?reschedule=BOOKING_ID — open reschedule flow for an existing booking
+  const rid = p.get('reschedule')
+  if (rid) {
+    const b = getBookings().find(x => x.id === rid)
+    if (b) {
+      const target = new Date(b.date + 'T00:00:00')
+      if (!isNaN(target.getTime())) { _viewDate = target; render() }
+      setTimeout(() => { _detailId = rid; rescheduleBooking() }, 0)
+    }
+    return
+  }
+
+  // ?date=…&court=…&start=… — open new booking pre-filled
   const d = p.get('date'), c = p.get('court'), s = p.get('start')
   if (d && c && s) {
     const target = new Date(d + 'T00:00:00')
-    if (!isNaN(target.getTime())) {
-      _viewDate = target
-      render()
-    }
+    if (!isNaN(target.getTime())) { _viewDate = target; render() }
     setTimeout(() => openBook(d, parseInt(c), s), 0)
   }
 })()
