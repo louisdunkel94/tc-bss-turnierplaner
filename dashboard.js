@@ -20,6 +20,8 @@ async function boot() {
   currentProfile = {
     id: authEmail,
     display_name: saved.display_name,
+    first_name: saved.first_name || '',
+    last_name:  saved.last_name  || '',
     role: saved.role,
     lk: saved.lk,
     gender: saved.gender || null,
@@ -146,7 +148,7 @@ function getSuggestedTourneys(regs, tourneys, profile) {
                 (gr === 'damen'  && profile.gender === 'dame')
     if (!gOk) return false
     return lkInRange(profile?.lk, t.skill_requirement)
-  }).sort((a, b) => new Date(a.start_at||0) - new Date(b.start_at||0)).slice(0, 3)
+  }).sort((a, b) => new Date(a.start_at||0) - new Date(b.start_at||0))
 }
 
 function fmtTime(mins) {
@@ -768,7 +770,7 @@ async function renderMitglied(app) {
         Meine Turniere
       </h2>
       ${myTourneys.length
-        ? `<div class="grid gap-3 md:grid-cols-2">${myTourneys.map(miniTourneyCard).join('')}</div>`
+        ? `<div class="grid gap-4 md:grid-cols-2">${myTourneys.map(t => tournamentCard(t, true, false)).join('')}</div>`
         : `<div class="rounded-2xl bg-white/5 border border-white/8 px-5 py-6 text-center text-white/30 font-body text-sm">
             <span class="material-symbols-outlined text-2xl block mb-2">event_busy</span>
             Du bist bei keinem aktiven Turnier angemeldet.
@@ -1190,8 +1192,11 @@ function tournamentCard(t, isRegistered, isOrganizer) {
         ${isRegistered && t.status === 'open' ? `<button onclick="unregisterFromTournament('${t.id}')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-red-900/30 hover:text-red-300 transition-colors">
           <span class="material-symbols-outlined text-xs">person_remove</span>Abmelden
         </button>` : ''}
-        ${isRegistered && t.status !== 'open' ? `<span class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed/10 text-secondary-fixed/60">
-          <span class="material-symbols-outlined text-xs">check</span>Angemeldet
+        ${isRegistered && t.status === 'running' ? `<a href="tournament.html?id=${t.id}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed/15 text-secondary-fixed hover:bg-secondary-fixed/25 transition-colors no-underline">
+          <span class="material-symbols-outlined text-xs">open_in_new</span>Zum Turnier
+        </a>` : ''}
+        ${isRegistered && t.status === 'closed' ? `<span class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-secondary-fixed/10 text-secondary-fixed/60">
+          <span class="material-symbols-outlined text-xs">check</span>Teilgenommen
         </span>` : ''}
         ${isOrganizer ? `
           ${t.status === 'draft' ? `<button onclick="setTournamentStatus('${t.id}','open')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-headline font-bold text-xs bg-white/10 text-white/60 hover:bg-white/15 transition-colors">
@@ -1231,12 +1236,13 @@ function tournamentCard(t, isRegistered, isOrganizer) {
 
 // ── Actions ───────────────────────────────────────────────────
 async function registerForTournament(id) {
+  const fullName = [currentProfile?.first_name, currentProfile?.last_name].filter(Boolean).join(' ') || currentProfile?.display_name || currentUser.id
   if (DEMO_MODE) {
-    DS.regs = [...DS.regs, { tournament_id: id, user_id: currentUser.id, gender: currentProfile?.gender || 'offen' }]
+    DS.regs = [...DS.regs, { tournament_id: id, user_id: currentUser.id, display_name: fullName, gender: currentProfile?.gender || 'offen' }]
     toast('Erfolgreich angemeldet!'); render(); return
   }
   try {
-    await pb.collection('participants').create({ tournament: id, user: currentUser.id, gender: currentProfile?.gender })
+    await pb.collection('participants').create({ tournament: id, user: currentUser.id, display_name: fullName, gender: currentProfile?.gender })
     toast('Erfolgreich angemeldet!'); render()
   } catch(e) { toast('Fehler: ' + e.message) }
 }
