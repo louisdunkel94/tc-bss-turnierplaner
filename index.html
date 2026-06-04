@@ -93,10 +93,10 @@ tailwind.config = {
     TC Bad Soden-Salmünster
   </div>
   <h1 class="text-5xl md:text-6xl font-black font-headline text-white leading-tight tracking-tight mb-5">
-    Turniere.<br>Einfach.<br class="md:hidden"> Organisiert.
+    Tennis.<br>Buchungen.<br class="md:hidden"> Turniere.
   </h1>
   <p class="text-lg text-white/50 font-body max-w-xl mx-auto mb-10 leading-relaxed">
-    Der digitale Turnierplaner für euren Verein. Paarungen losen, Ergebnisse eintragen, Tabelle live verfolgen — alles im Browser, ohne Installation.
+    Die App für den TC Bad Soden-Salmünster. Plätze buchen, Turniere organisieren, Wetter checken — alles im Browser, ohne Installation.
   </p>
   <div class="flex flex-col sm:flex-row gap-3 justify-center">
     <a href="#login" class="flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl font-headline font-bold text-base bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors shadow-lg">
@@ -114,9 +114,25 @@ tailwind.config = {
      FEATURES
 ════════════════════════════════════════════════ -->
 <section class="max-w-4xl mx-auto px-6 py-20">
-  <h2 class="text-2xl font-black font-headline text-white text-center mb-2">Was das Tool kann</h2>
-  <p class="text-white/35 font-body text-center mb-12 text-sm">Alles was ihr für einen reibungslosen Turniertag braucht.</p>
+  <h2 class="text-2xl font-black font-headline text-white text-center mb-2">Was die App kann</h2>
+  <p class="text-white/35 font-body text-center mb-12 text-sm">Alles für euren Tennisverein — Buchungen, Turniere, Profil.</p>
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">calendar_month</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Platzbuchung</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Plätze per Gantt-Kalender reservieren. Tages- und Wochenansicht, Gäste-Buchungen, Wiederkehrende Slots.</div>
+      </div>
+    </div>
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">cloud</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Wettervorhersage</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Stündliche Vorhersage und 5-Tage-Ausblick direkt beim Buchen — ideal für die Platzplanung.</div>
+      </div>
+    </div>
 
     <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
       <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">tune</span>
@@ -130,7 +146,7 @@ tailwind.config = {
       <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">display_settings</span>
       <div>
         <div class="font-headline font-bold text-white text-base mb-1">Live-Anzeigetafel</div>
-        <div class="text-white/40 font-body text-sm leading-relaxed">QR-Code scannen, und alle sehen die aktuellen Paarungen und Ergebnisse live auf ihrem Handy.</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">QR-Code scannen — alle sehen die aktuellen Paarungen und Ergebnisse live auf dem Handy.</div>
       </div>
     </div>
 
@@ -138,53 +154,34 @@ tailwind.config = {
       <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">bar_chart</span>
       <div>
         <div class="font-headline font-bold text-white text-base mb-1">Statistiken & Karriere</div>
-        <div class="text-white/40 font-body text-sm leading-relaxed">Persönliche Auswertungen: Siege-Serien, Formkurve, Nemesis, häufigste Partner und mehr.</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Persönliche Auswertungen: Siege-Serien, Formkurve, Nemesis, häufigste Partner und Buchungshistorie.</div>
+      </div>
+    </div>
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">military_tech</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Badges & Gamification</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Teilnahme-Badges pro Turnier, Platzierungs-Trophäen (🥇🥈🥉) sichtbar im Spielerprofil.</div>
+      </div>
+    </div>
+
+    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
+      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">warning_amber</span>
+      <div>
+        <div class="font-headline font-bold text-white text-base mb-1">Platzzustand-Meldungen</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Zustand je Platz melden: ✅ Gut · 💧 Nass · ⚠️ Beschädigt — für alle Buchenden sichtbar.</div>
       </div>
     </div>
 
     <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
       <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">cloud_off</span>
       <div>
-        <div class="font-headline font-bold text-white text-base mb-1">Keine Installation</div>
-        <div class="text-white/40 font-body text-sm leading-relaxed">Läuft komplett im Browser. Kein App-Store, kein Server nötig — einfach den Link öffnen und loslegen.</div>
+        <div class="font-headline font-bold text-white text-base mb-1">Offline-fähig</div>
+        <div class="text-white/40 font-body text-sm leading-relaxed">Läuft als PWA komplett im Browser. Kein App-Store, kein Server nötig — einfach den Link öffnen.</div>
       </div>
     </div>
 
-    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
-      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">emoji_events</span>
-      <div>
-        <div class="font-headline font-bold text-white text-base mb-1">Siegerehrung</div>
-        <div class="text-white/40 font-body text-sm leading-relaxed">Animierte Platzierungsverkündung am Ende — Platz 3, Platz 2, Platz 1 mit Konfetti-Effekt.</div>
-      </div>
-    </div>
-
-    <div class="bg-black/20 border border-white/8 rounded-2xl p-6 flex gap-4">
-      <span class="material-symbols-outlined text-3xl text-secondary-fixed flex-shrink-0 mt-0.5" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">group</span>
-      <div>
-        <div class="font-headline font-bold text-white text-base mb-1">Mitgliederdatenbank</div>
-        <div class="text-white/40 font-body text-sm leading-relaxed">Namen einmal anlegen, dann beim nächsten Turnier per Autocomplete oder Schnell-Chip eintragen.</div>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<hr class="section-divider">
-
-<!-- ══════════════════════════════════════════════
-     SPIELMODI
-════════════════════════════════════════════════ -->
-<section class="max-w-3xl mx-auto px-6 py-20 text-center">
-  <h2 class="text-2xl font-black font-headline text-white mb-2">Spielmodi</h2>
-  <p class="text-white/35 font-body text-sm mb-10">Für jede Gruppe und jeden Anlass der passende Modus.</p>
-  <div class="flex flex-wrap gap-2.5 justify-center">
-    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🎾 Balanced Draw</span>
-    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🔄 Americano</span>
-    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🏆 Jeder gegen jeden</span>
-    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🇨🇭 Schweizer System</span>
-    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">⚡ Einfaches KO</span>
-    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🔀 Doppeltes KO</span>
-    <span class="bg-white/8 border border-white/12 rounded-full px-4 py-2 text-sm font-headline font-bold text-white">🗂 Gruppenphase + KO</span>
   </div>
 </section>
 
@@ -193,33 +190,71 @@ tailwind.config = {
 <!-- ══════════════════════════════════════════════
      KURZANLEITUNG
 ════════════════════════════════════════════════ -->
-<section id="anleitung" class="max-w-3xl mx-auto px-6 py-20">
-  <h2 class="text-2xl font-black font-headline text-white text-center mb-2">In 3 Schritten zum Turnier</h2>
-  <p class="text-white/35 font-body text-center text-sm mb-12">So läuft ein typischer Turniertag ab.</p>
+<section id="anleitung" class="max-w-4xl mx-auto px-6 py-20">
+  <h2 class="text-2xl font-black font-headline text-white text-center mb-2">So geht's</h2>
+  <p class="text-white/35 font-body text-center text-sm mb-12">Platz buchen oder Turnier starten — in jeweils drei Schritten.</p>
 
-  <div class="space-y-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-    <div class="flex gap-5 bg-black/20 border border-white/8 rounded-2xl p-6">
-      <div class="w-10 h-10 rounded-xl bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-lg flex-shrink-0">1</div>
-      <div>
-        <div class="font-headline font-bold text-white text-base mb-1">Turnier erstellen</div>
-        <div class="text-white/40 font-body text-sm leading-relaxed">Im Dashboard auf „Neues Turnier" klicken. Name, Datum, Spielmodus und Anzahl der Plätze festlegen. Optional eine Vorlage aus einem früheren Turnier laden.</div>
+    <!-- Platzbuchung -->
+    <div>
+      <div class="flex items-center gap-2 mb-5">
+        <span class="material-symbols-outlined text-secondary-fixed" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">calendar_month</span>
+        <h3 class="font-headline font-bold text-white text-base">Platz buchen</h3>
+      </div>
+      <div class="space-y-3">
+        <div class="flex gap-4 bg-black/20 border border-white/8 rounded-2xl p-5">
+          <div class="w-8 h-8 rounded-lg bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-sm flex-shrink-0">1</div>
+          <div>
+            <div class="font-headline font-bold text-white text-sm mb-0.5">Datum & Uhrzeit wählen</div>
+            <div class="text-white/40 font-body text-xs leading-relaxed">Im Buchungskalender zum gewünschten Tag navigieren und den freien Slot im Gantt antippen.</div>
+          </div>
+        </div>
+        <div class="flex gap-4 bg-black/20 border border-white/8 rounded-2xl p-5">
+          <div class="w-8 h-8 rounded-lg bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-sm flex-shrink-0">2</div>
+          <div>
+            <div class="font-headline font-bold text-white text-sm mb-0.5">Buchungsformular ausfüllen</div>
+            <div class="text-white/40 font-body text-xs leading-relaxed">Spielart (Einzel / Doppel / Teamtraining), optionaler Gastname und Notiz eingeben.</div>
+          </div>
+        </div>
+        <div class="flex gap-4 bg-black/20 border border-white/8 rounded-2xl p-5">
+          <div class="w-8 h-8 rounded-lg bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-sm flex-shrink-0">3</div>
+          <div>
+            <div class="font-headline font-bold text-white text-sm mb-0.5">Bestätigen & fertig</div>
+            <div class="text-white/40 font-body text-xs leading-relaxed">Buchung erscheint sofort im Kalender. Optional als ⭐ Favorit für Schnellbuchungen speichern.</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="flex gap-5 bg-black/20 border border-white/8 rounded-2xl p-6">
-      <div class="w-10 h-10 rounded-xl bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-lg flex-shrink-0">2</div>
-      <div>
-        <div class="font-headline font-bold text-white text-base mb-1">Spieler eintragen & losen</div>
-        <div class="text-white/40 font-body text-sm leading-relaxed">Spielernamen eingeben oder aus der Vereins-Mitgliederliste per Chip hinzufügen. Dann „Turnier starten" — die erste Runde wird automatisch ausgelost.</div>
+    <!-- Turnier -->
+    <div>
+      <div class="flex items-center gap-2 mb-5">
+        <span class="material-symbols-outlined text-secondary-fixed" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">emoji_events</span>
+        <h3 class="font-headline font-bold text-white text-base">Turnier starten</h3>
       </div>
-    </div>
-
-    <div class="flex gap-5 bg-black/20 border border-white/8 rounded-2xl p-6">
-      <div class="w-10 h-10 rounded-xl bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-lg flex-shrink-0">3</div>
-      <div>
-        <div class="font-headline font-bold text-white text-base mb-1">Ergebnisse eintragen</div>
-        <div class="text-white/40 font-body text-sm leading-relaxed">Nach jeder Runde Ergebnis antippen — Tabelle und Statistiken aktualisieren sich sofort. Runde für Runde bis zum Finale, dann die animierte Siegerehrung starten.</div>
+      <div class="space-y-3">
+        <div class="flex gap-4 bg-black/20 border border-white/8 rounded-2xl p-5">
+          <div class="w-8 h-8 rounded-lg bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-sm flex-shrink-0">1</div>
+          <div>
+            <div class="font-headline font-bold text-white text-sm mb-0.5">Turnier anlegen</div>
+            <div class="text-white/40 font-body text-xs leading-relaxed">Im Dashboard „Neues Turnier" wählen, Name, Datum, Spielmodus und Anzahl Plätze festlegen.</div>
+          </div>
+        </div>
+        <div class="flex gap-4 bg-black/20 border border-white/8 rounded-2xl p-5">
+          <div class="w-8 h-8 rounded-lg bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-sm flex-shrink-0">2</div>
+          <div>
+            <div class="font-headline font-bold text-white text-sm mb-0.5">Spieler eintragen & losen</div>
+            <div class="text-white/40 font-body text-xs leading-relaxed">Teilnehmer per Chip aus der Mitgliederliste hinzufügen, dann „Auslosung starten" — erste Runde automatisch generiert.</div>
+          </div>
+        </div>
+        <div class="flex gap-4 bg-black/20 border border-white/8 rounded-2xl p-5">
+          <div class="w-8 h-8 rounded-lg bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-headline font-black text-sm flex-shrink-0">3</div>
+          <div>
+            <div class="font-headline font-bold text-white text-sm mb-0.5">Ergebnisse eintragen</div>
+            <div class="text-white/40 font-body text-xs leading-relaxed">Runde für Runde — Tabelle aktualisiert sich sofort. Am Ende die animierte Siegerehrung starten.</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -240,7 +275,7 @@ tailwind.config = {
 <section id="login" class="max-w-sm mx-auto px-6 py-20">
   <div class="text-center mb-8">
     <span class="material-symbols-outlined text-4xl text-secondary-fixed block mb-3" style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">sports_tennis</span>
-    <h2 class="text-2xl font-black font-headline text-white mb-1">Zum Turnier</h2>
+    <h2 class="text-2xl font-black font-headline text-white mb-1">Anmelden</h2>
     <p class="text-white/35 font-body text-sm">Mit deinen Vereinszugangsdaten einloggen.</p>
   </div>
 
