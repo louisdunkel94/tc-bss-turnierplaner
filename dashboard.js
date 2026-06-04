@@ -68,6 +68,7 @@ async function render() {
   } else {
     await renderVeranstalter(app)
   }
+  loadWeather()
 }
 
 // ── Safe localStorage write ───────────────────────────────────
@@ -727,6 +728,8 @@ async function renderMitglied(app) {
       </div>
     </div>
 
+    ${WEATHER_WIDGET_HTML}
+
     ${announcementsHtml}
 
     <!-- Platzauslastung + Nächste Buchung -->
@@ -815,6 +818,8 @@ async function renderVeranstalter(app) {
     : `<p class="text-white/30 font-body text-sm mb-3">Heute keine Buchungen.</p>`
 
   app.innerHTML = `
+    ${WEATHER_WIDGET_HTML}
+
     <section class="mb-10 p-5 rounded-2xl bg-black/10 border border-white/8">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
@@ -1085,10 +1090,12 @@ async function renderAdmin(app) {
   const myIds = new Set(myRegs.map(r => r.tournament_id))
 
   app.innerHTML = `
-    <div class="mb-8">
+    <div class="mb-5">
       <h1 class="text-3xl font-headline font-bold text-white tracking-tight">Admin</h1>
       <p class="text-white/40 font-body mt-1">Übersicht aller Mitglieder und Turniere.</p>
     </div>
+
+    ${WEATHER_WIDGET_HTML}
 
     ${renderCourtConfig()}
 
@@ -1793,6 +1800,84 @@ function loadExampleTournament() {
   DS.regs = [...DS.regs.filter(r => r.tournament_id !== id), ...regs]
   toast('Beispielturnier erstellt!')
   render()
+}
+
+// ── Weather ───────────────────────────────────────────────────
+const WEATHER_WIDGET_HTML = `<div id="weather-widget" style="display:none" class="mb-5 rounded-xl bg-black/10 border border-white/8 overflow-hidden">
+  <div class="flex items-center gap-2.5 px-4 py-2.5">
+    <span id="weather-emoji" class="text-xl leading-none"></span>
+    <span id="weather-temp" class="font-headline font-bold text-white/80 text-sm"></span>
+    <span class="text-white/15">·</span>
+    <span id="weather-rain" class="text-white/45 font-body text-xs"></span>
+    <span class="ml-auto text-[10px] text-white/20 font-body">Bad Soden-Salmünster</span>
+  </div>
+  <div class="border-t border-white/5 px-3 py-2 overflow-x-auto scrollbar-hide">
+    <div id="weather-hourly" class="flex gap-3 min-w-max"></div>
+  </div>
+  <div id="weather-daily" class="border-t border-white/5 px-3 py-2 flex"></div>
+</div>`
+
+function weatherEmoji(code) {
+  if (code === 0) return '☀️'
+  if (code <= 3) return '⛅'
+  if (code <= 48) return '🌫️'
+  if (code <= 67) return '🌧️'
+  if (code <= 77) return '🌨️'
+  if (code <= 82) return '🌦️'
+  if (code <= 86) return '🌨️'
+  return '⛈️'
+}
+
+function renderWeather(data) {
+  const c = data?.current
+  if (!c) return
+  const el = document.getElementById('weather-widget')
+  if (!el) return
+  document.getElementById('weather-emoji').textContent = weatherEmoji(c.weathercode ?? 0)
+  document.getElementById('weather-temp').textContent = Math.round(c.temperature_2m ?? 0) + '°C'
+  document.getElementById('weather-rain').textContent = Math.round(c.precipitation_probability ?? 0) + '% Regen'
+  const hourlyEl = document.getElementById('weather-hourly')
+  if (hourlyEl && data.hourly) {
+    const now = new Date()
+    const todayStr = now.toISOString().split('T')[0]
+    const curH = String(now.getHours()).padStart(2, '0')
+    let startIdx = data.hourly.time.findIndex(t => t >= `${todayStr}T${curH}:00`)
+    if (startIdx < 0) startIdx = 0
+    hourlyEl.innerHTML = data.hourly.time.slice(startIdx, startIdx + 10).map((t, i) => {
+      const idx = startIdx + i
+      const label = i === 0 ? 'Jetzt' : t.slice(11, 13) + 'h'
+      return `<div class="flex flex-col items-center gap-0.5 min-w-[36px]">
+        <div class="text-[9px] text-white/35 font-body">${label}</div>
+        <div class="text-sm">${weatherEmoji(data.hourly.weathercode[idx] ?? 0)}</div>
+        <div class="text-[10px] font-headline font-bold text-white/70">${Math.round(data.hourly.temperature_2m[idx] ?? 0)}°</div>
+      </div>`
+    }).join('')
+  }
+  const dailyEl = document.getElementById('weather-daily')
+  if (dailyEl && data.daily) {
+    const DE_DAYS = ['So','Mo','Di','Mi','Do','Fr','Sa']
+    dailyEl.innerHTML = data.daily.time.slice(0, 5).map((dateStr, i) => {
+      const day = i === 0 ? 'Heute' : DE_DAYS[new Date(dateStr + 'T12:00').getDay()]
+      return `<div class="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+        <div class="text-[9px] text-white/35 font-body">${day}</div>
+        <div class="text-sm">${weatherEmoji(data.daily.weathercode[i] ?? 0)}</div>
+        <div class="text-[10px] font-headline font-bold text-white/70">${Math.round(data.daily.temperature_2m_max[i] ?? 0)}°</div>
+        <div class="text-[9px] text-white/30 font-body">${Math.round(data.daily.temperature_2m_min[i] ?? 0)}°</div>
+      </div>`
+    }).join('')
+  }
+  el.style.display = 'block'
+}
+
+async function loadWeather() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('tc_weather') || 'null')
+    if (cached && Date.now() - cached.ts < 30 * 60 * 1000) { renderWeather(cached.data); return }
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.05&longitude=9.48&current=temperature_2m,precipitation_probability,weathercode&hourly=temperature_2m,precipitation_probability,weathercode&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode&forecast_days=5&timezone=Europe%2FBerlin')
+    const d = await r.json()
+    localStorage.setItem('tc_weather', JSON.stringify({ ts: Date.now(), data: d }))
+    renderWeather(d)
+  } catch(e) {}
 }
 
 // ── Toast ─────────────────────────────────────────────────────
