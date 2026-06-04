@@ -121,6 +121,8 @@ function getProfile(email) {
   const isAdmin = email === 'admin@tennisclub-bss.de'
   return {
     display_name: saved.display_name || (isAdmin ? 'TC BSS Admin' : 'Testmitglied'),
+    first_name: saved.first_name || '',
+    last_name:  saved.last_name  || '',
     role: saved.role || (isAdmin ? 'admin' : 'mitglied'),
     lk: saved.lk || '',
     gender: saved.gender || null,
@@ -403,6 +405,16 @@ function renderOwnProfile(email, profile) {
       <h2 class="text-sm font-headline font-bold text-white/50 uppercase tracking-widest flex items-center gap-2">
         <span class="material-symbols-outlined text-base">person</span>Persönliche Daten
       </h2>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label" for="p-firstname">Vorname</label>
+          <input type="text" id="p-firstname" maxlength="40" value="${esc(profile.first_name)}" class="field-input"/>
+        </div>
+        <div>
+          <label class="field-label" for="p-lastname">Nachname</label>
+          <input type="text" id="p-lastname" maxlength="40" value="${esc(profile.last_name)}" class="field-input"/>
+        </div>
+      </div>
       <div>
         <label class="field-label" for="p-name">Anzeigename</label>
         <input type="text" id="p-name" maxlength="60" value="${esc(profile.display_name)}" class="field-input"/>
@@ -510,6 +522,8 @@ function saveProfile(email) {
   profiles[email] = {
     ...current,
     display_name: document.getElementById('p-name').value.trim() || current.display_name,
+    first_name:   document.getElementById('p-firstname').value.trim(),
+    last_name:    document.getElementById('p-lastname').value.trim(),
     lk: document.getElementById('p-lk').value,
     gender: document.getElementById('p-gender').value || null,
     avatar: newAvatar,

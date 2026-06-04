@@ -738,11 +738,14 @@ function openBook(date, court, timeStart) {
   const endMin = Math.min(toMinutes(timeStart) + 60, TIME_END)
   buildTimeOptions(document.getElementById('book-end'), fromMinutes(endMin))
 
-  // Auto-fill logged-in user's display name
-  const _autoName = currentUserId
-    ? (JSON.parse(localStorage.getItem('tc_profiles') || '{}')[currentUserId]?.display_name || '')
-    : ''
-  document.getElementById('book-member').value = _autoName
+  // Auto-fill logged-in user's full name
+  const _profile = currentUserId ? (JSON.parse(localStorage.getItem('tc_profiles') || '{}')[currentUserId] || {}) : {}
+  const _autoName = [_profile.first_name, _profile.last_name].filter(Boolean).join(' ') || _profile.display_name || ''
+  const bookMemberEl = document.getElementById('book-member')
+  bookMemberEl.value = _autoName
+  bookMemberEl.readOnly = (currentRole === 'mitglied')
+  bookMemberEl.classList.toggle('opacity-60', currentRole === 'mitglied')
+  bookMemberEl.classList.toggle('cursor-default', currentRole === 'mitglied')
   document.getElementById('book-note').value = ''
   document.getElementById('book-conflict').classList.add('hidden')
   document.getElementById('suggest-list').classList.add('hidden')
