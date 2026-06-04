@@ -7,6 +7,7 @@ let currentUser = null
 let currentProfile = null
 let activeTournamentId = null
 let _showArchive = false
+let _showSgForm = false
 
 // ── Boot ─────────────────────────────────────────────────────
 async function boot() {
@@ -143,26 +144,75 @@ function getSuggestedTourneys(regs, tourneys, profile) {
   }).sort((a, b) => new Date(a.start_at||0) - new Date(b.start_at||0)).slice(0, 3)
 }
 
-function renderUtilizationBar(todayBookings, numCourts) {
-  const START = 8 * 60, RANGE = (22 - 8) * 60
+function fmtTime(mins) {
+  return String(Math.floor(mins / 60)).padStart(2,'0') + ':' + String(mins % 60).padStart(2,'0')
+}
+
+function renderCourtTimeline(todayBookings, numCourts) {
+  const START = 8 * 60, END = 22 * 60, RANGE = END - START
   const colors = ['bg-emerald-500','bg-lime-500','bg-blue-400','bg-purple-400','bg-orange-400','bg-pink-400','bg-cyan-400','bg-teal-400']
-  let html = ''
+  const now = new Date()
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+  const nowPct  = (nowMins >= START && nowMins <= END) ? ((nowMins - START) / RANGE * 100).toFixed(1) : null
+
+  let rows = ''
   for (let c = 1; c <= numCourts; c++) {
     const blocks = todayBookings.filter(b => b.court === c).map(b => {
       const [sh, sm] = b.timeStart.split(':').map(Number)
       const [eh, em] = b.timeEnd.split(':').map(Number)
-      const s = sh * 60 + sm
-      const e = eh * 60 + em
+      const s = sh * 60 + sm, e = eh * 60 + em
       const left  = ((s - START) / RANGE * 100).toFixed(1)
       const width = ((e - s) / RANGE * 100).toFixed(1)
-      return `<div class="${colors[(c-1)%colors.length]} absolute top-0 bottom-0 rounded-sm opacity-80" style="left:${left}%;width:${width}%" title="${esc(b.memberName)} · ${b.timeStart}–${b.timeEnd}"></div>`
+      const col   = colors[(c - 1) % colors.length]
+      const label = esc((b.memberName || '').split(' ')[0])
+      return `<div class="${col} absolute top-0 bottom-0 flex items-center px-1 overflow-hidden opacity-85" style="left:${left}%;width:${width}%" title="${esc(b.memberName)} · ${b.timeStart}–${b.timeEnd}">
+        <span class="text-[10px] font-headline font-bold text-white truncate leading-none select-none">${label}</span>
+      </div>`
     }).join('')
-    html += `<div class="flex items-center gap-2">
+    const nowLine = nowPct !== null
+      ? `<div class="absolute top-0 bottom-0 w-px bg-red-500 z-10 pointer-events-none" style="left:${nowPct}%"></div>` : ''
+    rows += `<div class="flex items-center gap-2">
       <span class="text-xs text-white/40 font-body w-14 flex-shrink-0 text-right">Platz ${c}</span>
-      <div class="flex-1 h-4 rounded bg-white/5 relative overflow-hidden">${blocks}</div>
+      <div class="flex-1 h-5 rounded-md bg-green-500/10 border border-green-500/10 relative overflow-hidden">${blocks}${nowLine}</div>
     </div>`
   }
-  return html || '<p class="text-white/30 font-body text-sm">Keine Plätze konfiguriert.</p>'
+
+  const axis = `<div class="flex items-center gap-2 mt-1.5">
+    <div class="w-14 flex-shrink-0"></div>
+    <div class="flex-1 flex justify-between">
+      ${['08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00'].map(t => `<span class="text-[9px] text-white/20 font-body">${t}</span>`).join('')}
+    </div>
+  </div>`
+
+  return rows ? rows + axis : '<p class="text-white/30 font-body text-sm">Keine Plätze konfiguriert.</p>'
+}
+
+function getFreeSlots(todayBookings, numCourts) {
+  const START = 8 * 60, END = 22 * 60, SLOT = 30
+  const now = new Date()
+  const nowMins  = now.getHours() * 60 + now.getMinutes()
+  const fromMins = Math.ceil(nowMins / SLOT) * SLOT
+
+  const results = []
+  for (let c = 1; c <= numCourts; c++) {
+    const booked = new Set()
+    todayBookings.filter(b => b.court === c).forEach(b => {
+      const [sh, sm] = b.timeStart.split(':').map(Number)
+      const [eh, em] = b.timeEnd.split(':').map(Number)
+      for (let m = sh * 60 + sm; m < eh * 60 + em; m += SLOT) booked.add(m)
+    })
+    let blockStart = null
+    for (let m = Math.max(START, fromMins); m < END; m += SLOT) {
+      if (!booked.has(m)) {
+        if (blockStart === null) blockStart = m
+      } else {
+        if (blockStart !== null && m - blockStart >= 60) results.push({ court: c, timeStart: fmtTime(blockStart), timeEnd: fmtTime(m) })
+        blockStart = null
+      }
+    }
+    if (blockStart !== null && END - blockStart >= 60) results.push({ court: c, timeStart: fmtTime(blockStart), timeEnd: fmtTime(END) })
+  }
+  return results.sort((a, b) => a.timeStart.localeCompare(b.timeStart) || a.court - b.court).slice(0, 6)
 }
 
 function getProfile(email) {
@@ -357,16 +407,39 @@ async function renderMitglied(app) {
   const [tourneys, myRegs] = await Promise.all([dbTourneys(['open','running']), dbMyRegs()])
 
   const todayBookings = getTodayBookings()
-  const numCourts = Math.max(1, Math.min(12, (JSON.parse(localStorage.getItem('tc_settings')||'{}').numCourts) || 6))
-  const nextBooking   = getNextMyBooking()
-  const myTourneys    = getMyTourneys(myRegs, tourneys)
-  const suggested     = getSuggestedTourneys(myRegs, tourneys, currentProfile)
+  const numCourts  = Math.max(1, Math.min(12, (JSON.parse(localStorage.getItem('tc_settings')||'{}').numCourts) || 6))
+  const nextBooking  = getNextMyBooking()
+  const myTourneys   = getMyTourneys(myRegs, tourneys)
+  const suggested    = getSuggestedTourneys(myRegs, tourneys, currentProfile)
+  const announcements = getAnnouncements().slice(0, 3)
+  const freeSlots    = getFreeSlots(todayBookings, numCourts)
+  const spielgesuche = getSpielgesuche()
+  const myGesuch     = spielgesuche.find(g => g.userId === currentUser?.id)
+  const otherGesuche = spielgesuche.filter(g => g.userId !== currentUser?.id)
 
   const statusConf = {
     open:    { label: 'Offen',  color: 'bg-secondary-fixed/15 text-secondary-fixed' },
     running: { label: 'Läuft', color: 'bg-green-500/15 text-green-400' },
   }
   const modeLabels = Object.fromEntries(Object.entries(MODES).map(([k,v]) => [k, v.label]))
+
+  const relativeDate = iso => {
+    const d = new Date(iso + 'T00:00:00')
+    const today = new Date(); today.setHours(0,0,0,0)
+    const diff = Math.round((d - today) / 86400000)
+    if (diff === 0) return 'Heute'
+    if (diff === 1) return 'Morgen'
+    return d.toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short' })
+  }
+
+  const relativeDateAnn = iso => {
+    const d = new Date(iso)
+    const today = new Date(); today.setHours(0,0,0,0)
+    const yesterday = new Date(today); yesterday.setDate(today.getDate()-1)
+    if (d >= today) return 'Heute'
+    if (d >= yesterday) return 'Gestern'
+    return d.toLocaleDateString('de-DE', { day:'numeric', month:'short' })
+  }
 
   const nextBookingHtml = nextBooking ? (() => {
     const d = new Date(nextBooking.date + 'T00:00:00')
@@ -408,6 +481,130 @@ async function renderMitglied(app) {
     </div>`
   }
 
+  const announcementsHtml = announcements.length ? `
+    <div class="mb-6 space-y-2">
+      ${announcements.map(a => `
+        <div class="flex items-start gap-3 px-4 py-3 rounded-xl bg-secondary-fixed/8 border border-secondary-fixed/15">
+          <span class="material-symbols-outlined text-secondary-fixed text-base flex-shrink-0 mt-0.5">campaign</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-body text-white/85 leading-relaxed">${esc(a.text)}</p>
+            <p class="text-xs text-white/30 font-body mt-0.5">${relativeDateAnn(a.createdAt)}</p>
+          </div>
+        </div>`).join('')}
+    </div>` : ''
+
+  const freeSlotsHtml = `
+    <section class="mb-6">
+      <h2 class="font-headline font-bold text-white text-base mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-base text-white/40">event_available</span>
+        Freie Slots heute
+      </h2>
+      ${freeSlots.length
+        ? `<div class="flex flex-wrap gap-2">${freeSlots.map(s => `
+            <a href="booking.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-white/8 text-white/70 hover:bg-secondary-fixed/15 hover:text-secondary-fixed transition-colors no-underline border border-white/8 hover:border-secondary-fixed/20">
+              <span class="material-symbols-outlined text-xs">schedule</span>
+              ${s.timeStart}–${s.timeEnd} · Platz ${s.court}
+            </a>`).join('')}</div>`
+        : `<p class="text-white/25 font-body text-sm">Heute keine freien Blöcke ≥ 1h mehr verfügbar.</p>`}
+    </section>`
+
+  const sgCardOther = g => {
+    const hasInterest = g.interested?.includes(currentUser?.id)
+    const typeLabel = g.type === 'doubles' ? 'Doppel' : 'Einzel'
+    return `<div class="rounded-2xl bg-white/6 border border-white/10 p-4 flex flex-col gap-2">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <span class="font-headline font-bold text-white text-sm">${esc(g.memberName)}</span>
+          ${g.lkLabel ? `<span class="ml-1.5 text-xs text-white/30 font-body">LK ${esc(g.lkLabel)}</span>` : ''}
+        </div>
+        <span class="text-[10px] font-body text-white/30 flex-shrink-0">${relativeDate(g.date)}</span>
+      </div>
+      <div class="text-xs text-white/50 font-body flex items-center gap-3">
+        <span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">schedule</span>${g.timeStart}–${g.timeEnd}</span>
+        <span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">sports_tennis</span>${typeLabel}</span>
+      </div>
+      ${g.message ? `<p class="text-xs text-white/60 font-body leading-relaxed">${esc(g.message)}</p>` : ''}
+      <button onclick="toggleInterest('${g.id}')" class="self-start mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold transition-colors ${hasInterest ? 'bg-secondary-fixed/15 text-secondary-fixed border border-secondary-fixed/20' : 'bg-white/8 text-white/50 hover:bg-white/12 hover:text-white/80 border border-white/8'}">
+        <span class="material-symbols-outlined text-xs">favorite</span>
+        ${hasInterest ? 'Interesse signalisiert' : 'Interesse zeigen'}
+        ${g.interested?.length ? `<span class="ml-1 text-white/30">(${g.interested.length})</span>` : ''}
+      </button>
+    </div>`
+  }
+
+  const sgFormHtml = _showSgForm ? `
+    <div class="mb-4 rounded-2xl bg-white/6 border border-white/10 p-4 space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-white/40 font-body block mb-1">Datum</label>
+          <input type="date" id="sg-date" min="${isoToday()}" value="${isoToday()}" class="w-full bg-white/8 border border-white/10 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
+        <div>
+          <label class="text-xs text-white/40 font-body block mb-1">Spielart</label>
+          <select id="sg-type" class="w-full bg-white/8 border border-white/10 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed">
+            <option value="singles">Einzel</option>
+            <option value="doubles">Doppel</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-white/40 font-body block mb-1">Von</label>
+          <input type="time" id="sg-start" value="10:00" class="w-full bg-white/8 border border-white/10 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
+        <div>
+          <label class="text-xs text-white/40 font-body block mb-1">Bis</label>
+          <input type="time" id="sg-end" value="12:00" class="w-full bg-white/8 border border-white/10 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-white/40 font-body block mb-1">Kurze Nachricht (optional)</label>
+        <input type="text" id="sg-msg" maxlength="100" placeholder="z.B. Suche Doppelpartner für lockeres Spiel" class="w-full bg-white/8 border border-white/10 text-white rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed placeholder:text-white/20"/>
+      </div>
+      <div class="flex gap-2 justify-end">
+        <button onclick="_showSgForm=false;render()" class="px-4 py-2 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/50 hover:bg-white/12 transition-colors">Abbrechen</button>
+        <button onclick="submitSpielgesuch()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">
+          <span class="material-symbols-outlined text-base">send</span>Veröffentlichen
+        </button>
+      </div>
+    </div>` : ''
+
+  const spielgesucheHtml = `
+    <section class="mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-headline font-bold text-white text-base flex items-center gap-2">
+          <span class="material-symbols-outlined text-base text-white/40">group_add</span>
+          Mitspieler suchen
+        </h2>
+        ${!myGesuch ? `<button onclick="_showSgForm=!_showSgForm;render()" class="flex items-center gap-1 text-xs font-headline font-bold text-secondary-fixed hover:underline">
+          <span class="material-symbols-outlined text-sm">${_showSgForm ? 'close' : 'add'}</span>${_showSgForm ? 'Schließen' : 'Gesuch erstellen'}
+        </button>` : ''}
+      </div>
+      ${sgFormHtml}
+      ${myGesuch ? `
+        <div class="mb-3 rounded-2xl bg-secondary-fixed/8 border border-secondary-fixed/20 p-4">
+          <div class="flex items-start justify-between gap-2 mb-1">
+            <span class="text-xs font-headline font-bold text-secondary-fixed uppercase tracking-wider">Mein Gesuch</span>
+            <button onclick="deleteMeinGesuch('${myGesuch.id}')" class="text-white/20 hover:text-red-400 transition-colors">
+              <span class="material-symbols-outlined text-sm">delete</span>
+            </button>
+          </div>
+          <div class="text-xs text-white/50 font-body flex flex-wrap items-center gap-3 mt-1">
+            <span>${relativeDate(myGesuch.date)}</span>
+            <span>${myGesuch.timeStart}–${myGesuch.timeEnd}</span>
+            <span>${myGesuch.type === 'doubles' ? 'Doppel' : 'Einzel'}</span>
+          </div>
+          ${myGesuch.message ? `<p class="text-xs text-white/60 font-body mt-1">${esc(myGesuch.message)}</p>` : ''}
+          <p class="text-xs text-white/30 font-body mt-2">${myGesuch.interested?.length || 0} Interessent${myGesuch.interested?.length !== 1 ? 'en' : ''}</p>
+        </div>` : ''}
+      ${otherGesuche.length
+        ? `<div class="grid gap-3 md:grid-cols-2">${otherGesuche.map(sgCardOther).join('')}</div>`
+        : `<div class="rounded-2xl bg-white/5 border border-white/8 px-5 py-5 text-center text-white/25 font-body text-sm">
+            <span class="material-symbols-outlined text-2xl block mb-2">group_add</span>
+            Noch keine offenen Spielgesuche. Erstelle das erste!
+           </div>`}
+    </section>`
+
   app.innerHTML = `
     <div class="flex items-start justify-between mb-6 gap-4">
       <div>
@@ -418,6 +615,8 @@ async function renderMitglied(app) {
         <span class="material-symbols-outlined text-base">bar_chart</span><span class="hidden md:inline">Statistiken</span>
       </a>
     </div>
+
+    ${announcementsHtml}
 
     <!-- Platzauslastung + Nächste Buchung -->
     <div class="grid md:grid-cols-3 gap-4 mb-6">
@@ -431,7 +630,7 @@ async function renderMitglied(app) {
             Alle<span class="material-symbols-outlined text-sm">chevron_right</span>
           </a>
         </div>
-        <div class="space-y-2">${renderUtilizationBar(todayBookings, numCourts)}</div>
+        <div class="space-y-1.5">${renderCourtTimeline(todayBookings, numCourts)}</div>
         <div class="mt-4 flex items-center justify-between">
           <span class="text-xs text-white/30 font-body">${todayBookings.length} Buchung${todayBookings.length !== 1 ? 'en' : ''} heute</span>
           <a href="booking.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors no-underline">
@@ -448,6 +647,10 @@ async function renderMitglied(app) {
         <div class="flex-1">${nextBookingHtml}</div>
       </div>
     </div>
+
+    ${freeSlotsHtml}
+
+    ${spielgesucheHtml}
 
     <!-- Meine Turniere -->
     <section class="mb-6">
@@ -634,6 +837,137 @@ function renderBookingRulesEditor() {
     </section>`
 }
 
+// ── Announcements ─────────────────────────────────────────────
+function getAnnouncements() {
+  try { return JSON.parse(localStorage.getItem('tc_announcements') || '[]') } catch { return [] }
+}
+
+function saveAnnouncement(text) {
+  const ann = getAnnouncements()
+  ann.unshift({ id: 'ann_' + Date.now(), text: text.trim(), createdAt: new Date().toISOString(), authorName: currentProfile?.display_name || 'Admin' })
+  localStorage.setItem('tc_announcements', JSON.stringify(ann))
+}
+
+function deleteAnnouncement(id) {
+  localStorage.setItem('tc_announcements', JSON.stringify(getAnnouncements().filter(a => a.id !== id)))
+}
+
+function renderAnnouncementsEditor() {
+  const ann = getAnnouncements()
+  const fmtAnnDate = iso => {
+    const d = new Date(iso)
+    const today = new Date(); today.setHours(0,0,0,0)
+    const yesterday = new Date(today); yesterday.setDate(today.getDate()-1)
+    if (d >= today) return 'Heute'
+    if (d >= yesterday) return 'Gestern'
+    return d.toLocaleDateString('de-DE', { day:'numeric', month:'short' })
+  }
+  return `
+    <section class="mb-10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-headline font-bold text-white flex items-center gap-2">
+          <span class="material-symbols-outlined text-base text-white/40">campaign</span>
+          Ankündigungen
+        </h2>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <textarea id="ann-text" rows="2" placeholder="Ankündigung eingeben…" class="flex-1 bg-white/8 border border-white/10 text-white rounded-xl px-3 py-2 text-sm font-body resize-none focus:outline-none focus:border-secondary-fixed placeholder:text-white/25"></textarea>
+        <button onclick="adminSaveAnnouncement()" class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors self-end">
+          <span class="material-symbols-outlined text-base">send</span>Posten
+        </button>
+      </div>
+      ${ann.length
+        ? `<div class="space-y-2">${ann.map(a => `
+            <div class="flex items-start gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/8">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-body text-white/80 leading-relaxed">${esc(a.text)}</p>
+                <p class="text-xs text-white/25 font-body mt-0.5">${fmtAnnDate(a.createdAt)} · ${esc(a.authorName)}</p>
+              </div>
+              <button onclick="adminDeleteAnnouncement('${a.id}')" class="flex-shrink-0 text-white/20 hover:text-red-400 transition-colors mt-0.5">
+                <span class="material-symbols-outlined text-sm">delete</span>
+              </button>
+            </div>`).join('')}</div>`
+        : '<p class="text-white/25 font-body text-sm">Noch keine Ankündigungen.</p>'}
+    </section>`
+}
+
+async function adminSaveAnnouncement() {
+  const text = document.getElementById('ann-text')?.value?.trim()
+  if (!text) return
+  saveAnnouncement(text)
+  document.getElementById('ann-text').value = ''
+  await renderAdmin(document.getElementById('app'))
+  toast('Ankündigung veröffentlicht')
+}
+
+async function adminDeleteAnnouncement(id) {
+  deleteAnnouncement(id)
+  await renderAdmin(document.getElementById('app'))
+  toast('Ankündigung gelöscht')
+}
+
+// ── Spielgesuche ─────────────────────────────────────────────
+function getSpielgesuche() {
+  try {
+    const today = isoToday()
+    return JSON.parse(localStorage.getItem('tc_spielgesuche') || '[]')
+      .filter(g => g.date >= today)
+      .sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.timeStart.localeCompare(b.timeStart))
+  } catch { return [] }
+}
+
+function saveSpielgesuch({ date, timeStart, timeEnd, type, message }) {
+  const all = JSON.parse(localStorage.getItem('tc_spielgesuche') || '[]')
+  all.push({
+    id: 'sg_' + Date.now(),
+    userId: currentUser?.id,
+    memberName: currentProfile?.display_name || '',
+    lkLabel: currentProfile?.lk || '',
+    date, timeStart, timeEnd, type, message: message || '',
+    createdAt: new Date().toISOString(),
+    interested: []
+  })
+  localStorage.setItem('tc_spielgesuche', JSON.stringify(all))
+}
+
+function deleteSpielgesuch(id) {
+  localStorage.setItem('tc_spielgesuche', JSON.stringify(
+    JSON.parse(localStorage.getItem('tc_spielgesuche') || '[]').filter(g => g.id !== id)
+  ))
+}
+
+function toggleInterest(id) {
+  const all = JSON.parse(localStorage.getItem('tc_spielgesuche') || '[]')
+  const uid = currentUser?.id
+  const g = all.find(x => x.id === id)
+  if (!g || !uid) return
+  const idx = g.interested.indexOf(uid)
+  if (idx >= 0) g.interested.splice(idx, 1)
+  else g.interested.push(uid)
+  localStorage.setItem('tc_spielgesuche', JSON.stringify(all))
+  render()
+}
+
+function submitSpielgesuch() {
+  const date      = document.getElementById('sg-date')?.value
+  const timeStart = document.getElementById('sg-start')?.value
+  const timeEnd   = document.getElementById('sg-end')?.value
+  const type      = document.getElementById('sg-type')?.value || 'singles'
+  const message   = document.getElementById('sg-msg')?.value?.trim() || ''
+  if (!date || !timeStart || !timeEnd) { toast('Datum und Uhrzeit ausfüllen'); return }
+  if (timeEnd <= timeStart) { toast('Endzeit muss nach Startzeit liegen'); return }
+  saveSpielgesuch({ date, timeStart, timeEnd, type, message })
+  _showSgForm = false
+  toast('Gesuch veröffentlicht!')
+  render()
+}
+
+function deleteMeinGesuch(id) {
+  deleteSpielgesuch(id)
+  render()
+  toast('Gesuch gelöscht')
+}
+
 // ── Admin ─────────────────────────────────────────────────────
 async function renderAdmin(app) {
   const [tourneys, members, myRegs] = await Promise.all([dbTourneys(), dbMembers(), dbMyRegs()])
@@ -646,6 +980,8 @@ async function renderAdmin(app) {
     </div>
 
     ${renderBookingRulesEditor()}
+
+    ${renderAnnouncementsEditor()}
 
     <section class="mb-10">
       <h2 class="text-lg font-headline font-bold text-white mb-4 flex items-center gap-2">
