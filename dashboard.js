@@ -20,6 +20,7 @@ async function boot() {
     display_name: saved.display_name,
     role: saved.role,
     lk: saved.lk,
+    gender: saved.gender || null,
     avatar: saved.avatar,
     privacy: saved.privacy,
     notifications: saved.notifications,
@@ -58,6 +59,8 @@ async function render() {
   const app = document.getElementById('app')
   if (currentProfile?.role === 'mitglied') {
     await renderMitglied(app)
+  } else if (currentProfile?.role === 'admin') {
+    await renderAdmin(app)
   } else {
     await renderVeranstalter(app)
   }
