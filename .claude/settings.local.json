@@ -44,7 +44,8 @@
       "Bash(sed -i '' 's/TC Bad Soden-Salmünster – Turnierplan/TC Bad Soden-Salmünster – TC BSS App/g' /Users/louisdunkelprivat/Dev/Donatocup/tournament.html)",
       "Bash(sed -i '' 's|>Turniere</div>|>TC BSS App</div>|g' /Users/louisdunkelprivat/Dev/Donatocup/dashboard.html)",
       "Bash(node --input-type=module)",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(gh run *)"
     ]
   }
 }
