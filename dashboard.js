@@ -69,6 +69,7 @@ async function render() {
     await renderVeranstalter(app)
   }
   loadWeather()
+  checkUpcomingBookingNotifications()
 }
 
 // ── Safe localStorage write ───────────────────────────────────
@@ -1103,6 +1104,8 @@ async function renderAdmin(app) {
 
     ${renderAnnouncementsEditor()}
 
+    ${renderBookingStats()}
+
     <section class="mb-10">
       <h2 class="text-lg font-headline font-bold text-white mb-4 flex items-center gap-2">
         <span class="material-symbols-outlined text-base text-white/40">group</span>
@@ -1800,6 +1803,79 @@ function loadExampleTournament() {
   DS.regs = [...DS.regs.filter(r => r.tournament_id !== id), ...regs]
   toast('Beispielturnier erstellt!')
   render()
+}
+
+// ── Booking notifications ─────────────────────────────────────
+function checkUpcomingBookingNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return
+  const userId = currentUser?.id; if (!userId) return
+  const now = new Date()
+  const todayISO = now.toISOString().split('T')[0]
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  let notified = {}
+  try { notified = JSON.parse(localStorage.getItem('tc_notified') || '{}') } catch(e) {}
+  let bookings = []
+  try { bookings = JSON.parse(localStorage.getItem('tc_bookings') || '[]') } catch(e) {}
+  const toMin = t => { const [h,m] = t.split(':').map(Number); return h*60+m }
+  bookings.filter(b => b.date === todayISO && b.userId === userId).forEach(b => {
+    const minUntil = toMin(b.timeStart) - nowMin
+    if (minUntil > 0 && minUntil <= 40 && !notified[b.id]) {
+      new Notification('🎾 Platzbuchung beginnt bald', { body: `Platz ${b.court} · ${b.timeStart}–${b.timeEnd}`, icon: './icon-hd.jpg' })
+      notified[b.id] = Date.now()
+      try { localStorage.setItem('tc_notified', JSON.stringify(notified)) } catch(e) {}
+    }
+  })
+}
+
+// ── Admin booking stats ───────────────────────────────────────
+function renderBookingStats() {
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30)
+  const cutoffISO = cutoff.toISOString().split('T')[0]
+  let bookings = []
+  try { bookings = JSON.parse(localStorage.getItem('tc_bookings') || '[]') } catch(e) {}
+  bookings = bookings.filter(b => b.date >= cutoffISO)
+  if (!bookings.length) return ''
+
+  let numCourts = 4
+  try { numCourts = JSON.parse(localStorage.getItem('tc_settings') || '{}').numCourts || 4 } catch(e) {}
+
+  const byCourt = {}
+  for (let c = 1; c <= numCourts; c++) byCourt[c] = 0
+  bookings.forEach(b => { if (byCourt[b.court] !== undefined) byCourt[b.court]++ })
+  const maxCourt = Math.max(...Object.values(byCourt), 1)
+
+  const DE_DAYS = ['So','Mo','Di','Mi','Do','Fr','Sa']
+  const byDay = Array(7).fill(0)
+  bookings.forEach(b => { byDay[new Date(b.date + 'T12:00').getDay()]++ })
+  const maxDay = Math.max(...byDay, 1)
+
+  const byType = { singles: 0, doubles: 0, team: 0 }
+  bookings.forEach(b => { const k = b.type || 'singles'; if (byType[k] !== undefined) byType[k]++; else byType.singles++ })
+  const maxType = Math.max(...Object.values(byType), 1)
+
+  const bar = (val, max) => `<div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="bg-secondary-fixed h-full rounded-full" style="width:${Math.round(val/max*100)}%"></div></div>`
+  const row = (label, val, max) => `<div class="flex items-center gap-2"><div class="text-xs font-headline text-white/55 w-20 flex-shrink-0">${label}</div>${bar(val,max)}<div class="text-xs font-headline font-bold text-white/70 w-5 text-right flex-shrink-0">${val}</div></div>`
+
+  return `<section class="mb-10">
+    <h2 class="text-lg font-headline font-bold text-white mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-base text-white/40">bar_chart</span>
+      Buchungsstatistik <span class="text-white/30 font-normal text-sm ml-1">(letzte 30 Tage · ${bookings.length} Buchungen)</span>
+    </h2>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="rounded-2xl bg-black/20 border border-white/5 p-4">
+        <div class="text-[10px] font-headline uppercase tracking-widest text-white/30 mb-3">Pro Platz</div>
+        <div class="space-y-2">${Object.entries(byCourt).map(([c,n]) => row('Platz '+c, n, maxCourt)).join('')}</div>
+      </div>
+      <div class="rounded-2xl bg-black/20 border border-white/5 p-4">
+        <div class="text-[10px] font-headline uppercase tracking-widest text-white/30 mb-3">Pro Wochentag</div>
+        <div class="space-y-2">${DE_DAYS.map((d,i) => row(d, byDay[i], maxDay)).join('')}</div>
+      </div>
+      <div class="rounded-2xl bg-black/20 border border-white/5 p-4">
+        <div class="text-[10px] font-headline uppercase tracking-widest text-white/30 mb-3">Spielart</div>
+        <div class="space-y-2">${[['Einzel','singles'],['Doppel','doubles'],['Mannschaft','team']].map(([l,k]) => row(l, byType[k], maxType)).join('')}</div>
+      </div>
+    </div>
+  </section>`
 }
 
 // ── Weather ───────────────────────────────────────────────────

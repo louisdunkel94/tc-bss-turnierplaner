@@ -158,6 +158,9 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- ── Favorites quick-book bar ── -->
+  <div id="favorites-bar"></div>
+
   <!-- ── Booking Rules Editor (admin/veranstalter only) ── -->
   <div id="rules-editor" class="mb-5"></div>
 
@@ -250,6 +253,11 @@ tailwind.config = {
           <input type="text" id="book-note" placeholder="z.B. Training, Mannschaft…"
             class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
         </div>
+        <div>
+          <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Gast <span class="normal-case font-normal">(optional)</span></label>
+          <input type="text" id="book-guest" placeholder="Name des Gastes…"
+            class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
+        </div>
         <div id="book-conflict" class="hidden px-3 py-2 rounded-xl bg-red-900/30 border border-red-500/25 text-red-300 text-xs font-body"></div>
         <button onclick="confirmBook()" class="w-full py-3 rounded-xl font-headline font-bold text-sm bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors flex items-center justify-center gap-2">
           <span class="material-symbols-outlined text-base">event_available</span>Buchen
@@ -294,7 +302,14 @@ tailwind.config = {
           <span class="material-symbols-outlined text-white/40">group</span>
           <span id="detail-partners" class="text-white/70 font-body text-sm"></span>
         </div>
+        <div id="detail-guest-row" class="hidden flex items-center gap-3">
+          <span class="material-symbols-outlined text-white/40">person_add</span>
+          <span id="detail-guest" class="text-white/70 font-body text-sm"></span>
+        </div>
         <div class="pt-1 border-t border-white/8 space-y-2">
+          <button id="detail-favorite-btn" onclick="addFavorite(_detailId)" class="w-full flex items-center justify-center gap-1.5 text-xs font-headline font-bold text-white/40 hover:text-secondary-fixed transition-colors py-1">
+            <span class="material-symbols-outlined text-sm">star</span>Als Favorit speichern
+          </button>
           <button id="detail-ics-btn" onclick="exportDetailICS()" class="w-full flex items-center justify-center gap-1.5 text-xs font-headline font-bold text-white/40 hover:text-white/70 transition-colors py-1">
             <span class="material-symbols-outlined text-sm">calendar_export</span>Zum Kalender exportieren
           </button>
@@ -433,6 +448,35 @@ tailwind.config = {
   </div>
 </dialog>
 
+<!-- ── Condition Modal ── -->
+<dialog id="modal-condition" aria-modal="true">
+  <div class="w-full max-w-xs mx-auto mt-20 px-4">
+    <div class="bg-[#0d2e10] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
+      <div class="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <h2 id="condition-modal-title" class="font-headline font-bold text-base text-white">Platzzustand melden</h2>
+        <button onclick="document.getElementById('modal-condition').close()" class="text-white/40 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+      <div class="p-4 space-y-2">
+        <button onclick="confirmCondition('gut')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-green-900/20 border border-green-500/20 hover:bg-green-900/40 transition-colors">
+          <span class="text-lg">✅</span>
+          <span class="font-headline font-bold text-white text-sm">Gut bespielbar</span>
+        </button>
+        <button onclick="confirmCondition('nass')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-900/20 border border-blue-500/20 hover:bg-blue-900/40 transition-colors">
+          <span class="text-lg">💧</span>
+          <span class="font-headline font-bold text-white text-sm">Nass / feucht</span>
+        </button>
+        <button onclick="confirmCondition('beschädigt')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-yellow-900/20 border border-yellow-500/20 hover:bg-yellow-900/40 transition-colors">
+          <span class="text-lg">⚠️</span>
+          <span class="font-headline font-bold text-white text-sm">Beschädigt / unspielbar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <!-- ── Toast ── -->
 <div id="toast" role="status" aria-live="polite" aria-atomic="true" class="fixed bottom-6 left-1/2 -translate-x-1/2 opacity-0 translate-y-2 transition-all duration-300 bg-secondary-fixed text-on-secondary-fixed px-5 py-2.5 rounded-full text-sm font-headline font-bold shadow-xl z-50 pointer-events-none whitespace-nowrap"></div>
 
@@ -488,6 +532,20 @@ function getClosures() {
   try { return JSON.parse(localStorage.getItem('tc_closures') || '[]') } catch(e) { return [] }
 }
 function saveClosures(c) { localStorage.setItem('tc_closures', JSON.stringify(c)) }
+
+function getConditions() { try { return JSON.parse(localStorage.getItem('tc_conditions') || '[]') } catch(e) { return [] } }
+function saveConditions(c) { localStorage.setItem('tc_conditions', JSON.stringify(c)) }
+function getConditionForCourt(dateISO, court) {
+  return getConditions().filter(c => c.date === dateISO && c.court === court).sort((a,b) => b.ts - a.ts)[0] || null
+}
+
+function getFavorites() {
+  if (!currentUserId) return []
+  try { return (JSON.parse(localStorage.getItem('tc_favorites') || '{}')[currentUserId]) || [] } catch(e) { return [] }
+}
+function saveFavorites(favs) {
+  try { const all = JSON.parse(localStorage.getItem('tc_favorites') || '{}'); all[currentUserId] = favs; localStorage.setItem('tc_favorites', JSON.stringify(all)) } catch(e) {}
+}
 
 function getMembers() {
   try { return JSON.parse(localStorage.getItem('tc_members') || '[]') } catch(e) { return [] }
@@ -696,8 +754,15 @@ function render() {
   html += `<th class="w-14 py-2 px-1 border-b border-white/8 border-r border-white/8 sticky left-0 top-0 bg-black/20 z-20"></th>`
   for (let c = 1; c <= numCourts; c++) {
     const colorClass = COURT_COLORS[(c-1) % COURT_COLORS.length]
+    const cond = getConditionForCourt(iso, c)
+    const condBadge = cond ? (() => {
+      const map = { gut: ['✅','text-green-400'], nass: ['💧','text-blue-400'], 'beschädigt': ['⚠️','text-yellow-400'] }
+      const [icon, cls] = map[cond.condition] || ['','']
+      return `<button onclick="openConditionModal(${c})" class="block text-[9px] ${cls} font-body mt-0.5 hover:opacity-70 leading-tight">${icon} ${cond.condition}</button>`
+    })() : `<button onclick="openConditionModal(${c})" class="block text-[9px] text-white/20 font-body mt-0.5 hover:text-white/40 leading-tight">melden</button>`
     html += `<th class="py-2 font-headline font-bold text-white/70 border-b border-white/8 sticky top-0 bg-black/20 backdrop-blur z-20 ${c < numCourts ? 'border-r border-white/5' : ''}">
       <span class="inline-block w-5 h-5 rounded-full ${colorClass} text-white text-[10px] leading-5 text-center font-bold mr-1 opacity-80">${c}</span>Platz ${c}
+      ${condBadge}
     </th>`
   }
   html += `</tr></thead>`
@@ -728,6 +793,7 @@ function render() {
         if (durationSlots > 1) html += `<div class="text-white/70 text-[10px] leading-tight">${booking.timeStart}–${booking.timeEnd}</div>`
         if (booking.isRecurring) html += `<div class="text-white/50 text-[9px] flex items-center gap-0.5"><span class="material-symbols-outlined text-[9px]">repeat</span>wöchentlich</div>`
         else if (booking.type) html += `<div class="text-white/50 text-[9px]">${booking.type === 'doubles' ? 'Doppel' : 'Einzel'}</div>`
+        if (booking.guestName) html += `<div class="text-white/40 text-[9px]">+${esc(booking.guestName)}</div>`
         html += `</td>`
       } else {
         const blocked = isSlotBlocked(iso, c, slotMin, slotMin + SLOT_MIN)
@@ -744,6 +810,7 @@ function render() {
 
   html += `</tbody></table>`
   document.getElementById('calendar').innerHTML = html
+  renderFavorites()
 }
 
 // ── 7-day overview ────────────────────────────────
@@ -948,6 +1015,7 @@ function openBook(date, court, timeStart) {
   bookMemberEl.classList.toggle('opacity-60', currentRole === 'mitglied')
   bookMemberEl.classList.toggle('cursor-default', currentRole === 'mitglied')
   document.getElementById('book-note').value = ''
+  const guestEl = document.getElementById('book-guest'); if (guestEl) guestEl.value = ''
   document.getElementById('book-conflict').classList.add('hidden')
   document.getElementById('suggest-list').classList.add('hidden')
 
@@ -1038,14 +1106,17 @@ function confirmBook() {
     bookings = bookings.filter(b => b.id !== _rescheduleId)
     _rescheduleId = null
   }
+  const guestName = document.getElementById('book-guest')?.value.trim() || null
   bookings.push({
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     date, court, timeStart: start, timeEnd: end,
     memberName: member, note, type, userId: currentUserId,
     partners: [..._partners],
+    ...(guestName ? { guestName } : {}),
     createdAt: new Date().toISOString()
   })
   saveBookings(bookings)
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission()
   document.getElementById('modal-book').close()
   toast(isReschedule ? 'Buchung verschoben' : 'Buchung gespeichert')
   render()
@@ -1071,6 +1142,8 @@ function showDetail(id) {
     if (r.note) { document.getElementById('detail-note').textContent = r.note; noteRow.classList.remove('hidden') }
     else { noteRow.classList.add('hidden') }
     document.getElementById('detail-partners-row').classList.add('hidden')
+    document.getElementById('detail-guest-row')?.classList.add('hidden')
+    const _favBtn = document.getElementById('detail-favorite-btn'); if (_favBtn) _favBtn.style.display = 'none'
     badge.classList.remove('hidden')
     if (icsBtn) icsBtn.style.display = 'none'
     if (rescheduleBtn) rescheduleBtn.style.display = 'none'
@@ -1106,6 +1179,15 @@ function showDetail(id) {
   } else {
     partnersRow.classList.add('hidden')
   }
+  const guestRow = document.getElementById('detail-guest-row')
+  if (b.guestName) {
+    document.getElementById('detail-guest').textContent = 'Gast: ' + b.guestName
+    guestRow.classList.remove('hidden')
+  } else {
+    guestRow.classList.add('hidden')
+  }
+  const favBtn = document.getElementById('detail-favorite-btn')
+  if (favBtn) favBtn.style.display = (b.userId === currentUserId) ? '' : 'none'
   document.getElementById('modal-detail').showModal()
 }
 
@@ -1460,9 +1542,87 @@ function toast(msg) {
   setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px) translateX(-50%)' }, 2500)
 }
 
+// ── Court conditions ──────────────────────────────
+let _conditionCourt = null
+function openConditionModal(court) {
+  _conditionCourt = court
+  document.getElementById('condition-modal-title').textContent = `Platz ${court} – Zustand melden`
+  document.getElementById('modal-condition').showModal()
+}
+function confirmCondition(condition) {
+  document.getElementById('modal-condition').close()
+  const dateISO = _viewDate.toISOString().split('T')[0]
+  const conditions = getConditions().filter(c => !(c.date === dateISO && c.court === _conditionCourt))
+  const reporter = (() => { try { const p = JSON.parse(localStorage.getItem('tc_profiles') || '{}')[currentUserId] || {}; return [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name || 'Mitglied' } catch(e) { return 'Mitglied' } })()
+  conditions.push({ court: _conditionCourt, date: dateISO, condition, reportedBy: reporter, ts: Date.now() })
+  saveConditions(conditions)
+  render()
+  toast(`Platz ${_conditionCourt}: ${condition}`)
+}
+
+// ── Favorites ─────────────────────────────────────
+function renderFavorites() {
+  const el = document.getElementById('favorites-bar')
+  if (!el) return
+  const favs = getFavorites()
+  if (!favs.length) { el.innerHTML = ''; return }
+  el.innerHTML = `<div class="mb-4">
+    <div class="text-[10px] font-headline uppercase tracking-widest text-white/30 mb-2 flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-xs">bolt</span>Schnellbuchung
+    </div>
+    <div class="flex flex-wrap gap-2">
+      ${favs.map((f, i) => `
+        <div class="flex items-center gap-1 pl-3 pr-1 py-1.5 rounded-xl bg-black/20 border border-white/8">
+          <span class="text-xs font-body text-white/70">Platz ${f.court} · ${f.timeStart}–${f.timeEnd}</span>
+          <button onclick="quickBook(${i})" class="ml-1.5 px-2 py-0.5 rounded-lg text-[10px] font-headline font-bold bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim transition-colors">Buchen</button>
+          <button onclick="deleteFavorite(${i})" class="p-1 text-white/20 hover:text-red-400 transition-colors" title="Favorit löschen">
+            <span class="material-symbols-outlined text-xs">close</span>
+          </button>
+        </div>`).join('')}
+    </div>
+  </div>`
+}
+function addFavorite(bookingId) {
+  const b = getBookings().find(x => x.id === bookingId)
+  if (!b) return
+  const favs = getFavorites()
+  if (favs.find(f => f.court === b.court && f.timeStart === b.timeStart && f.timeEnd === b.timeEnd)) { toast('Bereits als Favorit gespeichert'); return }
+  saveFavorites([...favs, { court: b.court, timeStart: b.timeStart, timeEnd: b.timeEnd }])
+  render()
+  toast('Favorit gespeichert ⭐')
+}
+function deleteFavorite(idx) {
+  const favs = getFavorites(); favs.splice(idx, 1); saveFavorites(favs); renderFavorites()
+}
+function quickBook(idx) {
+  const fav = getFavorites()[idx]; if (!fav) return
+  const iso = _viewDate.toISOString().split('T')[0]
+  openBook(iso, fav.court, fav.timeStart)
+  setTimeout(() => { const endEl = document.getElementById('book-end'); if (endEl) endEl.value = fav.timeEnd }, 50)
+}
+
+// ── Booking notifications ──────────────────────────
+function checkUpcomingNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !currentUserId) return
+  const now = new Date()
+  const todayISO = now.toISOString().split('T')[0]
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  let notified = {}
+  try { notified = JSON.parse(localStorage.getItem('tc_notified') || '{}') } catch(e) {}
+  getBookings().filter(b => b.date === todayISO && b.userId === currentUserId).forEach(b => {
+    const minUntil = toMinutes(b.timeStart) - nowMin
+    if (minUntil > 0 && minUntil <= 40 && !notified[b.id]) {
+      new Notification('🎾 Platzbuchung beginnt bald', { body: `Platz ${b.court} · ${b.timeStart}–${b.timeEnd}`, icon: './icon-hd.jpg' })
+      notified[b.id] = Date.now()
+      try { localStorage.setItem('tc_notified', JSON.stringify(notified)) } catch(e) {}
+    }
+  })
+}
+
 // ── Init ──────────────────────────────────────────
 render()
 loadWeather()
+checkUpcomingNotifications()
 
 // Auto-open from URL params (dashboard Gantt click or reschedule link)
 ;(function() {
