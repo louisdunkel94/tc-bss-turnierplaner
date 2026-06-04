@@ -1817,10 +1817,6 @@ const WEATHER_WIDGET_HTML = `<div id="weather-widget" style="display:none" class
       <div id="weather-hourly" class="flex gap-2.5 min-w-max pb-1"></div>
     </div>
   </div>
-  <div class="border-t border-white/5 px-3 pt-2 pb-2">
-    <div class="text-[9px] font-headline uppercase tracking-widest text-white/25 mb-1.5">5 Tage</div>
-    <div id="weather-daily" class="flex"></div>
-  </div>
 </div>`
 
 function weatherEmoji(code) {
