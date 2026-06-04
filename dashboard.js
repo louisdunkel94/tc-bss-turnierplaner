@@ -265,6 +265,14 @@ function exportBookingICS(booking) {
   document.body.appendChild(a); a.click(); document.body.removeChild(a)
 }
 
+function cancelDashBooking(id) {
+  if (!id) return
+  const bookings = JSON.parse(localStorage.getItem('tc_bookings') || '[]').filter(b => b.id !== id)
+  localStorage.setItem('tc_bookings', JSON.stringify(bookings))
+  toast('Buchung storniert')
+  render()
+}
+
 function saveCourtConfig() {
   const s = JSON.parse(localStorage.getItem('tc_settings') || '{}')
   s.numCourts = Math.max(1, Math.min(12, parseInt(document.getElementById('cfg-courts')?.value) || 6))
@@ -530,26 +538,38 @@ async function renderMitglied(app) {
     const d = new Date(nextBooking.date + 'T00:00:00')
     const dayLabel  = d.toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short' })
     const typeLabel = nextBooking.type === 'doubles' ? 'Doppel' : nextBooking.type === 'team' ? 'Mannschaftstraining' : 'Einzel'
-    return `<div class="space-y-2.5">
-      <div class="flex items-center gap-2.5">
-        <span class="material-symbols-outlined text-secondary-fixed">calendar_month</span>
-        <span class="font-headline font-bold text-white">${dayLabel}</span>
+    return `<div class="flex flex-col h-full">
+      <div class="space-y-2.5 flex-1">
+        <div class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-secondary-fixed">calendar_month</span>
+          <span class="font-headline font-bold text-white">${dayLabel}</span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-white/40">schedule</span>
+          <span class="text-white/70 font-body text-sm">${nextBooking.timeStart}–${nextBooking.timeEnd}</span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-white/40">sports_tennis</span>
+          <span class="text-white/70 font-body text-sm">Platz ${nextBooking.court} · ${typeLabel}</span>
+        </div>
+        ${nextBooking.partners?.length ? `<div class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-white/40">group</span>
+          <span class="text-white/50 font-body text-xs">${esc(nextBooking.partners.join(', '))}</span>
+        </div>` : ''}
       </div>
-      <div class="flex items-center gap-2.5">
-        <span class="material-symbols-outlined text-white/40">schedule</span>
-        <span class="text-white/70 font-body text-sm">${nextBooking.timeStart}–${nextBooking.timeEnd}</span>
+      <div class="mt-4 pt-3 border-t border-white/8 space-y-2">
+        <button onclick="exportBookingICS(_dashNextBooking)" class="w-full flex items-center justify-center gap-1.5 text-xs font-headline font-bold text-white/30 hover:text-white/60 transition-colors py-1">
+          <span class="material-symbols-outlined text-sm">calendar_export</span>Zum Kalender exportieren
+        </button>
+        <div class="flex gap-2">
+          <a href="booking.html?reschedule=${nextBooking.id}" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-white/8 text-white/70 hover:bg-white/15 transition-colors flex items-center justify-center gap-1.5 no-underline border border-white/10">
+            <span class="material-symbols-outlined text-base">edit_calendar</span>Verschieben
+          </a>
+          <button onclick="cancelDashBooking('${nextBooking.id}')" class="flex-1 py-2.5 rounded-xl font-headline font-bold text-sm bg-red-900/30 border border-red-500/25 text-red-300 hover:bg-red-900/50 transition-colors flex items-center justify-center gap-1.5">
+            <span class="material-symbols-outlined text-base">event_busy</span>Stornieren
+          </button>
+        </div>
       </div>
-      <div class="flex items-center gap-2.5">
-        <span class="material-symbols-outlined text-white/40">sports_tennis</span>
-        <span class="text-white/70 font-body text-sm">Platz ${nextBooking.court} · ${typeLabel}</span>
-      </div>
-      ${nextBooking.partners?.length ? `<div class="flex items-center gap-2.5">
-        <span class="material-symbols-outlined text-white/40">group</span>
-        <span class="text-white/50 font-body text-xs">${esc(nextBooking.partners.join(', '))}</span>
-      </div>` : ''}
-      <button onclick="exportBookingICS(_dashNextBooking)" class="mt-1 flex items-center gap-1.5 text-xs font-headline font-bold text-secondary-fixed hover:underline">
-        <span class="material-symbols-outlined text-xs">calendar_export</span>Zum Kalender
-      </button>
     </div>`
   })() : `<div class="flex flex-col items-center justify-center h-full py-2 gap-3">
     <p class="text-white/40 font-body text-sm text-center">Keine Buchung geplant.</p>
