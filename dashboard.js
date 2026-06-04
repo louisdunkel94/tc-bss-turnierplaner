@@ -159,11 +159,17 @@ function renderCourtTimeline(todayBookings, numCourts) {
   const now = new Date()
   const nowMins = now.getHours() * 60 + now.getMinutes()
   const nowPct  = (nowMins >= START && nowMins <= END) ? ((nowMins - START) / RANGE * 100).toFixed(1) : null
+  const today   = isoToday()
 
-  // Stündliche Gitterlinien (09:00–21:00 = 13 Linien)
+  // Halbstunden-Gitterlinien (8:30–21:30 = 27 Linien, dezenter)
+  const halfLines = Array.from({ length: 27 }, (_, i) => {
+    const pct = (((i + 1) * 30) / RANGE * 100).toFixed(1)
+    return `<div class="absolute top-0 bottom-0 w-px bg-white/4 pointer-events-none" style="left:${pct}%"></div>`
+  }).join('')
+  // Stündliche Gitterlinien (09:00–21:00 = 13 Linien, stärker)
   const hourLines = Array.from({ length: 13 }, (_, i) => {
     const pct = (((i + 1) * 60) / RANGE * 100).toFixed(1)
-    return `<div class="absolute top-0 bottom-0 w-px bg-white/8 pointer-events-none" style="left:${pct}%"></div>`
+    return `<div class="absolute top-0 bottom-0 w-px bg-white/10 pointer-events-none" style="left:${pct}%"></div>`
   }).join('')
 
   let rows = ''
@@ -176,16 +182,16 @@ function renderCourtTimeline(todayBookings, numCourts) {
       const width = ((e - s) / RANGE * 100).toFixed(1)
       const col   = colors[(c - 1) % colors.length]
       const label = esc((b.memberName || '').split(' ')[0])
-      return `<div class="${col} absolute top-0 bottom-0 flex flex-col justify-center px-1.5 overflow-hidden opacity-85" style="left:${left}%;width:${width}%" title="${esc(b.memberName)} · ${b.timeStart}–${b.timeEnd}">
+      return `<div class="${col} absolute top-0 bottom-0 flex flex-col justify-center px-1.5 overflow-hidden opacity-90 z-10" style="left:${left}%;width:${width}%" title="${esc(b.memberName)} · ${b.timeStart}–${b.timeEnd}" onclick="event.stopPropagation()">
         <span class="text-[10px] font-headline font-bold text-white truncate leading-tight select-none">${label}</span>
         <span class="text-[9px] text-white/70 truncate leading-tight select-none">${b.timeStart}–${b.timeEnd}</span>
       </div>`
     }).join('')
     const nowLine = nowPct !== null
-      ? `<div class="absolute top-0 bottom-0 w-px bg-red-500 z-10 pointer-events-none" style="left:${nowPct}%"></div>` : ''
+      ? `<div class="absolute top-0 bottom-0 w-px bg-red-500 z-20 pointer-events-none" style="left:${nowPct}%"></div>` : ''
     rows += `<div class="flex items-center gap-2">
       <span class="text-xs text-white/40 font-body w-14 flex-shrink-0 text-right">Platz ${c}</span>
-      <div class="flex-1 h-8 rounded-md bg-green-500/10 border border-green-500/10 relative overflow-hidden">${hourLines}${blocks}${nowLine}</div>
+      <div class="flex-1 h-12 rounded-md bg-green-500/10 border border-green-500/10 relative overflow-hidden cursor-pointer hover:bg-green-500/15 transition-colors" onclick="dashTimelineClick(event,${c},'${today}')" title="Klicken zum Buchen">${halfLines}${hourLines}${blocks}${nowLine}</div>
     </div>`
   }
 
@@ -197,6 +203,16 @@ function renderCourtTimeline(todayBookings, numCourts) {
   </div>`
 
   return rows ? rows + axis : '<p class="text-white/30 font-body text-sm">Keine Plätze konfiguriert.</p>'
+}
+
+function dashTimelineClick(event, court, date) {
+  const rect = event.currentTarget.getBoundingClientRect()
+  const pct = (event.clientX - rect.left) / rect.width
+  const START = 8 * 60, END = 22 * 60, RANGE = END - START
+  const mins = START + pct * RANGE
+  const snapped = Math.round(mins / 30) * 30
+  const startTime = fmtTime(Math.max(START, Math.min(END - 60, snapped)))
+  window.location.href = `booking.html?date=${date}&court=${court}&start=${startTime}`
 }
 
 function getFreeSlots(todayBookings, numCourts) {
@@ -577,7 +593,7 @@ async function renderMitglied(app) {
       </h2>
       ${freeSlots.length
         ? `<div class="flex flex-wrap gap-2">${freeSlots.map(s => `
-            <a href="booking.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-white/8 text-white/70 hover:bg-secondary-fixed/15 hover:text-secondary-fixed transition-colors no-underline border border-white/8 hover:border-secondary-fixed/20">
+            <a href="booking.html?date=${isoToday()}&court=${s.court}&start=${s.timeStart}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-headline font-bold bg-white/8 text-white/70 hover:bg-secondary-fixed/15 hover:text-secondary-fixed transition-colors no-underline border border-white/8 hover:border-secondary-fixed/20">
               <span class="material-symbols-outlined text-xs">schedule</span>
               ${s.timeStart}–${s.timeEnd} · Platz ${s.court}
             </a>`).join('')}</div>`
