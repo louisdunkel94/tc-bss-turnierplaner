@@ -98,18 +98,18 @@ tailwind.config = {
 
   <!-- ── Toolbar ── -->
   <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-    <!-- Week navigation -->
+    <!-- Day navigation -->
     <div class="flex items-center gap-1">
-      <button onclick="prevWeek()" class="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
+      <button onclick="prevDay()" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
         <span class="material-symbols-outlined text-base">chevron_left</span>
       </button>
       <button onclick="goToday()" class="px-3 py-2 rounded-xl text-xs font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/60">
         Heute
       </button>
-      <button onclick="nextWeek()" class="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
+      <button onclick="nextDay()" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
         <span class="material-symbols-outlined text-base">chevron_right</span>
       </button>
-      <span id="week-label" class="ml-2 text-sm font-headline font-bold text-white"></span>
+      <span id="day-label" class="ml-2 text-sm font-headline font-bold text-white"></span>
     </div>
     <!-- Courts setting -->
     <div class="flex items-center gap-2">
@@ -351,12 +351,13 @@ const COURT_COLORS = [
   'court-color-5','court-color-6','court-color-7','court-color-8'
 ]
 
-// ── Week state ────────────────────────────────────
-let _weekStart = getMondayOf(new Date())
+// ── Day state ─────────────────────────────────────
+let _viewDate = new Date()
+_viewDate.setHours(0,0,0,0)
 
-function prevWeek() { _weekStart.setDate(_weekStart.getDate() - 7); render() }
-function nextWeek() { _weekStart.setDate(_weekStart.getDate() + 7); render() }
-function goToday()  { _weekStart = getMondayOf(new Date()); render() }
+function prevDay() { _viewDate.setDate(_viewDate.getDate() - 1); render() }
+function nextDay() { _viewDate.setDate(_viewDate.getDate() + 1); render() }
+function goToday() { _viewDate = new Date(); _viewDate.setHours(0,0,0,0); render() }
 
 function setCourts(delta) { setNumCourts(getNumCourts() + delta) }
 
@@ -405,99 +406,63 @@ function render() {
     rulesEl.innerHTML = ''
   }
 
-  // Week label
-  const weekEnd = new Date(_weekStart)
-  weekEnd.setDate(weekEnd.getDate() + 6)
-  const fmtOpts = { day:'numeric', month:'short' }
-  document.getElementById('week-label').textContent =
-    _weekStart.toLocaleDateString('de-DE', fmtOpts) + ' – ' + weekEnd.toLocaleDateString('de-DE', fmtOpts)
+  // Day label
+  const isToday = isoDate(_viewDate) === isoDate(new Date())
+  const dayLabel = _viewDate.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })
+  const dayLabelEl = document.getElementById('day-label')
+  if (dayLabelEl) dayLabelEl.textContent = dayLabel + (isToday ? ' · Heute' : '')
 
-  // Build week days
-  const days = []
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(_weekStart)
-    d.setDate(d.getDate() + i)
-    days.push(d)
-  }
-
+  const iso = isoDate(_viewDate)
   const bookings = getBookings()
-  const todayIso = isoDate(new Date())
 
   // Time slots
   const slots = []
   for (let m = TIME_START; m < TIME_END; m += SLOT_MIN) slots.push(m)
 
-  // Build grid HTML
-  // Structure: left column = times, then 7 day columns, each column = numCourts rows per slot
-  // Layout: top row = day headers, then one row per time slot (split into court cells)
-
-  const COL_COUNT = 7  // days
-  const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-
+  // Day view: rows = time slots, columns = courts
   let html = `<table class="w-full border-collapse text-xs" style="table-layout:fixed">`
 
-  // Header row: time col + 7 day cols
+  // Header: time col + one col per court
   html += `<thead><tr>`
-  html += `<th class="w-14 py-2 px-1 text-center font-body text-white/30 border-b border-white/8 border-r border-white/8 sticky left-0 bg-black/10 z-10"></th>`
-  days.forEach((d, i) => {
-    const iso = isoDate(d)
-    const isToday = iso === todayIso
-    const label = d.toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' })
-    html += `<th colspan="${numCourts}" class="py-2 px-1 font-headline font-bold ${isToday ? 'text-secondary-fixed' : 'text-white/60'} border-b border-white/8 ${i < 6 ? 'border-r border-white/5' : ''}">${label}</th>`
-  })
-  html += `</tr>`
-
-  // Court sub-header
-  html += `<tr>`
-  html += `<th class="py-1 border-b border-white/8 border-r border-white/8 sticky left-0 bg-black/10 z-10"></th>`
-  days.forEach((d, di) => {
-    for (let c = 1; c <= numCourts; c++) {
-      html += `<th class="py-1 font-body text-white/25 border-b border-white/8 ${c === numCourts && di < 6 ? 'border-r border-white/5' : c < numCourts ? 'border-r border-white/3' : ''}">${c}</th>`
-    }
-  })
+  html += `<th class="w-14 py-2 px-1 border-b border-white/8 border-r border-white/8 sticky left-0 bg-black/10 z-10"></th>`
+  for (let c = 1; c <= numCourts; c++) {
+    const colorClass = COURT_COLORS[(c-1) % COURT_COLORS.length]
+    html += `<th class="py-2 font-headline font-bold text-white/70 border-b border-white/8 ${c < numCourts ? 'border-r border-white/5' : ''}">
+      <span class="inline-block w-5 h-5 rounded-full ${colorClass} text-white text-[10px] leading-5 text-center font-bold mr-1 opacity-80">${c}</span>Platz ${c}
+    </th>`
+  }
   html += `</tr></thead>`
 
   // Body: one row per time slot
   html += `<tbody>`
-  slots.forEach((slotMin, si) => {
+  slots.forEach(slotMin => {
     const isHour = slotMin % 60 === 0
     html += `<tr>`
-    // Time label
-    html += `<td class="py-0 px-1 text-center font-body text-white/30 border-r border-white/8 sticky left-0 bg-black/10 z-10 ${isHour ? 'border-t border-white/8' : ''}" style="height:28px;vertical-align:top;padding-top:2px;">${isHour ? fromMinutes(slotMin) : ''}</td>`
+    html += `<td class="py-0 px-1 text-center font-body text-white/30 border-r border-white/8 sticky left-0 bg-black/10 z-10 ${isHour ? 'border-t border-white/8' : ''}" style="height:32px;vertical-align:top;padding-top:3px;">${isHour ? fromMinutes(slotMin) : ''}</td>`
 
-    days.forEach((d, di) => {
-      const iso = isoDate(d)
-      const slotEnd = slotMin + SLOT_MIN
+    for (let c = 1; c <= numCourts; c++) {
+      const booking = bookings.find(b =>
+        b.date === iso && b.court === c &&
+        toMinutes(b.timeStart) <= slotMin && toMinutes(b.timeEnd) > slotMin
+      )
+      const isSlotStart = booking && toMinutes(booking.timeStart) === slotMin
+      const colBorder = c < numCourts ? 'border-r border-white/5' : ''
+      const topBorder = isHour ? 'border-t border-white/8' : ''
 
-      for (let c = 1; c <= numCourts; c++) {
-        // Check if a booking covers this slot
-        const booking = bookings.find(b =>
-          b.date === iso && b.court === c &&
-          toMinutes(b.timeStart) <= slotMin && toMinutes(b.timeEnd) > slotMin
-        )
-
-        const isSlotStart = booking && toMinutes(booking.timeStart) === slotMin
-        const colBorder = c === numCourts && di < 6 ? 'border-r border-white/5' : c < numCourts ? 'border-r border-white/3' : ''
-        const topBorder = isHour ? 'border-t border-white/8' : ''
-
-        if (booking && !isSlotStart) {
-          // Continuation of a booking — empty cell (booking spans upward)
-          html += `<td class="${colBorder} ${topBorder}" style="height:28px;"></td>`
-        } else if (booking && isSlotStart) {
-          // Calculate rowspan
-          const durationSlots = Math.round((toMinutes(booking.timeEnd) - toMinutes(booking.timeStart)) / SLOT_MIN)
-          const colorClass = COURT_COLORS[(c - 1) % COURT_COLORS.length]
-          html += `<td rowspan="${durationSlots}" class="${colorClass} ${colBorder} rounded cursor-pointer" style="height:${durationSlots * 28}px;padding:2px 3px;vertical-align:top;" onclick="showDetail('${booking.id}')">`
-          html += `<div class="text-white font-headline font-bold leading-tight truncate" style="font-size:10px;">${esc(booking.memberName)}</div>`
-          if (durationSlots > 1) html += `<div class="text-white/60 leading-none" style="font-size:9px;">${booking.timeStart}–${booking.timeEnd}</div>`
-          html += `</td>`
-        } else {
-          // Empty bookable slot
-          html += `<td class="slot-cell ${colBorder} ${topBorder}" style="height:28px;" onclick="openBook('${iso}',${c},'${fromMinutes(slotMin)}')"></td>`
-        }
+      if (booking && !isSlotStart) {
+        html += `<td class="${colBorder} ${topBorder}" style="height:32px;"></td>`
+      } else if (booking && isSlotStart) {
+        const durationSlots = Math.round((toMinutes(booking.timeEnd) - toMinutes(booking.timeStart)) / SLOT_MIN)
+        const colorClass = COURT_COLORS[(c-1) % COURT_COLORS.length]
+        html += `<td rowspan="${durationSlots}" class="${colorClass} ${colBorder} rounded-lg cursor-pointer" style="height:${durationSlots*32}px;padding:4px 6px;vertical-align:top;" onclick="showDetail('${booking.id}')">`
+        html += `<div class="text-white font-headline font-bold leading-tight truncate text-xs">${esc(booking.memberName)}</div>`
+        if (durationSlots > 1) html += `<div class="text-white/70 text-[10px] leading-tight">${booking.timeStart}–${booking.timeEnd}</div>`
+        if (booking.type) html += `<div class="text-white/50 text-[9px]">${booking.type === 'doubles' ? 'Doppel' : 'Einzel'}</div>`
+        html += `</td>`
+      } else {
+        html += `<td class="slot-cell ${colBorder} ${topBorder}" style="height:32px;" onclick="openBook('${iso}',${c},'${fromMinutes(slotMin)}')"></td>`
       }
-    })
-
+    }
     html += `</tr>`
   })
 
