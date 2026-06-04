@@ -78,15 +78,17 @@ tailwind.config = {
   #suggest-list li, #partner-suggest li { padding:0.5rem 0.75rem; cursor:pointer; font-size:0.875rem; color:rgba(255,255,255,0.8); }
   #suggest-list li:hover, #partner-suggest li:hover { background:rgba(255,255,255,0.08); }
   .partner-chip { display:inline-flex; align-items:center; gap:4px; padding:2px 8px 2px 10px; border-radius:9999px; background:rgba(219,237,80,0.15); border:1px solid rgba(219,237,80,0.3); color:#dbed50; font-size:11px; font-family:'Lexend',sans-serif; font-weight:700; }
+  :focus-visible { outline:2px solid rgba(219,237,80,0.75); outline-offset:2px; border-radius:4px; }
 </style>
 </head>
 <body class="min-h-screen" style="padding-bottom:max(5rem,env(safe-area-inset-bottom))">
+<a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-xl focus:font-headline focus:font-bold focus:text-sm focus:bg-secondary-fixed focus:text-on-secondary-fixed focus:shadow-lg">Zum Hauptinhalt springen</a>
 
 <!-- ── Header ── -->
 <header class="sticky top-0 z-50 w-full flex justify-between items-center px-5 py-3 bg-[#115217]/80 backdrop-blur-xl border-b border-white/5">
   <div class="flex items-center gap-3">
-    <a href="dashboard.html" class="text-white/30 hover:text-white transition-colors flex-shrink-0 flex items-center" title="Zurück">
-      <span class="material-symbols-outlined text-xl">arrow_back</span>
+    <a href="dashboard.html" class="text-white/30 hover:text-white transition-colors flex-shrink-0 flex items-center" aria-label="Zurück zum Dashboard">
+      <span class="material-symbols-outlined text-xl" aria-hidden="true">arrow_back</span>
     </a>
     <img src="icon-hd.jpg" alt="TC BSS" class="w-9 h-9 object-cover flex-shrink-0 rounded-xl"/>
     <div>
@@ -95,35 +97,35 @@ tailwind.config = {
     </div>
   </div>
   <div class="flex items-center gap-2">
-    <button onclick="tcToggleTheme()" class="theme-toggle-btn" title="Design wechseln">
-      <span class="material-symbols-outlined text-xl theme-icon">light_mode</span>
+    <button onclick="tcToggleTheme()" class="theme-toggle-btn" title="Design wechseln" aria-label="Design wechseln">
+      <span class="material-symbols-outlined text-xl theme-icon" aria-hidden="true">light_mode</span>
     </button>
   </div>
 </header>
 
-<main class="max-w-5xl mx-auto px-3 py-5">
+<main id="main-content" class="max-w-5xl mx-auto px-3 py-5">
 
   <!-- ── Toolbar ── -->
   <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <!-- Day navigation -->
     <div class="flex items-center gap-1">
-      <button onclick="prevDay()" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
-        <span class="material-symbols-outlined text-base">chevron_left</span>
+      <button onclick="prevDay()" aria-label="Vorheriger Tag" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
+        <span class="material-symbols-outlined text-base" aria-hidden="true">chevron_left</span>
       </button>
       <button onclick="goToday()" class="px-3 py-2 rounded-xl text-xs font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/60">
         Heute
       </button>
-      <button onclick="nextDay()" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
-        <span class="material-symbols-outlined text-base">chevron_right</span>
+      <button onclick="nextDay()" aria-label="Nächster Tag" class="flex items-center px-3 py-2 rounded-xl text-sm font-headline font-bold bg-black/8 hover:bg-black/15 transition-colors text-white/70">
+        <span class="material-symbols-outlined text-base" aria-hidden="true">chevron_right</span>
       </button>
       <span id="day-label" class="ml-2 text-sm font-headline font-bold text-white"></span>
     </div>
     <!-- Courts setting (admin/veranstalter only) -->
     <div class="flex items-center gap-2" id="court-controls-wrap">
       <span class="text-xs text-white/40 font-body">Plätze:</span>
-      <button onclick="setCourts(-1)" class="w-7 h-7 rounded-lg bg-black/10 hover:bg-black/20 text-white/60 flex items-center justify-center text-base font-bold transition-colors">−</button>
-      <span id="courts-count" class="text-sm font-headline font-bold text-white w-4 text-center"></span>
-      <button onclick="setCourts(+1)" class="w-7 h-7 rounded-lg bg-black/10 hover:bg-black/20 text-white/60 flex items-center justify-center text-base font-bold transition-colors">+</button>
+      <button onclick="setCourts(-1)" aria-label="Platz entfernen" class="w-7 h-7 rounded-lg bg-black/10 hover:bg-black/20 text-white/60 flex items-center justify-center text-base font-bold transition-colors">−</button>
+      <span id="courts-count" class="text-sm font-headline font-bold text-white w-4 text-center" aria-live="polite"></span>
+      <button onclick="setCourts(+1)" aria-label="Platz hinzufügen" class="w-7 h-7 rounded-lg bg-black/10 hover:bg-black/20 text-white/60 flex items-center justify-center text-base font-bold transition-colors">+</button>
     </div>
   </div>
 
@@ -138,14 +140,14 @@ tailwind.config = {
 </main>
 
 <!-- ── Book Modal ── -->
-<dialog id="modal-book">
+<dialog id="modal-book" aria-modal="true" aria-labelledby="modal-book-title">
   <div class="w-full max-w-sm mx-auto mt-16 px-4">
     <div class="bg-[#0d2e10] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
       <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
       <div class="flex items-center justify-between px-5 py-4 border-b border-white/8">
-        <h2 class="font-headline font-bold text-base text-white">Platz buchen</h2>
-        <button onclick="document.getElementById('modal-book').close()" class="text-white/40 hover:text-white transition-colors">
-          <span class="material-symbols-outlined text-lg">close</span>
+        <h2 id="modal-book-title" class="font-headline font-bold text-base text-white">Platz buchen</h2>
+        <button onclick="document.getElementById('modal-book').close()" aria-label="Schließen" class="text-white/40 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-lg" aria-hidden="true">close</span>
         </button>
       </div>
       <div class="p-5 space-y-4">
@@ -171,9 +173,9 @@ tailwind.config = {
         </div>
         <div class="relative">
           <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-1">Mitglied</label>
-          <input type="text" id="book-member" autocomplete="off" placeholder="Name…"
+          <input type="text" id="book-member" autocomplete="off" placeholder="Name…" aria-autocomplete="list" aria-controls="suggest-list"
             class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
-          <ul id="suggest-list" class="hidden mt-1"></ul>
+          <ul id="suggest-list" role="listbox" aria-label="Mitgliedervorschläge" class="hidden mt-1"></ul>
         </div>
         <div>
           <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-2">Spielart</label>
@@ -197,9 +199,9 @@ tailwind.config = {
           <label class="block text-xs font-headline font-bold uppercase tracking-widest text-white/40 mb-2">Mitspieler</label>
           <div id="partner-chips" class="flex flex-wrap gap-1.5 mb-2 min-h-[24px]"></div>
           <div class="relative" id="partner-input-wrap">
-            <input type="text" id="partner-input" autocomplete="off" placeholder="Mitglied suchen und hinzufügen…"
+            <input type="text" id="partner-input" autocomplete="off" placeholder="Mitglied suchen und hinzufügen…" aria-autocomplete="list" aria-controls="partner-suggest"
               class="w-full bg-white/10 border border-white/15 text-white placeholder-white/30 rounded-xl px-3 py-2 text-sm font-body focus:outline-none focus:border-secondary-fixed"/>
-            <ul id="partner-suggest" class="hidden mt-1"></ul>
+            <ul id="partner-suggest" role="listbox" aria-label="Mitspieler-Vorschläge" class="hidden mt-1"></ul>
           </div>
           <label class="flex items-center gap-2 cursor-pointer mt-2" id="solo-training-label">
             <input type="checkbox" id="solo-training" class="accent-secondary-fixed" onchange="onSoloTrainingChange()"/>
@@ -222,14 +224,14 @@ tailwind.config = {
 </dialog>
 
 <!-- ── Detail Modal ── -->
-<dialog id="modal-detail">
+<dialog id="modal-detail" aria-modal="true" aria-labelledby="modal-detail-title">
   <div class="w-full max-w-sm mx-auto mt-16 px-4">
     <div class="bg-[#0d2e10] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
       <div class="sm:hidden w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 -mb-1"></div>
       <div class="flex items-center justify-between px-5 py-4 border-b border-white/8">
-        <h2 class="font-headline font-bold text-base text-white">Buchung</h2>
-        <button onclick="document.getElementById('modal-detail').close()" class="text-white/40 hover:text-white transition-colors">
-          <span class="material-symbols-outlined text-lg">close</span>
+        <h2 id="modal-detail-title" class="font-headline font-bold text-base text-white">Buchung</h2>
+        <button onclick="document.getElementById('modal-detail').close()" aria-label="Schließen" class="text-white/40 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-lg" aria-hidden="true">close</span>
         </button>
       </div>
       <div class="p-5 space-y-3">
@@ -272,7 +274,7 @@ tailwind.config = {
 </dialog>
 
 <!-- ── Toast ── -->
-<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 opacity-0 translate-y-2 transition-all duration-300 bg-secondary-fixed text-on-secondary-fixed px-5 py-2.5 rounded-full text-sm font-headline font-bold shadow-xl z-50 pointer-events-none whitespace-nowrap"></div>
+<div id="toast" role="status" aria-live="polite" aria-atomic="true" class="fixed bottom-6 left-1/2 -translate-x-1/2 opacity-0 translate-y-2 transition-all duration-300 bg-secondary-fixed text-on-secondary-fixed px-5 py-2.5 rounded-full text-sm font-headline font-bold shadow-xl z-50 pointer-events-none whitespace-nowrap"></div>
 
 <script>
 // ── Current user ──────────────────────────────────
@@ -429,7 +431,7 @@ function render() {
     const inp = (id, val, min, max) =>
       `<input type="number" id="${id}" value="${val}" min="${min}" max="${max}" class="w-16 bg-white/10 border border-white/15 text-white rounded-lg px-2 py-1 text-sm font-body text-center focus:outline-none focus:border-secondary-fixed"/>`
     const row = (label, prefix, rules) =>
-      `<tr><td class="py-1.5 pr-4 text-white/60 whitespace-nowrap">${label}</td>
+      `<tr><th scope="row" class="py-1.5 pr-4 text-white/60 whitespace-nowrap font-normal text-left">${label}</th>
        <td class="py-1.5 px-2 text-center">${inp(prefix+'-dur', rules.maxDurationMins, 30, 480)}</td>
        <td class="py-1.5 px-2 text-center">${inp(prefix+'-cnt', rules.maxPerPeriod, 1, 99)}</td>
        <td class="py-1.5 px-2 text-center">${inp(prefix+'-days', rules.periodDays, 1, 365)}</td></tr>`
@@ -444,10 +446,10 @@ function render() {
         <div class="overflow-x-auto">
           <table class="text-xs font-body w-full">
             <thead><tr class="text-white/30 uppercase tracking-wide text-left">
-              <th class="pb-2 pr-4">Gruppe</th>
-              <th class="pb-2 px-2 text-center">Max. Dauer (min)</th>
-              <th class="pb-2 px-2 text-center">Max. Buchungen</th>
-              <th class="pb-2 px-2 text-center">pro … Tage</th>
+              <th scope="col" class="pb-2 pr-4">Gruppe</th>
+              <th scope="col" class="pb-2 px-2 text-center">Max. Dauer (min)</th>
+              <th scope="col" class="pb-2 px-2 text-center">Max. Buchungen</th>
+              <th scope="col" class="pb-2 px-2 text-center">pro … Tage</th>
             </tr></thead>
             <tbody class="divide-y divide-white/5">
               ${row('Mitglied · Einzel',      'rule-m-s', r.mitglied.singles)}
@@ -476,7 +478,7 @@ function render() {
   for (let m = TIME_START; m < TIME_END; m += SLOT_MIN) slots.push(m)
 
   // Day view: rows = time slots, columns = courts
-  let html = `<table class="w-full border-collapse text-xs" style="table-layout:fixed">`
+  let html = `<table class="w-full border-collapse text-xs" aria-label="Platzbuchungskalender" style="table-layout:fixed">`
 
   // Header: time col + one col per court
   html += `<thead><tr>`
@@ -813,7 +815,7 @@ memberInput.addEventListener('input', () => {
   const matches = getMembers().filter(m => m.name.toLowerCase().includes(q)).slice(0, 8)
   if (!matches.length) { suggestList.classList.add('hidden'); return }
   suggestList.innerHTML = matches.map(m =>
-    `<li onclick="selectMember('${m.name.replace(/'/g,"\\'")}')"> ${esc(m.name)}</li>`
+    `<li role="option" onclick="selectMember('${m.name.replace(/'/g,"\\'")}')"> ${esc(m.name)}</li>`
   ).join('')
   suggestList.classList.remove('hidden')
 })
@@ -841,7 +843,7 @@ document.getElementById('partner-input').addEventListener('input', function() {
     .slice(0, 8)
   if (!matches.length) { pSuggest.classList.add('hidden'); return }
   pSuggest.innerHTML = matches.map(m =>
-    `<li onclick="addPartner('${m.name.replace(/'/g,"\\'")}')"> ${esc(m.name)}</li>`
+    `<li role="option" onclick="addPartner('${m.name.replace(/'/g,"\\'")}')"> ${esc(m.name)}</li>`
   ).join('')
   pSuggest.classList.remove('hidden')
 })
